@@ -45,6 +45,7 @@ def get_lang(
 class ExpertIn(BaseModel):
     id: str
     display_name: str = ""
+    farewell: str = ""
     sayings: list[str] = Field(default_factory=list)
     taboos: list[str] = Field(default_factory=list)
     leaving_on: date | None = None
@@ -91,6 +92,12 @@ class FlagIn(BaseModel):
 class GradeIn(BaseModel):
     expert: str
     topic: str
+
+
+class DocumentIn(BaseModel):
+    expert: str
+    text: str
+    domain: str = ""
 
 
 class ThanksIn(BaseModel):
@@ -150,6 +157,7 @@ def upsert_expert(
         sayings="\n".join(body.sayings),
         taboos="\n".join(body.taboos),
         leaving_on=body.leaving_on,
+        farewell=body.farewell or None,   # 빈 값으로 기존 글을 지우지 않는다
         # 온보딩 화면의 언어가 이 사람이 파는 언어다. 카드도 분신도 여기서 산다.
         lang=lang,
     )
@@ -169,6 +177,7 @@ def list_experts(
                 "id": r.id,
                 "name": r.display_name or r.id,
                 "alter": service.persona_of(r).label(lang),
+                "farewell": r.farewell,
                 "active": r.alter_active,
                 "days_left": service.days_left(r),
             }
@@ -271,6 +280,18 @@ def ask(
 ) -> dict:
     return service.ask_alter(
         session, expert, body.question, asker=body.asker, lang=lang
+    )
+
+
+@router.post("/documents")
+def interrogate_document(
+    body: DocumentIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """문서 → 질문 → 공백 큐. **카드로 변환하지 않는다.**"""
+    return service.interrogate_document(
+        session, body.expert, body.text, domain=body.domain, lang=lang
     )
 
 

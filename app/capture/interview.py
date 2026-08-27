@@ -178,6 +178,7 @@ def next_question(
     card: Card | None = None,
     history: list[tuple[str, str]] | None = None,
     gap_question: str = "",
+    gap_from_doc: bool = False,
     lang: str = "en",
 ) -> Question:
     """다음 질문 하나.
@@ -188,7 +189,17 @@ def next_question(
     history = history or []
 
     if gap_question:
-        if lang == "ko":
+        # 출처를 속이지 않는다 — 문서 심문에서 나온 질문을 "후배가 물었다" 고
+        # 하면, 전문가가 없는 후배에게 답장하는 셈이 된다.
+        if gap_from_doc:
+            if lang == "ko":
+                text = ("절차서를 읽다가 문서가 답하지 않는 것을 찾았습니다.\n\n"
+                        f"「{gap_question}」\n\n어떻게 하십니까?")
+            else:
+                text = ("Reading your procedure, I found something it does not "
+                        "answer.\n\n"
+                        f"\u201c{gap_question}\u201d\n\nWhat do you do?")
+        elif lang == "ko":
             text = ("후배가 이걸 물었는데 분신이 답하지 못했습니다.\n\n"
                     f"「{gap_question}」\n\n어떻게 보십니까?")
         else:
@@ -281,6 +292,84 @@ _WRONG_SCHEMA: dict[str, Any] = {
     "required": ["wrong_answer", "why_tempting"],
     "additionalProperties": False,
 }
+
+
+_DOC_PROBE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "questions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "anchor": {"type": "string"},
+                },
+                "required": ["question", "anchor"],
+            },
+        },
+    },
+    "required": ["questions"],
+}
+
+
+def probe_document(
+    llm: BaseLLM, text: str, *, domain: str = "", lang: str = "en", limit: int = 7
+) -> list[dict[str, str]]:
+    """📄 절차서 빨간펜 — 문서에서 **질문**을 뽑는다. 카드를 뽑지 않는다.
+
+    문서를 카드로 자동 변환하면 신호가 빈 카드가 쏟아지고 제품이 사내 RAG
+    챗봇으로 무너진다 — 적힌 것은 절차이고, 잃는 것은 예외와 판단 근거이기
+    때문이다 (docs/design.md §1). 대신 문서를 **심문**한다: 절차서가 다루지
+    않는 판단 지점을 찾아 전문가에게 물을 질문으로 바꾼다. 오답 채점기와 같은
+    기제다 — 사람은 자기 지식은 설명 못 해도 **남이 쓴 것의 구멍**은 바로
+    짚는다.
+
+    반환된 질문은 새 큐가 아니라 **공백 큐**로 들어간다. "다음에 팔 곳" 은
+    이미 공백 큐가 정하고 있고, 문서발 질문도 같은 길을 탄다.
+    """
+    body = (text or "").strip()
+    if not body:
+        return []
+    body = body[:60_000]   # 절차서 한 부면 충분하다
+    if lang == "ko":
+        prompt = (
+            f"아래는 '{domain or '현장'}' 절차 문서다. 이 문서를 읽고, **문서에 "
+            "명시되지 않은 판단 지점**을 찾아라 — 절차는 있는데 다음이 빠진 곳:\n"
+            "· 예외 상황에서 어떻게 하는지\n"
+            "· 두 절차가 충돌할 때 무엇이 우선인지\n"
+            "· '적절히/필요시/충분히' 같은 말의 실제 기준값\n"
+            "· 이 단계가 실패했을 때의 복구 경로\n\n"
+            f"각각을 이 문서의 저자(현장 전문가)에게 물을 **질문 한 문장**으로 "
+            f"만들어라. 최대 {limit}개. anchor 에는 근거가 된 문서 구절을 20자 "
+            "내외로 인용하라. 문서에 이미 답이 있는 것은 묻지 마라.\n\n"
+            f"--- 문서 ---\n{body}"
+        )
+    else:
+        prompt = (
+            f"Below is a procedure document from the '{domain or 'shop floor'}' "
+            "domain. Find the **judgment points the document does not cover** — "
+            "places where a procedure exists but the following is missing:\n"
+            "- what to do in the exception case\n"
+            "- which rule wins when two procedures conflict\n"
+            "- the actual threshold behind words like 'adequate' or 'as needed'\n"
+            "- the recovery path when a step fails\n\n"
+            f"Turn each into **one question** to ask the document's author (the "
+            f"expert). At most {limit}. In `anchor`, quote the passage (about 10 "
+            "words) that raised the question. Do not ask what the document "
+            f"already answers.\n\n--- DOCUMENT ---\n{body}"
+        )
+    try:
+        raw = llm.extract(prompt, _DOC_PROBE_SCHEMA)
+    except Exception as exc:
+        log.warning("문서 심문 실패: %s", exc)
+        raw = {}
+    out = []
+    for q in (raw.get("questions") or [])[:limit]:
+        question = str(q.get("question", "")).strip()
+        if question:
+            out.append({"question": question, "anchor": str(q.get("anchor", "")).strip()})
+    return out
 
 
 def wrong_answer(

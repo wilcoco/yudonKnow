@@ -98,17 +98,31 @@ def _experts_for(lang: str) -> list[dict]:
     try:
         from sqlalchemy import select
 
+        from app.core.card import CardStatus
+        from app.store import service
+
         rows = session.scalars(select(db.Expert)).all()
-        items = [
-            {
+        items = []
+        for r in rows:
+            if not r.alter_active:
+                continue
+            cards = [
+                c for c in service.cards_of(session, r.id)
+                if c.status not in (CardStatus.DRAFT, CardStatus.DORMANT)
+            ]
+            domains = [c.domain for c in cards if c.domain]
+            items.append({
                 "id": r.id,
                 "name": r.display_name or r.id,
+                "alter": service.persona_of(r).label(lang),
                 "lang": r.lang,
                 "same": r.lang == lang,
-            }
-            for r in rows
-            if r.alter_active
-        ]
+                "cards": len(cards),
+                # ✔ 는 후배의 실측에서만 나온다 — 여기서도 그 숫자만 센다.
+                "verified": sum(1 for c in cards if c.status is CardStatus.ANCHORED),
+                "domain": max(set(domains), key=domains.count) if domains else "",
+                "days_left": service.days_left(r),
+            })
     except Exception as exc:  # 목록 실패가 랜딩을 막아서는 안 된다
         log.warning("전문가 목록 조회 실패: %s", exc)
         items = []
@@ -133,9 +147,17 @@ def expert(request: Request) -> HTMLResponse:
 
 @app.get("/alter/{expert_id}", response_class=HTMLResponse)
 def alter(request: Request, expert_id: str) -> HTMLResponse:
-    return TEMPLATES.TemplateResponse(
-        request, "alter.html", _ctx(request) | {"expert_id": expert_id}
-    )
+    session = db.SessionLocal()
+    try:
+        row = session.get(db.Expert, expert_id)
+        extra = {
+            "expert_id": expert_id,
+            "farewell": row.farewell if row else "",
+            "expert_name": (row.display_name or row.id) if row else expert_id,
+        }
+    finally:
+        session.close()
+    return TEMPLATES.TemplateResponse(request, "alter.html", _ctx(request) | extra)
 
 
 @app.get("/admin", response_class=HTMLResponse)

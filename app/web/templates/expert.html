@@ -93,6 +93,23 @@
       </div>
     </div>
 
+    {# 문서는 질문이 되지 카드가 되지 않는다. 절차서를 심문해서 빠진 판단
+       지점을 공백 큐에 쌓는다 — 그래서 결과 화면도 큐 안내다. #}
+    <h2 class="sec">{{ L['home.doc'] }}</h2>
+    <div class="card">
+      <p class="t">{{ L['home.doc.q'] }}</p>
+      <textarea id="doc_text" style="min-height:120px" placeholder="{{ L['home.doc.ph'] }}"></textarea>
+      <div class="row" style="margin-top:8px;align-items:center">
+        <input type="file" id="doc_file" accept=".txt,.md" style="max-width:280px">
+        <span class="quiet">{{ L['home.doc.file'] }}</span>
+      </div>
+      <p class="quiet">{{ L['home.doc.note'] }}</p>
+      <div class="acts">
+        <button class="primary" id="doc_btn" onclick="redPen()">{{ L['home.doc.cta'] }}</button>
+      </div>
+      <div class="c" id="doc_out" style="margin-top:10px"></div>
+    </div>
+
     <div id="h_suggest"></div>
 
     <details style="margin-top:18px">
@@ -243,6 +260,36 @@ async function startStory(){
   }catch(e){ err(e.message); }
   finally{ if(btn) btn.disabled = false; }
 }
+
+// 📄 절차서 빨간펜 — 문서를 심문해서 빠진 판단 지점을 공백 큐로.
+async function redPen(){
+  err('');
+  const text = $('doc_text').value.trim();
+  if(!text){ $('doc_text').focus(); return; }
+  const btn = $('doc_btn'); btn.disabled = true;
+  $('doc_out').textContent = L['home.doc.busy'];
+  try{
+    const r = await api('/api/documents', {method:'POST', body: JSON.stringify({
+      expert: me(), text, domain: (STATE.home?.map?.domains?.[0]?.domain) || '',
+    })});
+    if(!r.queued){ $('doc_out').textContent = L['home.doc.none']; return; }
+    $('doc_out').innerHTML =
+      '<p class="quiet">' + esc(L['home.doc.done'].replace('{}', r.queued)) + '</p>' +
+      r.questions.map(q => '<div class="msg">' + esc(q.question) +
+        (q.anchor ? ' <span class="quiet">— "' + esc(q.anchor) + '"</span>' : '') +
+        '</div>').join('');
+    $('doc_text').value = '';
+    loadHome();          // 공백 큐 블록이 바로 갱신되게
+  }catch(e){ $('doc_out').textContent = ''; err(e.message); }
+  finally{ btn.disabled = false; }
+}
+
+document.addEventListener('change', e => {
+  if(e.target?.id !== 'doc_file') return;
+  const f = e.target.files?.[0];
+  if(!f) return;
+  f.text().then(t => { $('doc_text').value = t.slice(0, 60000); });
+});
 
 // ── home ────────────────────────────────────────────────
 async function loadHome(){

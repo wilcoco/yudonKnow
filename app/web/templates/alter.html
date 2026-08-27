@@ -17,6 +17,19 @@
 </header>
 
 <main class="wide">
+  {% if farewell %}
+  {# 분신에게 말을 걸기 전에 한 번은 사람의 말을 읽는다. 매번 펼치면 방해가
+     되므로, 이 브라우저에서 한 번 본 뒤로는 줄 하나로 접힌다. #}
+  <div class="card hero" id="fw" hidden>
+    <p class="t">{{ L['alter.farewell.title'].replace('{}', expert_name) }}</p>
+    <div class="c" style="white-space:pre-wrap">{{ farewell }}</div>
+    <div class="acts"><button onclick="hideFarewell()">{{ L['alter.farewell.close'] }}</button></div>
+  </div>
+  <p class="quiet" id="fw_link" hidden>
+    <a href="#" onclick="showFarewell();return false">{{ L['alter.farewell.link'].replace('{}', expert_name) }}</a>
+  </p>
+  {% endif %}
+
   <div class="badges" style="margin-bottom:10px">
     <span class="b am" id="label"></span>
     <span class="b" id="days"></span>
@@ -27,6 +40,7 @@
     <input type="text" id="q" placeholder="{{ L['alter.ask.ph'] }}" onkeydown="if(event.key==='Enter')ask()">
     <button class="primary" onclick="ask()">{{ L['alter.ask.cta'] }}</button>
   </div>
+  <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
   <div class="err" id="err"></div>
 
   <div class="panes" style="grid-template-columns:1fr" id="out"></div>
@@ -134,6 +148,23 @@ async function report(cardId, verdict, btn){
       + '</span>';
   }catch(e){ $('err').textContent = e.message; }
 }
+</script>
+<script>
+// 처음 온 사람에게는 펼쳐서, 그 다음부터는 줄 하나로. 브라우저에만 남는 표시라
+// 다른 사람이 처음 오면 그 사람에게는 다시 펼쳐진다.
+(function(){
+  const key = 'ydk_fw_{{ expert_id }}';
+  const box = document.getElementById('fw'), link = document.getElementById('fw_link');
+  if(!box) return;
+  let seen = false;
+  try{ seen = localStorage.getItem(key) === '1'; }catch(e){}
+  box.hidden = seen; link.hidden = !seen;
+  window.hideFarewell = function(){
+    box.hidden = true; link.hidden = false;
+    try{ localStorage.setItem(key, '1'); }catch(e){}
+  };
+  window.showFarewell = function(){ box.hidden = false; link.hidden = true; };
+})();
 </script>
 </body>
 </html>

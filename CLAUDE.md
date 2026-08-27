@@ -29,6 +29,7 @@
 | **`app/core` 는 프레임워크·DB 를 import 하지 않는다** | `tests/test_isolation.py` |
 | **한 바퀴가 닫힌다** — 승인 카드가 후배 답에 실제로 인용된다 | `test_the_wheel_closes` |
 | **발굴만으로 카드가 채워진다** — 기저 없이도. 답은 그 답을 끌어낸 질문의 칸에 들어간다 (`Turn.targets`) | `tests/test_excavation.py` |
+| **문서는 질문이 되지 카드가 되지 않는다** — 절차서 빨간펜은 공백 큐에만 쓴다 | `test_a_document_becomes_questions_never_cards` |
 | **카드는 파낸 언어로 산다** — 검색은 언어를 넘지 않는다 | `test_the_wheel_closes` (영어 질문 → 공백) |
 
 ## 설계 원칙 (위반 금지)

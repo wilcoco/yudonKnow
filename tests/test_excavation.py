@@ -105,3 +105,42 @@ def test_a_dug_card_becomes_citable_without_hand_editing(session):
 
     assert reply["is_gap"] is False, "발굴로만 만든 카드가 인용되지 않았다"
     assert card_id in [c["id"] for c in reply["cards"]]
+
+
+def test_a_document_becomes_questions_never_cards(session):
+    """📄 절차서 빨간펜 — **문서는 질문이 되지, 카드가 되지 않는다.**
+
+    문서를 카드로 자동 변환하면 신호가 빈 카드가 쏟아지고 제품이 사내 RAG
+    챗봇으로 무너진다. 이 선이 무너지면 이 도구가 비판하는 바로 그 물건이 된다.
+    stub 은 extract 를 빈 dict 로 떨어뜨리므로 질문 0개가 정상이다 — 여기서
+    보는 것은 **개수가 아니라 어떤 경우에도 카드가 생기지 않는다**는 것이다.
+    """
+    from sqlalchemy import select
+
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    before = len(session.scalars(select(db.CardRow)).all())
+
+    result = service.interrogate_document(
+        session, "hong", "1. 예열 30분. 2. 불량 시 적절히 조정한다.", lang="ko"
+    )
+
+    after = len(session.scalars(select(db.CardRow)).all())
+    assert after == before, "문서에서 카드가 만들어졌다 — RAG 챗봇으로 가는 문이다"
+    assert "questions" in result and "queued" in result
+
+
+def test_doc_questions_join_the_same_gap_queue(session):
+    """문서발 질문은 새 큐가 아니라 **공백 큐**로 들어간다.
+
+    "다음에 팔 곳" 을 정하는 자리는 하나여야 한다. 큐가 둘이면 우선순위도 둘이다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    service._record_gap(session, "hong", "예열 30분의 근거가 무엇인가요?", asker="📄")
+    session.commit()
+
+    home = service.expert_home(session, "hong", lang="ko")
+    assert any("예열" in g["question"] for g in home["gaps"]), "공백 큐에 없다"
+
+    started = service.start_session(session, "hong", lang="ko")
+    assert started["from_gap"] is True
+    assert "절차서" in started["question"], "문서발 질문을 후배 질문처럼 말했다"

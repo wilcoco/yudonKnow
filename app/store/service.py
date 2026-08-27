@@ -187,6 +187,7 @@ def start_session(
         get_llm(),
         instrument=instrument,
         gap_question=gap.question if gap else "",
+        gap_from_doc=bool(gap) and _lines(gap.askers) == ["📄"],
         lang=lang,
     )
     turn = db.Turn(
@@ -481,6 +482,30 @@ def _record_gap(session: OrmSession, expert: str, question: str, asker: str) -> 
     session.add(
         db.Gap(id=_uid("g"), expert=expert, question=question, askers=asker or "")
     )
+
+
+def interrogate_document(
+    session: OrmSession, expert: str, text: str, *,
+    domain: str = "", lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """📄 절차서 빨간펜 — 문서가 다루지 않는 판단 지점을 **공백 큐**에 넣는다.
+
+    문서 원문은 저장하지 않는다. 이 도구의 저장 단위는 판단 카드이지 문서가
+    아니고, 문서 보관은 위키가 이미 잘한다. 여기서 남는 것은 질문뿐이며,
+    답이 나와야 카드가 된다 — 문서는 질문이 되지, 카드가 되지 않는다.
+    """
+    get_expert(session, expert, lang=lang)
+    probes = interview.probe_document(
+        get_llm(), text, domain=domain, lang=lang
+    )
+    for item in probes:
+        question = item["question"]
+        if item.get("anchor"):
+            # 어느 구절에서 나온 질문인지 붙인다 — 전문가가 맥락을 바로 잡는다.
+            question = f'{question} (문서: "{item["anchor"]}")' if lang == "ko"                 else f'{question} (doc: "{item["anchor"]}")'
+        _record_gap(session, expert, question, asker="📄")
+    session.commit()
+    return {"expert": expert, "questions": probes, "queued": len(probes)}
 
 
 def _norm(text: str) -> list[str]:

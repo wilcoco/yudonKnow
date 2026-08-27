@@ -10,9 +10,12 @@
 
 from __future__ import annotations
 
+import logging
+
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    text,
     Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -41,6 +44,9 @@ class Expert(Base):
     #: 분신 어투의 재료 (온보딩에서 본인이 채운다)
     sayings: Mapped[str] = mapped_column(Text, default="")     # 줄바꿈 구분
     taboos: Mapped[str] = mapped_column(Text, default="")      # 줄바꿈 구분
+    #: 후배에게 남기는 말. 카드가 아니라 **사람의 말**이다 — 분신에게 말을 걸기
+    #: 전에 한 번은 읽히는 자리이고, 이 도구에서 가장 사람다운 한 조각이다.
+    farewell: Mapped[str] = mapped_column(Text, default="")
     #: 통제권 — 본인이 자기 분신을 끌 수 있다
     alter_active: Mapped[bool] = mapped_column(Boolean, default=True)
     leaving_on: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -212,5 +218,39 @@ engine = create_engine(
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
 
+log = logging.getLogger(__name__)
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """모델에는 있는데 테이블에 없는 칸을 **더하기만** 한다.
+
+    ``create_all`` 은 이미 있는 테이블을 바꾸지 않는다. 그래서 칸을 하나 추가한
+    배포가 기존 DB 에서 곧장 500 으로 죽는다 (`experts.farewell` 이 그랬다).
+    Alembic 을 들이기엔 이 레포가 작고, 지우거나 바꾸는 마이그레이션은 어차피
+    사람이 봐야 한다. 여기서는 **추가만** 처리한다 — 되돌릴 일이 없는 연산이라
+    자동으로 돌려도 안전하다.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    inspector = sa_inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            have = {c["name"] for c in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in have:
+                    continue
+                ddl = column.type.compile(engine.dialect)
+                default = column.default.arg if column.default is not None else None
+                clause = f'ALTER TABLE {table.name} ADD COLUMN "{column.name}" {ddl}'
+                if isinstance(default, (str, int, float, bool)):
+                    literal = f"'{default}'" if isinstance(default, str) else str(default)
+                    clause += f" DEFAULT {literal}"
+                log.warning("칸 추가: %s.%s", table.name, column.name)
+                conn.execute(text(clause))

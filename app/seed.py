@@ -29,16 +29,30 @@ log = logging.getLogger(__name__)
 
 def _card(session, expert: str, *, lang: str, tacit: Tacitness, **fields) -> str:
     """세션을 거치지 않고 카드를 직접 심는다 — 시드는 발굴 동선의 산출물이지
-    발굴 자체가 아니다."""
+    발굴 자체가 아니다.
+
+    **이미 있으면 건너뛴다.** 데모 카드를 뒤에 추가해도 기존 배포에 들어가야
+    하고, 그렇다고 사용자가 판 것을 지울 수는 없기 때문이다.
+    """
+    existing = session.scalar(
+        select(db.CardRow).where(
+            db.CardRow.expert == expert, db.CardRow.title == fields["title"]
+        )
+    )
+    if existing is not None:
+        return existing.id
     row = db.CardRow(id=service._uid("c"), expert=expert, title=fields["title"])
     session.add(row)
     session.flush()
     card = service.row_to_card(row)
     for key, value in fields.items():
-        setattr(card, key, value)
+        if not key.startswith("_"):
+            setattr(card, key, value)
     card.status = CardStatus.CONFIRMED
     card.tacitness = tacit
-    card.visibility = Visibility.PUBLIC
+    card.visibility = fields.pop("_visibility", None) or Visibility.PUBLIC
+    card.for_whom = fields.pop("_for_whom", "")
+    card.open_at = fields.pop("_open_at", None)
     card.instrument = "moment"
     service.write_card(row, card)
     row.lang = lang   # 카드는 파낸 언어로 산다 (docs/design.md §7)
@@ -47,10 +61,13 @@ def _card(session, expert: str, *, lang: str, tacit: Tacitness, **fields) -> str
 
 
 def seed(session) -> bool:
-    """비어 있을 때만 심는다. 심었으면 True."""
-    if session.scalar(select(db.Expert).limit(1)) is not None:
-        return False
+    """데모 상태를 **맞춘다.** 없는 것만 심고, 있는 것은 건드리지 않는다.
 
+    "비었을 때만" 방식이었을 때는 데모 카드를 뒤에 추가해도 이미 떠 있는 배포에
+    영원히 반영되지 않았다. 통제권 시연용 카드(봉인·지목)가 정확히 그렇게
+    누락됐다. 카드는 제목으로 중복을 막고, 아래 활동(질문·적용 보고)은 한 번만
+    심는다 — 매 기동마다 쌓이면 유산 원장 숫자가 거짓이 된다.
+    """
     today = date.today()
 
     # ── yudon — 사출 성형 (한국어 원본) ──────────────────────────────
@@ -61,6 +78,15 @@ def seed(session) -> bool:
         taboos="원인 모른 채 설정값 되돌리지 마라\n야간에 혼자 금형 열지 마라",
         leaving_on=today + timedelta(days=84),
         lang="ko",
+        farewell="김대리, 그리고 뒤에 올 사람들에게.\n\n"
+                 "제가 남긴 카드들은 정답이 아닙니다. 제가 그 상황에서 그렇게 "
+                 "봤다는 기록일 뿐입니다. 현장이 바뀌면 틀릴 수 있고, 실제로 "
+                 "저도 여러 번 틀렸습니다 — 틀렸던 것도 같이 적어뒀습니다.\n\n"
+                 "부탁이 하나 있습니다. 카드대로 해보고 안 맞았으면 꼭 "
+                 "'안 맞았다'고 눌러주세요. 그게 저한테 돌아옵니다. "
+                 "제가 아직 회사에 있는 동안은 제가 고칠 수 있습니다.\n\n"
+                 "그리고 '그냥 보면 안다'고 적어둔 것들은 정말 글로는 안 됩니다. "
+                 "그건 나가기 전에 옆에서 같이 봅시다. 불러주세요.",
     )
     yudon_card = _card(
         session, "yudon", lang="ko", tacit=Tacitness.HANDS,
@@ -94,6 +120,46 @@ def seed(session) -> bool:
         risk="high",
     )
 
+    # 통제권을 **화면에서 확인할 수 있게** 두 장 더 심는다.
+    #
+    # 첫 화면은 "봉인·지목·비공개는 당신이 정합니다" 라고 약속한다. 그 약속을
+    # 확인할 자리가 없으면 약속은 문구로만 남는다. 아래 두 장이 그 자리다 —
+    # 심사자가 "나" 를 바꿔가며 같은 질문을 던지면 답이 달라진다.
+    #
+    # 내용도 아무거나가 아니다. **가장 값진 판단일수록 오늘 공개하기 곤란하다**
+    # 는 것이 통제권의 존재 이유이므로 (docs/self-excavation.md), 딱 그런 것을
+    # 심는다.
+    _card(
+        session, "yudon", lang="ko", tacit=Tacitness.PARTIAL,
+        _visibility=Visibility.TARGETED, _for_whom="kim",
+        title="야간에 라인 세울지 말지는 누구에게 전화하느냐로 갈린다",
+        domain="야간 대응",
+        situation="야간 당직 중 판단이 애매한 불량이 나왔을 때",
+        cues=["불량률이 애매하게 오르는데 정지 기준에는 안 걸림",
+              "생산 일정이 빡빡한 주간"],
+        judgment="공식 절차대로 생산팀장부터 찾으면 아침까지 못 세운다. "
+                 "품질 쪽에 먼저 알리고 기록을 남긴 다음에 올려야 한다",
+        action=["품질 담당에게 먼저 전화", "샘플 3개 확보하고 사진", "그 다음 생산팀장"],
+        rationale="기록이 먼저 있으면 아침 회의에서 판단이 뒤집히지 않는다",
+        exceptions=["안전 관련이면 순서 무시하고 즉시 정지"],
+        failure="",
+        risk="high",
+    )
+    _card(
+        session, "yudon", lang="ko", tacit=Tacitness.PARTIAL,
+        _visibility=Visibility.SEALED, _open_at=today + timedelta(days=84),
+        title="A 협력사 초도품은 담당자가 바뀌기 전까지 그대로 믿지 마라",
+        domain="협력사 품질 대응",
+        situation="특정 협력사에서 온 초도품 검사",
+        cues=["검사성적서 수치가 매번 너무 깨끗함", "재측정하면 값이 다르게 나옴"],
+        judgment="성적서를 믿지 말고 우리 게이지로 다시 잰다",
+        action=["입고분 전량 자체 재측정", "차이 나면 사진과 함께 기록"],
+        rationale="측정 방식이 우리와 다른데 그걸 맞춰본 적이 없다",
+        exceptions=["담당자가 바뀌면 다시 판단해야 한다"],
+        failure="",
+        risk="high",
+    )
+
     # ── dale — 하수처리장 (English) ──────────────────────────────────
     service.ensure_expert(
         session, "dale",
@@ -104,6 +170,16 @@ def seed(session) -> bool:
                "Never change two settings in the same shift.",
         leaving_on=today + timedelta(days=31),
         lang="en",
+        farewell="Rosa, Tom — and whoever comes after.\n\n"
+                 "What I left here are not answers. They are notes on how I read "
+                 "a plant on a particular day. Plants change. I was wrong more "
+                 "than once, and I wrote those down too.\n\n"
+                 "One favour. If you try a card and it does not hold, press "
+                 "\"it did not\". That comes back to me, and while I am still "
+                 "here I can fix it.\n\n"
+                 "The ones marked \"you have to be standing there\" — I meant "
+                 "that. Come find me before I go and we will look at the tank "
+                 "together.",
     )
     dale_card = _card(
         session, "dale", lang="en", tacit=Tacitness.HANDS,
@@ -150,6 +226,10 @@ def seed(session) -> bool:
     )
 
     session.commit()
+
+    # 활동은 한 번만 심는다 — 매 기동마다 쌓이면 원장 숫자가 거짓이 된다.
+    if session.scalar(select(db.Ask).limit(1)) is not None:
+        return True
 
     # ── 바퀴가 이미 한 바퀴 돈 상태로 심는다 ─────────────────────────
     # 심사자가 빈 원장을 보면 "보람" 이 무슨 말인지 알 수 없다.

@@ -258,3 +258,26 @@ def test_the_alter_never_points_at_someone_you_cannot_read(session):
     )
 
     assert "김책임" not in reply["text"], "영어 사용자에게 한국어로 판 사람을 권했다"
+
+
+def test_a_targeted_card_answers_only_the_named_junior(session):
+    """지목 공개 — "이건 김대리한테만" 이 화면에서도 지켜지는가.
+
+    통제권은 첫 화면이 **약속**하는 것이고, 여기가 그 약속이 **지켜지는** 자리다.
+    지켜지지 않으면 전문가는 가장 값진 판단을 남기지 않는다.
+    """
+    from app.core.card import Visibility
+
+    card_id, _ = _leave_a_judgment(
+        session, visibility=Visibility.TARGETED.value, for_whom="kim"
+    )
+
+    named = service.ask_alter(
+        session, "hong", "플로우마크가 한쪽만 나와요", asker="kim", lang="ko"
+    )
+    assert card_id in [c["id"] for c in named["cards"]], "지목된 사람이 못 받았다"
+
+    other = service.ask_alter(
+        session, "hong", "플로우마크가 한쪽만 나와요", asker="park", lang="ko"
+    )
+    assert other["is_gap"] is True, "지목 안 된 사람에게 새어 나갔다"

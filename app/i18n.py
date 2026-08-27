@@ -86,6 +86,20 @@ CATALOG: dict[str, dict[str, str]] = {
               "· 분신이 헛소리하면 당신이 끕니다\n"
               "· 실패담은 인사 기록과 연결되지 않습니다",
     },
+    "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
+    "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
+    "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},
+    "landing.mine.title": {"en": "Leave mine", "ko": "내 분신 만들기"},
+    "landing.mine.body": {
+        "en": "Answer as I ask, and one judgment stays behind in three minutes. "
+              "It is yours — you set who may see it, and you can switch it off.",
+        "ko": "묻는 대로 답하시면 3분에 판단 하나가 남습니다. "
+              "그건 당신 것입니다 — 공개 범위도, 끄는 것도 당신이 정합니다.",
+    },
+    "landing.admin.link": {
+        "en": "Who leaves, and what goes empty — succession risk board →",
+        "ko": "누가 나가면 무엇이 비는지 — 승계 리스크 보드 →",
+    },
     "landing.who": {"en": "Who are you here as?", "ko": "누구로 들어오시나요"},
     "landing.expert.body": {
         "en": "Pick an instrument and dig. Three minutes leaves one judgment behind.",
@@ -257,6 +271,36 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Or pick a method yourself (12)",
         "ko": "직접 방법을 고르시려면 (12가지)",
     },
+    #: 문서는 질문이 되지 카드가 되지 않는다 (docs/design.md §7).
+    "home.doc": {"en": "📄 Red-pen a procedure", "ko": "📄 절차서 빨간펜"},
+    "home.doc.q": {
+        "en": "Paste a procedure you wrote or inherited. I will find what it "
+              "does not say and ask you.",
+        "ko": "쓰시던 절차서나 물려받은 문서를 붙여넣어 주세요. 문서가 말하지 "
+              "않는 것을 찾아 여쭙겠습니다.",
+    },
+    "home.doc.ph": {
+        "en": "Paste the document text here (.txt / .md also accepted below)",
+        "ko": "문서 내용을 여기 붙여넣으세요 (.txt / .md 파일도 아래에서 됩니다)",
+    },
+    "home.doc.file": {"en": "or pick a text file", "ko": "또는 텍스트 파일 선택"},
+    "home.doc.note": {
+        "en": "The document is not stored and never becomes cards by itself — "
+              "what it is missing becomes questions in your queue, and only "
+              "your answers become cards.",
+        "ko": "문서는 저장되지 않고, 그대로 카드가 되지도 않습니다 — 빠진 곳이 "
+              "질문이 되어 큐에 쌓이고, 당신의 답만 카드가 됩니다.",
+    },
+    "home.doc.cta": {"en": "Find what's missing", "ko": "빠진 것 찾기"},
+    "home.doc.busy": {"en": "Reading…", "ko": "읽는 중…"},
+    "home.doc.none": {
+        "en": "Nothing missing that I could see — this one covers its judgment calls.",
+        "ko": "빠진 판단 지점을 찾지 못했습니다 — 이 문서는 꽤 꼼꼼합니다.",
+    },
+    "home.doc.done": {
+        "en": "{} questions queued — they will come up first in your next dig.",
+        "ko": "질문 {}개를 큐에 넣었습니다 — 다음 발굴에서 먼저 나옵니다.",
+    },
     "home.toolbox": {
         "en": "🧰 Ways to record — pick one, or use the suggestion above",
         "ko": "🧰 기록하는 방법 — 하나 고르시거나 위 추천을 쓰세요",
@@ -374,6 +418,23 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.contested": {
         "en": "⚠ Someone recently reported this did not hold.",
         "ko": "⚠ 이 판단은 최근 안 맞았다는 보고가 있습니다.",
+    },
+    #: 통제권은 문구가 아니라 화면에서 확인되어야 한다. 데모에는 인증이 없으므로
+    #: 신원을 바꿔가며 같은 질문을 던져 보게 안내한다 — 그게 권한 모델의 시연이다.
+    "alter.farewell.title": {
+        "en": "What {} wanted to say to you", "ko": "{}님이 남기는 말",
+    },
+    "alter.farewell.close": {"en": "Thanks — let's talk", "ko": "잘 읽었습니다 — 물어볼게요"},
+    "alter.farewell.link": {
+        "en": "Read what {} left for you again", "ko": "{}님이 남기는 말 다시 읽기",
+    },
+    "alter.viewer.hint": {
+        "en": "Change who you are and ask again — a card left for one named person "
+              "answers only them, and a sealed one answers no one until its date. "
+              "Demo has no sign-in; corporate SSO plugs in here.",
+        "ko": "위 '나' 칸을 바꿔서 같은 질문을 다시 해보세요 — 지목된 사람에게만 남긴 "
+              "판단은 그 사람에게만 답하고, 봉인한 판단은 정한 날까지 아무에게도 "
+              "답하지 않습니다. 데모에는 로그인이 없고, 실배포는 여기에 사내 SSO가 붙습니다.",
     },
     "alter.gap.note": {
         "en": "Saying \"I don't know\" is a feature here, not a failure. It will not "

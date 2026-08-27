@@ -26,37 +26,40 @@
     <div class="c">{{ L['landing.yours.body'] }}</div>
   </div>
 
-  <h2 class="sec">{{ L['landing.who'] }}</h2>
+  {# 첫 화면은 역할 선택이 아니라 **남겨진 분신들**이다.
+     "나는 전문가인가 소비자인가" 는 추상적인 자기분류 질문이고, 아바타 앞에서는
+     내 것을 만들거나 남의 것에 말을 걸거나 둘 중 하나라 역할이 행동에서 나온다.
+     인격이 아니라 실물(카드 수·✔ 검증·재직일)을 적는다 — 캐릭터 챗봇이 아니다. #}
+  <h2 class="sec">{{ L['landing.alters'] }}</h2>
   <div class="grid g3">
+    {% for e in experts %}
     <div class="card">
-      <p class="t">🧰 {{ L['nav.expert'] }}</p>
-      <p class="c">{{ L['landing.expert.body'] }}</p>
-      <div class="acts"><button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button></div>
-    </div>
-    <div class="card">
-      <p class="t">💬 {{ L['nav.junior'] }}</p>
-      <p class="c">{{ L['landing.junior.body'] }}</p>
-      {% if experts %}
-      {# 아이디를 추측하게 두지 않는다. 화면 언어로 판 사람이 앞에 온다 —
-         못 읽을 카드를 찾아 주는 것은 답이 아니기 때문이다 (design.md §7). #}
-      <p class="c" style="margin-top:10px;font-size:12px;opacity:.7">{{ L['landing.junior.pick'] }}</p>
-      <div class="row" style="margin-top:4px">
-        {% for e in experts %}
-        <button onclick="go('/alter/{{ e.id }}')">{{ e.name }} · {{ e.lang|upper }}</button>
-        {% endfor %}
+      <p class="t">{{ e.alter }}</p>
+      <p class="c">
+        {% if e.domain %}{{ e.domain }} · {% endif %}{{ e.lang|upper }}<br>
+        {{ L['landing.alter.cards'].replace('{}', e.cards|string) }}{% if e.verified %} · ✔ {{ e.verified }}{% endif %}<br>
+        {% if e.days_left is not none %}
+        <span class="quiet">{{ L['landing.alter.days'].replace('{}', e.days_left|string) }}</span>
+        {% endif %}
+      </p>
+      <div class="acts">
+        <button class="primary" onclick="go('/alter/{{ e.id }}')">{{ L['landing.junior.cta'] }}</button>
       </div>
-      {% endif %}
-      <div class="row" style="margin-top:10px">
-        <input type="text" id="who" placeholder="{{ L['landing.junior.ph'] }}">
-      </div>
-      <div class="acts"><button class="primary" onclick="ask()">{{ L['landing.junior.cta'] }}</button></div>
     </div>
-    <div class="card">
-      <p class="t">📊 {{ L['nav.admin'] }}</p>
-      <p class="c">{{ L['landing.admin.body'] }}</p>
-      <div class="acts"><button onclick="go('/admin')">{{ L['landing.admin.cta'] }}</button></div>
+    {% endfor %}
+
+    <div class="card hero">
+      <p class="t">＋ {{ L['landing.mine.title'] }}</p>
+      <p class="c">{{ L['landing.mine.body'] }}</p>
+      <div class="acts">
+        <button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button>
+      </div>
     </div>
   </div>
+
+  <p class="quiet" style="margin-top:18px">
+    <a href="/admin{{ '?lang=' + lang if lang != 'en' else '' }}">{{ L['landing.admin.link'] }}</a>
+  </p>
 
   <h2 class="sec">{{ L['landing.wheel'] }}</h2>
   <div class="card"><div class="c">{{ L['landing.wheel.body'] }}</div></div>
