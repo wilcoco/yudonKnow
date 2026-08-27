@@ -37,11 +37,29 @@ class Instrument:
     unlocked: bool = False
     #: 첫 질문 — 연장의 성격이 여기서 드러난다
     opener: str = ""
+    #: 영문 병기 — 대회 규정 6조(영어 지원)는 통과 조건이다 (``docs/hackathon.md``).
+    name_en: str = ""
+    pitch_en: str = ""
+    opener_en: str = ""
+
+    def localized(self, lang: str = "en") -> dict[str, str]:
+        """화면에 나갈 한 벌. 문안을 카탈로그로 빼지 않고 여기 둔 이유는 연장
+        정의와 문안이 같이 움직여야 하기 때문이다 — 떼어두면 반드시 어긋난다."""
+        if lang == "ko" or not self.name_en:
+            return {"name": self.name, "pitch": self.pitch, "opener": self.opener}
+        return {
+            "name": self.name_en,
+            "pitch": self.pitch_en or self.pitch,
+            "opener": self.opener_en or self.opener,
+        }
 
 
 INSTRUMENTS: tuple[Instrument, ...] = (
     Instrument(
         key="moment", emoji="🔨", name="순간 포착",
+        name_en="Moment Capture",
+        pitch_en="Just made a call? Thirty seconds, three lines.",
+        opener_en="What was the situation, just now? One line only.",
         pitch="방금 판단한 게 있나요? 30초, 세 줄이면 됩니다.",
         fills=("situation", "cues"), also=("judgment",),
         minutes=1, unlocked=True,
@@ -49,6 +67,9 @@ INSTRUMENTS: tuple[Instrument, ...] = (
     ),
     Instrument(
         key="wrong", emoji="⚖️", name="오답 채점기",
+        name_en="Wrong-Answer Grader",
+        pitch_en="I'll give a wrong answer. You just hold the red pen.",
+        opener_en="Is my answer right? If it's wrong, point only at the part that's wrong.",
         pitch="제가 틀린 답을 냅니다. 빨간펜만 들어주세요.",
         fills=("judgment", "rationale"), also=("cues", "action", "exceptions"),
         minutes=3, unlocked=True,
@@ -56,6 +77,9 @@ INSTRUMENTS: tuple[Instrument, ...] = (
     ),
     Instrument(
         key="contrast", emoji="🔍", name="대조 짝",
+        name_en="Contrast Pairs",
+        pitch_en="Two near-identical situations. Only tell me what differs.",
+        opener_en="What separates these two cases?",
         pitch="비슷한 두 상황. 무엇이 다른지만 말해주세요.",
         fills=("cues", "judgment"), also=("situation", "rationale"),
         minutes=4,
@@ -63,18 +87,27 @@ INSTRUMENTS: tuple[Instrument, ...] = (
     ),
     Instrument(
         key="sensory", emoji="👂", name="감각 사다리",
+        name_en="Sensory Ladder",
+        pitch_en="Splits a gut feeling into eye, ear, hand, smell, timing, rhythm.",
+        opener_en="Let's split that feel by channel. What did you see?",
         pitch="'그냥 감으로'를 눈·귀·손·냄새·타이밍·리듬으로 쪼갭니다.",
         fills=("cues",), minutes=5,
         opener="그 '감'을 채널별로 나눠봅니다. 눈에 무엇이 보였나요?",
     ),
     Instrument(
         key="point", emoji="📷", name="가리키기",
+        name_en="Point & Annotate",
+        pitch_en="If words fail, circle it on a photo and write one line.",
+        opener_en="Upload a photo or screen, and mark what matters.",
         pitch="말로 안 되면 사진에 동그라미 치고 한 줄만.",
         fills=("cues",), also=("action",), minutes=2,
         opener="사진이나 화면을 올리고, 중요한 데에 표시해 주세요.",
     ),
     Instrument(
         key="aloud", emoji="🗣", name="소리내어 하기",
+        name_en="Think Aloud",
+        pitch_en="Just mutter while you work. I'll do the cutting.",
+        opener_en="While you do what you are doing, say what comes to mind.",
         pitch="일하면서 그냥 중얼거리세요. 자르는 건 제가 합니다.",
         fills=("situation", "cues", "judgment", "action"), also=("rationale",),
         minutes=10,
@@ -82,36 +115,54 @@ INSTRUMENTS: tuple[Instrument, ...] = (
     ),
     Instrument(
         key="debate", emoji="🥊", name="분신과 논쟁",
+        name_en="Argue With Your Alter",
+        pitch_en="Ask your own alter, then push back when it's weak.",
+        opener_en="Ask your alter. If the answer is thin, argue with it right there.",
         pitch="당신의 분신에게 물어보고, 틀리면 반박하세요.",
         fills=("exceptions", "rationale"), also=("judgment",), minutes=5,
         opener="분신에게 물어보세요. 답이 어설프면 그 자리에서 반박하시면 됩니다.",
     ),
     Instrument(
         key="letter", emoji="✉️", name="후계자에게",
+        name_en="Letter To A Successor",
+        pitch_en="Address it to one named person and far more comes out.",
+        opener_en="Who are you leaving this for? Start with what they'll hit in three months.",
         pitch="'김대리에게 남기는 말'로 쓰면 훨씬 많이 나옵니다.",
         fills=SLOTS, minutes=15,
         opener="누구에게 남기시겠습니까? 그 사람이 3개월 뒤 겪을 일부터 쓰시면 됩니다.",
     ),
     Instrument(
         key="regret", emoji="📉", name="회한 채굴",
+        name_en="Regret Mining",
+        pitch_en="If you could go back, what would you do differently?",
+        opener_en="Was there a time this went badly wrong? What happened?",
         pitch="그때로 돌아가면 무엇을 다르게 하시겠습니까?",
         fills=("failure", "exceptions", "rationale"), also=("situation",), minutes=5,
         opener="크게 틀렸던 적이 있나요? 그때 무슨 일이 있었나요?",
     ),
     Instrument(
         key="boundary", emoji="🎚", name="경계 슬라이더",
+        name_en="Boundary Slider",
+        pitch_en="Turns \"reasonably high\" into a number.",
+        opener_en="From what value does it get dangerous? Point with the slider.",
         pitch="'적당히 높으면'을 숫자로 바꿉니다.",
         fills=("cues", "exceptions"), minutes=2,
         opener="몇 부터가 위험한가요? 슬라이더로 짚어주세요.",
     ),
     Instrument(
         key="map", emoji="🗺", name="머릿속 지도",
+        name_en="Mind Map",
+        pitch_en="You plant the flags on ground you haven't dug yet.",
+        opener_en="Which area still has something big left in it?",
         pitch="아직 안 판 곳에 당신이 직접 깃발을 꽂습니다.",
         fills=(), minutes=2,
         opener="어느 영역이 아직 크게 남아 있나요?",
     ),
     Instrument(
         key="gauge", emoji="🌡", name="암묵지 온도계",
+        name_en="Tacitness Gauge",
+        pitch_en="Is this readable, or do you have to be watching?",
+        opener_en="This judgment — is it the kind you can read and follow?",
         pitch="이건 읽어서 되나요, 옆에서 봐야 하나요?",
         fills=(), minutes=1,
         opener="이 판단, 글로 읽고 따라 할 수 있는 종류입니까?",
@@ -153,6 +204,7 @@ class Suggestion:
 def recommend(
     cards: list[Card],
     *,
+    lang: str = "en",
     flags: set[str] | None = None,
     open_gaps: int = 0,
     card_count: int | None = None,
@@ -175,11 +227,11 @@ def recommend(
 
     # ① 후배의 공백이 최우선. 인터뷰 주제는 현장 수요가 정한다.
     if open_gaps:
-        push("wrong", f"후배가 막힌 곳 {open_gaps}건이 기다립니다. 3분이면 됩니다.")
+        push("wrong", _because_gap(open_gaps, lang))
 
     # ② 전문가 본인이 "아직 남았다" 고 표시한 곳.
     for name in sorted(flags or ()):
-        push("aloud", f"'{name}'에 깃발을 꽂아두셨습니다.")
+        push("aloud", _because_flag(name, lang))
         break
 
     # ③ 카드의 빈 칸 — 신호(cues)와 예외(exceptions)가 비면 가장 위험하다.
@@ -192,24 +244,45 @@ def recommend(
             continue
         for key in _SLOT_TO_INSTRUMENTS[slot]:
             if key in available:
-                push(key, f"'{target.title}'에 {_KO[slot]}가 비어 있습니다.", target.id)
+                push(key, _because_empty(target.title, slot, lang), target.id)
                 break
 
     if not out:
-        push("moment", "오늘 내린 판단 하나만 남겨두세요.")
+        push("moment", _because_default(lang))
     return out[:limit]
 
 
-_KO = {
-    "situation": "상황",
-    "cues": "신호",
-    "judgment": "판단",
-    "action": "조치",
-    "rationale": "근거",
-    "exceptions": "예외",
-    "failure": "실패담",
-}
+def slot_label(slot: str, lang: str = "en") -> str:
+    """카드 칸 이름. 문안은 ``app/i18n.py`` 가 갖는다."""
+    from app.i18n import t
+
+    return t(f"slot.{slot}", lang)
 
 
-def slot_ko(slot: str) -> str:
-    return _KO.get(slot, slot)
+# ── 추천 사유 문장 (근거 없는 추천은 하지 않는다) ──────────────────────
+
+def _because_gap(count: int, lang: str) -> str:
+    if lang == "ko":
+        return f"후배가 막힌 곳 {count}건이 기다립니다. 3분이면 됩니다."
+    noun = "place" if count == 1 else "places"
+    verb = "is" if count == 1 else "are"
+    return f"{count} {noun} where a junior got stuck {verb} waiting. Three minutes."
+
+
+def _because_flag(name: str, lang: str) -> str:
+    if lang == "ko":
+        return f"'{name}'에 깃발을 꽂아두셨습니다."
+    return f"You planted a flag on '{name}'."
+
+
+def _because_empty(title: str, slot: str, lang: str) -> str:
+    label = slot_label(slot, lang)
+    if lang == "ko":
+        return f"'{title}'에 {label}가 비어 있습니다."
+    return f"'{title}' has no {label.lower()} yet."
+
+
+def _because_default(lang: str) -> str:
+    if lang == "ko":
+        return "오늘 내린 판단 하나만 남겨두세요."
+    return "Leave behind just one call you made today."

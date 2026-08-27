@@ -107,12 +107,14 @@ def test_gap_decision_never_calls_the_llm():
     (docs/design.md §6 · alter-ai 의 '관문은 LLM 을 호출하지 않는다' 이식).
     """
     persona = Persona(expert="hong", display_name="홍길동 수석")
-    reply = respond(
-        ExplodingLLM(), persona, [make_card()], "연차 정산은 어떻게 하나요", days_left=84
-    )
-    assert reply.is_gap is True
-    assert reply.cards == []
-    assert "지어내지 않겠습니다" in reply.text
+    for lang, promise in (("en", "I will not make it up"), ("ko", "지어내지 않겠습니다")):
+        reply = respond(
+            ExplodingLLM(), persona, [make_card()],
+            "연차 정산은 어떻게 하나요", days_left=84, lang=lang,
+        )
+        assert reply.is_gap is True
+        assert reply.cards == []
+        assert promise in reply.text
 
 
 def test_stopped_alter_answers_nothing():
@@ -123,7 +125,18 @@ def test_stopped_alter_answers_nothing():
 
 
 def test_alter_label_never_impersonates():
-    assert Persona(expert="hong", display_name="홍길동 수석").label == "홍길동 수석의 분신"
+    """어느 언어에서도 사람 이름 단독으로 뜨지 않는다.
+
+    영어 지원은 대회 규정 6조의 통과 조건이라 붙인 것이지만, 사칭 금지 규약은
+    언어를 타지 않아야 한다 — 번역하면서 규약이 새는 것이 가장 흔한 사고다.
+    """
+    persona = Persona(expert="hong", display_name="홍길동 수석")
+    for lang in ("en", "ko"):
+        label = persona.label(lang)
+        assert label != "홍길동 수석"
+        assert "홍길동 수석" in label
+    assert persona.label("ko") == "홍길동 수석의 분신"
+    assert persona.label("en") == "홍길동 수석's alter"
 
 
 # ----------------------------------------------------------------- 도구함
@@ -137,15 +150,17 @@ def test_toolbox_starts_with_only_two_instruments():
 
 def test_recommendation_puts_the_juniors_gap_first():
     """인터뷰 주제는 컨설턴트가 아니라 현장 수요가 정한다."""
-    suggestions = recommend([make_card()], open_gaps=3, card_count=9)
-    assert suggestions[0].instrument.key == "wrong"
-    assert "후배" in suggestions[0].because
+    for lang, needle in (("en", "stuck"), ("ko", "후배")):
+        suggestions = recommend([make_card()], lang=lang, open_gaps=3, card_count=9)
+        assert suggestions[0].instrument.key == "wrong"
+        assert needle in suggestions[0].because
 
 
 def test_recommendation_is_always_explained():
     """근거 없는 추천은 하지 않는다 — 운전대는 전문가에게 있다."""
-    for s in recommend([make_card(exceptions=[])], card_count=9):
-        assert s.because.strip()
+    for lang in ("en", "ko"):
+        for s in recommend([make_card(exceptions=[])], lang=lang, card_count=9):
+            assert s.because.strip()
 
 
 # ---------------------------------------------------------------- 커버리지
@@ -186,3 +201,102 @@ def test_card_projects_to_pic_graph():
 @pytest.mark.parametrize("tacit,emoji", [("speakable", "🟢"), ("partial", "🟡"), ("hands", "🔴")])
 def test_tacitness_gauge(tacit, emoji):
     assert Tacitness(tacit).emoji == emoji
+
+
+# ─────────────────────────────────────────────────────────── 영어 지원
+
+def test_language_negotiation_defaults_to_english():
+    """심사자는 아무것도 누르지 않아도 영어를 본다 (대회 규정 6조).
+
+    유돈의 브라우저는 한국어를 먼저 보내므로 한국어로 뜬다 — 같은 규칙 하나로
+    둘 다 해결된다.
+    """
+    from app.i18n import pick
+
+    assert pick(None) == "en"
+    assert pick("en-US,en;q=0.9") == "en"
+    assert pick("ko-KR,ko;q=0.9,en;q=0.8") == "ko"
+    assert pick("fr-FR,fr;q=0.9") == "en"
+    assert pick("ko-KR", override="en") == "en"       # ?lang= 이 이긴다
+    assert pick("en-US", override="ko") == "ko"
+    assert pick("en-US", override="zz") == "en"       # 모르는 값은 무시
+
+
+def test_every_catalog_key_has_both_languages():
+    """한쪽만 채워진 문안은 배포 후에야 드러난다. 여기서 잡는다."""
+    from app.i18n import CATALOG, LANGS
+
+    missing = [
+        f"{key}.{lang}"
+        for key, entry in CATALOG.items()
+        for lang in LANGS
+        if not entry.get(lang)
+    ]
+    assert not missing, f"문안이 빠졌다: {missing}"
+
+
+def test_the_gap_screen_speaks_both_languages():
+    """'모른다'를 잘 말하는 것이 이 제품의 기능이다 — 영어에서도 그래야 한다."""
+    from app.alter.persona import Persona, gap_message
+
+    persona = Persona(expert="yudon", display_name="Yudon")
+    en = gap_message(persona, days_left=84, alternatives=["Park"], lang="en")
+    ko = gap_message(persona, days_left=84, alternatives=["Park"], lang="ko")
+    assert "will not make it up" in en and "84" in en
+    assert "지어내지 않겠습니다" in ko and "84" in ko
+
+
+def _english_card() -> Card:
+    return Card(
+        id="d1", expert="dale",
+        title="When aeration foam turns from white to chocolate brown",
+        domain="wastewater treatment",
+        situation="Activated sludge aeration basin, steady influent",
+        cues=["Foam goes tan then chocolate brown and stops breaking up",
+              "Sludge blanket creeping up while dissolved oxygen holds normal"],
+        judgment="Sludge age is too long and filaments are taking over",
+        action=["Increase wasting rate about 10%"],
+        rationale="An overload makes white billowy foam",
+        exceptions=["After heavy rain the same brown appears"],
+        status=CardStatus.ANCHORED,
+    )
+
+
+def test_unrelated_english_question_is_always_a_gap():
+    """**되돌리지 말 것.**
+
+    데모 시드에서 잡은 실제 버그의 회귀 테스트다. 영어 기능어("the", "about")와
+    라틴 문자 부분 일치("rate" ⊂ "calibrate")가 무관한 질문에 확신도를 붙여서,
+    분신이 엉뚱한 카드로 자신 있게 답했다.
+
+    후배가 검증할 능력이 없다는 것이 이 제품의 출발 전제이므로, 무관한 질문에
+    붙는 확신도는 기능 결함이 아니라 **신뢰 파괴**다.
+    """
+    card = _english_card()
+    for question in (
+        "how do I calibrate the new UV bank",
+        "what do I do about the UV bank calibration",
+        "how do I file my expense report",
+        "who should I ask about vacation days",
+    ):
+        result = retrieve([card], question)
+        assert result.is_gap is True, f"무관한 질문에 답했다: {question!r}"
+        assert result.confidence == 0.0
+
+
+def test_a_real_english_question_still_reaches_the_card():
+    """정밀도를 올리다 재현율을 죽이면 분신은 아무것도 답하지 못한다."""
+    card = _english_card()
+    for question in (
+        "brown foam on the aeration basin",
+        "the foam went brown overnight",
+        "sludge blanket is rising",
+    ):
+        result = retrieve([card], question)
+        assert result.is_gap is False, f"답했어야 할 질문을 공백 처리했다: {question!r}"
+
+
+def test_korean_compound_nouns_still_match_partially():
+    """영어 부분 일치를 끈 것이 한국어 복합명사 매칭을 깨뜨리면 안 된다."""
+    card = make_card()
+    assert retrieve([card], "사출압력 그래프가 이상합니다").is_gap is False

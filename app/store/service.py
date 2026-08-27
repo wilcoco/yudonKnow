@@ -27,6 +27,8 @@ from app.config import settings
 from app.core import coverage as cov
 from app.core import legacy
 from app.core.card import Card, CardStatus, Tacitness, Visibility
+from app.i18n import DEFAULT as LANG_DEFAULT
+from app.i18n import t
 from app.store import db
 
 
@@ -102,10 +104,12 @@ def cards_of(session: OrmSession, expert: str) -> list[Card]:
     return [row_to_card(r) for r in rows]
 
 
-def get_expert(session: OrmSession, expert_id: str) -> db.Expert:
+def get_expert(
+    session: OrmSession, expert_id: str, *, lang: str = LANG_DEFAULT
+) -> db.Expert:
     row = session.get(db.Expert, expert_id)
     if row is None:
-        raise ServiceError(f"'{expert_id}' 를 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_expert", lang, expert_id))
     return row
 
 
@@ -156,10 +160,11 @@ def _log(
 # --------------------------------------------------------------------- 발굴
 
 def start_session(
-    session: OrmSession, expert: str, *, instrument: str = LADDER
+    session: OrmSession, expert: str, *, instrument: str = LADDER,
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """발굴 세션 시작. **연장은 전문가가 고른다** — 기본값은 사다리."""
-    get_expert(session, expert)
+    get_expert(session, expert, lang=lang)
     row = db.Session(id=_uid("s"), expert=expert, instrument=instrument)
     session.add(row)
 
@@ -168,6 +173,7 @@ def start_session(
         get_llm(),
         instrument=instrument,
         gap_question=gap.question if gap else "",
+        lang=lang,
     )
     turn = db.Turn(
         id=_uid("t"), session_id=row.id, question=question.text, rung=question.rung
@@ -187,7 +193,8 @@ def start_session(
 
 
 def answer_turn(
-    session: OrmSession, turn_id: str, answer: str, *, skip: bool = False
+    session: OrmSession, turn_id: str, answer: str, *, skip: bool = False,
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """전문가의 답 하나 → 카드 갱신 → 다음 질문.
 
@@ -196,22 +203,22 @@ def answer_turn(
     """
     turn = session.get(db.Turn, turn_id)
     if turn is None:
-        raise ServiceError("그 질문을 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_turn", lang))
     if turn.answer:
-        raise ServiceError("이미 답하신 질문입니다.")
+        raise ServiceError(t("err.already_answered", lang))
 
     turn.answer = answer.strip()
     turn.skipped = skip or not turn.answer
     sess = session.get(db.Session, turn.session_id)
     if sess is None:
-        raise ServiceError("세션을 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_session", lang))
 
     history = _history(session, sess.id)
-    card_row = _upsert_card(session, sess, history)
+    card_row = _upsert_card(session, sess, history, lang=lang)
     card = row_to_card(card_row)
 
     question = interview.next_question(
-        get_llm(), instrument=sess.instrument, card=card, history=history
+        get_llm(), instrument=sess.instrument, card=card, history=history, lang=lang
     )
     next_turn = db.Turn(
         id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung
@@ -222,7 +229,7 @@ def answer_turn(
     answered = sum(1 for _, a in history if a)
     return {
         "card": card_view(card),
-        "report": interview.slot_report(card),
+        "report": interview.slot_report(card, lang),
         "turn_id": next_turn.id,
         "question": question.text,
         "rung": question.rung,
@@ -241,11 +248,12 @@ def _history(session: OrmSession, session_id: str) -> list[tuple[str, str]]:
 
 
 def _upsert_card(
-    session: OrmSession, sess: db.Session, history: list[tuple[str, str]]
+    session: OrmSession, sess: db.Session, history: list[tuple[str, str]],
+    *, lang: str = LANG_DEFAULT,
 ) -> db.CardRow:
     """대화가 쌓일 때마다 카드를 다시 뽑는다. 초안은 계속 덮어써도 안전하다 —
     승인 후에는 덮어쓰지 않는다 (전문가가 고친 것이 기계 추출보다 우선)."""
-    draft = interview.capture(get_llm(), history)
+    draft = interview.capture(get_llm(), history, lang=lang)
     if sess.card_id:
         row = session.get(db.CardRow, sess.card_id)
         if row is not None and row.status != CardStatus.DRAFT.value:
@@ -278,6 +286,7 @@ def confirm_card(
     visibility: str = "",
     for_whom: str = "",
     open_at: date | None = None,
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """전문가 승인 — 이때부터 분신이 인용한다.
 
@@ -285,7 +294,7 @@ def confirm_card(
     """
     row = session.get(db.CardRow, card_id)
     if row is None:
-        raise ServiceError("그 카드를 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_card", lang))
     card = row_to_card(row)
 
     for key, value in (edits or {}).items():
@@ -303,10 +312,7 @@ def confirm_card(
         card.open_at = open_at
 
     if not card.cues:
-        raise ServiceError(
-            "신호가 비어 있습니다. '무엇을 보고 아는가' 없이는 후배가 쓸 수 없습니다. "
-            "한 줄만 채워주세요."
-        )
+        raise ServiceError(t("err.no_cues", lang))
     card.status = CardStatus.CONFIRMED
     write_card(row, card)
     _log(session, card.expert, legacy.LedgerEvent.CARD_CONFIRMED, card_id=card.id)
@@ -316,18 +322,18 @@ def confirm_card(
     session.commit()
     return {
         "card": card_view(card),
-        "warning": "예외가 비어 있습니다. 예외 없는 판단은 후배에게 위험합니다."
-        if not card.exceptions
-        else "",
+        "warning": t("warn.no_exceptions", lang) if not card.exceptions else "",
         "filled_gap": filled,
     }
 
 
-def dormant_card(session: OrmSession, card_id: str) -> dict[str, Any]:
+def dormant_card(
+    session: OrmSession, card_id: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
     """폐기가 아니라 **잠복.** 조건이 바뀌면 되살아난다."""
     row = session.get(db.CardRow, card_id)
     if row is None:
-        raise ServiceError("그 카드를 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_card", lang))
     row.status = CardStatus.DORMANT.value
     session.commit()
     return {"card_id": card_id, "status": row.status}
@@ -335,22 +341,25 @@ def dormant_card(session: OrmSession, card_id: str) -> dict[str, Any]:
 
 # ------------------------------------------------------------------- 오답 채점
 
-def grade_prompt(session: OrmSession, expert: str, topic: str) -> dict[str, Any]:
+def grade_prompt(
+    session: OrmSession, expert: str, topic: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
     """⚖️ 오답 채점기 — 그럴듯한 오답을 내고 전문가에게 빨간펜을 준다."""
-    get_expert(session, expert)
+    get_expert(session, expert, lang=lang)
     cards = cards_of(session, expert)
     domain = cards[0].domain if cards else ""
-    out = interview.wrong_answer(get_llm(), topic, domain)
+    out = interview.wrong_answer(get_llm(), topic, domain, lang=lang)
     return {"topic": topic, **out}
 
 
 # --------------------------------------------------------------------- 분신
 
 def ask_alter(
-    session: OrmSession, expert: str, question: str, *, asker: str = ""
+    session: OrmSession, expert: str, question: str, *, asker: str = "",
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """후배의 질문 한 번. 답했으면 인용을, 못 답했으면 공백을 남긴다."""
-    expert_row = get_expert(session, expert)
+    expert_row = get_expert(session, expert, lang=lang)
     persona = persona_of(expert_row)
     cards = cards_of(session, expert)
 
@@ -365,6 +374,7 @@ def ask_alter(
         confidence_floor=settings.confidence_floor,
         days_left=days_left(expert_row),
         alternatives=_other_experts(session, expert),
+        lang=lang,
     )
 
     ask = db.Ask(
@@ -394,7 +404,7 @@ def ask_alter(
             detail=question[:120],
         )
     session.commit()
-    return {"ask_id": ask.id, "persona": persona.label, **reply.as_dict()}
+    return {"ask_id": ask.id, "persona": persona.label(lang), **reply.as_dict()}
 
 
 def _other_experts(session: OrmSession, expert: str) -> list[str]:
@@ -475,16 +485,17 @@ def report_anchor(
     metric: str = "",
     baseline: float = 0.0,
     observed: float = 0.0,
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """적용 보고 — ✔ 현장 검증 배지의 유일한 출처.
 
     "안 맞았다" 는 숨기지 않는다. 카드를 ``contested`` 로 바꾸고 전문가 큐에 올린다.
     """
     if verdict not in ("helped", "missed", "pending"):
-        raise ServiceError("보고 값이 올바르지 않습니다.")
+        raise ServiceError(t("err.bad_verdict", lang))
     row = session.get(db.CardRow, card_id)
     if row is None:
-        raise ServiceError("그 카드를 찾을 수 없습니다.")
+        raise ServiceError(t("err.no_card", lang))
 
     session.add(
         db.Anchor(
@@ -511,9 +522,12 @@ def report_anchor(
     return {"card_id": card_id, "status": row.status, "helped": row.helped, "missed": row.missed}
 
 
-def thank(session: OrmSession, expert: str, message: str, *, actor: str = "") -> dict:
+def thank(
+    session: OrmSession, expert: str, message: str, *, actor: str = "",
+    lang: str = LANG_DEFAULT,
+) -> dict:
     """후배가 남기는 감사 — 퇴직일 리포트에 그대로 실린다."""
-    get_expert(session, expert)
+    get_expert(session, expert, lang=lang)
     _log(session, expert, legacy.LedgerEvent.THANKS, actor=actor, detail=message[:300])
     session.commit()
     return {"ok": True}
@@ -549,9 +563,11 @@ def card_view(card: Card) -> dict[str, Any]:
     }
 
 
-def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
+def expert_home(
+    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
     """전문가 홈. **순서가 곧 우선순위다** — 보람 → 공백 → 교정 → 지도 → 도구함."""
-    row = get_expert(session, expert)
+    row = get_expert(session, expert, lang=lang)
     cards = cards_of(session, expert)
     live = [c for c in cards if c.status is not CardStatus.DORMANT]
     gaps = open_gaps(session, expert)
@@ -575,6 +591,11 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
         select(func.count(func.distinct(db.Ask.asker)))
         .where(db.Ask.expert == expert, db.Ask.asker != "")
     ) or 0
+    # 한 답이 카드 여러 장을 인용할 수 있으므로 인용 횟수와 답한 횟수는 다르다.
+    answers = session.scalar(
+        select(func.count()).select_from(db.Ask)
+        .where(db.Ask.expert == expert, db.Ask.answered.is_(True))
+    ) or 0
 
     summary = legacy.summarize(
         expert,
@@ -582,6 +603,7 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
         cards_alive=len(live),
         cards_verified=sum(1 for c in live if c.status is CardStatus.ANCHORED),
         citations=sum(c.citations for c in live),
+        answers=int(answers),
         askers=int(askers),
         helped=sum(c.helped for c in live),
         missed=sum(c.missed for c in live),
@@ -590,7 +612,7 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
     )
     risk = cov.succession_risk(expert, cards, days_left=days_left(row), flags=flags)
     suggestions = recommend(
-        live, flags=flags, open_gaps=len(gaps),
+        live, lang=lang, flags=flags, open_gaps=len(gaps),
         card_count=len(live), threshold=settings.unlock_after_cards,
     )
 
@@ -598,22 +620,31 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
         "expert": {
             "id": row.id,
             "name": row.display_name or row.id,
-            "alter_label": persona_of(row).label,
+            "alter_label": persona_of(row).label(lang),
             "alter_active": row.alter_active,
             "days_left": days_left(row),
         },
         "legacy": {
-            "headline": summary.headline(),
+            "headline": t(
+                summary.headline_key, lang,
+                askers=summary.askers, cited=summary.answers,
+                alive=summary.cards_alive,
+            ),
             "cards_alive": summary.cards_alive,
             "cards_verified": summary.cards_verified,
             "citations": summary.citations,
+            "answers": summary.answers,
             "askers": summary.askers,
             "helped": summary.helped,
             "missed": summary.missed,
             "help_rate": summary.help_rate,
             "hands_items": summary.hands_items,
             "recent": [
-                {"sentence": e.sentence, "event": e.event.value, "card_id": e.card_id}
+                {
+                    "sentence": e.sentence(t(f"ledger.{e.event.value}", lang)),
+                    "event": e.event.value,
+                    "card_id": e.card_id,
+                }
                 for e in summary.recent
             ],
         },
@@ -631,7 +662,10 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
             "coverage": risk.coverage,
             "hands_ratio": risk.hands_ratio,
             "risk": risk.score,
-            "level": risk.level,
+            "level": t(
+                {"심각": "risk.high", "중": "risk.mid", "저": "risk.low"}[risk.level],
+                lang,
+            ),
             "domains": [
                 {
                     "domain": d.domain, "coverage": round(d.coverage, 2),
@@ -642,10 +676,7 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
             ],
         },
         "toolbox": [
-            {
-                "key": i.key, "emoji": i.emoji, "name": i.name, "pitch": i.pitch,
-                "minutes": i.minutes,
-            }
+            {"key": i.key, "emoji": i.emoji, "minutes": i.minutes, **i.localized(lang)}
             for i in unlocked(len(live), threshold=settings.unlock_after_cards)
         ],
         "locked": max(
@@ -655,7 +686,8 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
         "suggestions": [
             {
                 "key": s.instrument.key, "emoji": s.instrument.emoji,
-                "name": s.instrument.name, "because": s.because, "card_id": s.card_id,
+                "name": s.instrument.localized(lang)["name"],
+                "because": s.because, "card_id": s.card_id,
             }
             for s in suggestions
         ],
@@ -663,15 +695,18 @@ def expert_home(session: OrmSession, expert: str) -> dict[str, Any]:
     }
 
 
-def flag_domain(session: OrmSession, expert: str, domain: str, note: str = "") -> dict:
+def flag_domain(
+    session: OrmSession, expert: str, domain: str, note: str = "",
+    *, lang: str = LANG_DEFAULT,
+) -> dict:
     """🚩 전문가가 직접 깃발을 꽂는다. 기계 계산보다 이걸 먼저 본다."""
-    get_expert(session, expert)
+    get_expert(session, expert, lang=lang)
     session.add(db.Flag(expert=expert, domain=domain, note=note))
     session.commit()
     return {"ok": True, "domain": domain}
 
 
-def admin_board(session: OrmSession) -> dict[str, Any]:
+def admin_board(session: OrmSession, *, lang: str = LANG_DEFAULT) -> dict[str, Any]:
     """승계 리스크 보드. **정렬 순서가 곧 개입 순서다.**"""
     rows = session.scalars(select(db.Expert)).all()
     board = []
@@ -682,6 +717,7 @@ def admin_board(session: OrmSession) -> dict[str, Any]:
             for f in session.scalars(select(db.Flag).where(db.Flag.expert == row.id)).all()
         }
         risk = cov.succession_risk(row.id, cards, days_left=days_left(row), flags=flags)
+        level_key = {"심각": "risk.high", "중": "risk.mid", "저": "risk.low"}[risk.level]
         board.append(
             {
                 "expert": row.id,
@@ -690,7 +726,7 @@ def admin_board(session: OrmSession) -> dict[str, Any]:
                 "coverage": risk.coverage,
                 "hands_ratio": risk.hands_ratio,
                 "risk": risk.score,
-                "level": risk.level,
+                "level": t(level_key, lang),
                 "cards": len(cards),
                 "gaps": len(open_gaps(session, row.id)),
                 "weakest": risk.domains[0].domain if risk.domains else "",

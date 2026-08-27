@@ -22,6 +22,7 @@ import logging
 from dataclasses import dataclass, field
 
 from app.capture.llm import BaseLLM
+from app.i18n import t
 from app.core.card import Card, CardStatus, Tacitness
 from app.core.retrieval import Retrieval, retrieve
 
@@ -40,10 +41,14 @@ class Persona:
     taboos: list[str] = field(default_factory=list)
     active: bool = True   # 전문가가 자기 분신을 끌 수 있다 (통제권)
 
-    @property
-    def label(self) -> str:
-        """화면에 뜨는 이름. **사칭 금지 규약의 구현.**"""
-        return f"{self.display_name or self.expert}의 분신"
+    def label(self, lang: str = "en") -> str:
+        """화면에 뜨는 이름. **사칭 금지 규약의 구현.**
+
+        어느 언어에서도 사람 이름 단독으로 뜨지 않는다 — 언제나 "…의 분신" /
+        "…'s alter" 다. ``tests/test_core.py::test_alter_label_never_impersonates``
+        가 이것을 강제한다.
+        """
+        return t("alter.of", lang, self.display_name or self.expert)
 
 
 @dataclass
@@ -85,9 +90,9 @@ class AlterReply:
         }
 
 
-def _system(persona: Persona) -> str:
+def _system_ko(persona: Persona) -> str:
     lines = [
-        f"너는 '{persona.label}' 이다. {persona.display_name or persona.expert} 본인이 "
+        f"너는 '{persona.label('ko')}' 이다. {persona.display_name or persona.expert} 본인이 "
         "아니라 그가 남긴 판단 카드로만 말하는 분신이다.",
         "",
         "절대 규칙:",
@@ -106,43 +111,96 @@ def _system(persona: Persona) -> str:
     return "\n".join(lines)
 
 
-def _cards_block(cards: list[Card]) -> str:
+def _system_en(persona: Persona) -> str:
+    who = persona.display_name or persona.expert
+    lines = [
+        f"You are '{persona.label('en')}'. You are not {who} — you are an alter that "
+        "speaks only from the judgment cards they left behind.",
+        "",
+        "Absolute rules:",
+        "1. Answer only from the cards provided below. Do not fill gaps with general "
+        "knowledge, not even common sense. If you do not know, say so.",
+        "2. Mark the card you used at the end of the sentence as [#CARD_ID].",
+        "3. If a card has exceptions, you must state them. An answer that drops the "
+        "exception is dangerous.",
+        "4. If a card has a war story, do not fold it away — a junior needs it most.",
+        "5. Never pretend to be the person. You are an alter.",
+        "6. Answer in English, short, in the voice of the shop floor. Keep the "
+        "expert's own terms exactly as written on the card.",
+    ]
+    if persona.sayings:
+        lines.append("\nThings this person said often (for voice): "
+                     + " / ".join(persona.sayings))
+    if persona.taboos:
+        lines.append("What this person taught juniors never to do: "
+                     + " / ".join(persona.taboos))
+    return "\n".join(lines)
+
+
+def _system(persona: Persona, lang: str = "en") -> str:
+    return _system_ko(persona) if lang == "ko" else _system_en(persona)
+
+
+def _cards_block(cards: list[Card], lang: str = "en") -> str:
+    """카드 원문 블록. **카드 내용은 번역하지 않는다** — 전문가가 자기 현장
+    용어로 쓴 원본이고, 번역하면 지식이 아니라 요약이 된다. 라벨만 언어를 탄다."""
+    L = {
+        "situation": t("slot.situation", lang),
+        "cues": t("slot.cues", lang),
+        "judgment": t("slot.judgment", lang),
+        "action": t("slot.action", lang),
+        "rationale": t("slot.rationale", lang),
+        "exceptions": t("slot.exceptions", lang),
+        "failure": t("slot.failure", lang),
+    }
+    verified = "(현장 검증됨)" if lang == "ko" else "(verified in the field)"
+    contested = (
+        "(최근 안 맞았다는 보고가 있음 — 그대로 알려줄 것)" if lang == "ko"
+        else "(recently reported as not holding — say so plainly)"
+    )
     out = []
     for c in cards:
         parts = [f"[#{c.id}] {c.title}"]
         if c.situation:
-            parts.append(f"  상황: {c.situation}")
+            parts.append(f"  {L['situation']}: {c.situation}")
         if c.cues:
-            parts.append("  신호: " + " / ".join(c.cues))
+            parts.append(f"  {L['cues']}: " + " / ".join(c.cues))
         if c.judgment:
-            parts.append(f"  판단: {c.judgment}")
+            parts.append(f"  {L['judgment']}: {c.judgment}")
         if c.action:
-            parts.append("  조치: " + " → ".join(c.action))
+            parts.append(f"  {L['action']}: " + " → ".join(c.action))
         if c.rationale:
-            parts.append(f"  근거: {c.rationale}")
+            parts.append(f"  {L['rationale']}: {c.rationale}")
         if c.exceptions:
-            parts.append("  예외: " + " / ".join(c.exceptions))
+            parts.append(f"  {L['exceptions']}: " + " / ".join(c.exceptions))
         if c.failure:
-            parts.append(f"  실패담: {c.failure}")
+            parts.append(f"  {L['failure']}: {c.failure}")
         if c.status is CardStatus.ANCHORED:
-            parts.append("  (현장 검증됨)")
+            parts.append(f"  {verified}")
         if c.status is CardStatus.CONTESTED:
-            parts.append("  (최근 안 맞았다는 보고가 있음 — 그대로 알려줄 것)")
+            parts.append(f"  {contested}")
         out.append("\n".join(parts))
     return "\n\n".join(out)
 
 
-def gap_message(persona: Persona, *, days_left: int | None, alternatives: list[str]) -> str:
+def gap_message(
+    persona: Persona,
+    *,
+    days_left: int | None,
+    alternatives: list[str],
+    lang: str = "en",
+) -> str:
     """모른다고 말하는 화면. **이걸 잘 말하는 것이 이 제품의 기능이다.**"""
+    sent = t("alter.msg.gap.sent", lang)
+    if days_left is not None:
+        sent += t("alter.msg.gap.dday", lang, days_left)
     lines = [
-        f"이건 {persona.display_name or persona.expert}님이 남기지 않은 영역입니다.",
-        "지어내지 않겠습니다.",
+        t("alter.msg.gap", lang, name=persona.display_name or persona.expert),
         "",
-        "▸ 질문을 그대로 전달했습니다"
-        + (f" (재직 D-{days_left})" if days_left is not None else ""),
+        sent,
     ]
     if alternatives:
-        lines.append("▸ 비슷한 영역을 남긴 사람: " + ", ".join(alternatives))
+        lines.append(t("alter.msg.gap.alt", lang, ", ".join(alternatives)))
     return "\n".join(lines)
 
 
@@ -158,12 +216,12 @@ def respond(
     confidence_floor: float = 0.35,
     days_left: int | None = None,
     alternatives: list[str] | None = None,
+    lang: str = "en",
 ) -> AlterReply:
     """후배의 질문 → 분신의 답. 근거 없으면 답하지 않는다."""
     if not persona.active:
         return AlterReply(
-            text=f"{persona.label}은 지금 멈춰 있습니다. "
-                 "본인이 직접 정지시켜 두었습니다.",
+            text=t("alter.msg.stopped", lang, label=persona.label(lang)),
             cards=[], confidence=0.0, is_gap=True,
         )
 
@@ -179,40 +237,46 @@ def respond(
     if result.is_gap:
         # LLM 은 여기서 호출되지 않는다. 이 줄이 이 파일의 존재 이유다.
         return AlterReply(
-            text=gap_message(persona, days_left=days_left, alternatives=alternatives or []),
+            text=gap_message(
+                persona, days_left=days_left,
+                alternatives=alternatives or [], lang=lang,
+            ),
             cards=[],
             confidence=result.confidence,
             is_gap=True,
         )
 
     chosen = result.cards
-    prompt = (
-        f"[{persona.display_name or persona.expert}님이 남긴 판단 카드]\n"
-        f"{_cards_block(chosen)}\n\n"
-        f"[후배의 질문]\n{question}\n\n"
-        "위 카드 안에서만 답해라. 카드에 없는 부분은 '그건 남기지 않으셨습니다' 라고 말해라."
-    )
+    who = persona.display_name or persona.expert
+    if lang == "ko":
+        prompt = (
+            f"[{who}님이 남긴 판단 카드]\n{_cards_block(chosen, lang)}\n\n"
+            f"[후배의 질문]\n{question}\n\n"
+            "위 카드 안에서만 답해라. 카드에 없는 부분은 '그건 남기지 않으셨습니다' "
+            "라고 말해라."
+        )
+    else:
+        prompt = (
+            f"[Judgment cards {who} left behind]\n{_cards_block(chosen, lang)}\n\n"
+            f"[The junior's question]\n{question}\n\n"
+            "Answer only from within these cards. For anything not on them, say "
+            "\"they did not leave that behind\"."
+        )
     stubbed = False
     try:
-        text = llm.answer(_system(persona), prompt).strip()
+        text = llm.answer(_system(persona, lang), prompt).strip()
     except Exception as exc:
         log.warning("분신 응답 실패, 카드 원문으로 대체: %s", exc)
         text = ""
     if not text or text.startswith("⚠"):
         # stub/실패 시에도 **카드 원문**을 보여준다. 지어내는 것보다 낫다.
         stubbed = True
-        text = (
-            "⚠ LLM 미연결 — 남기신 판단 카드를 그대로 보여드립니다.\n\n"
-            + _cards_block(chosen)
-        )
+        text = t("alter.msg.stub", lang) + "\n\n" + _cards_block(chosen, lang)
 
     contested = [c.id for c in chosen if c.status is CardStatus.CONTESTED]
     notice = ""
     if any(c.tacitness is Tacitness.HANDS for c in chosen):
-        notice = (
-            "이 판단은 읽어서 되는 종류가 아니라고 표시해 두셨습니다. "
-            "가능하면 직접 옆에서 보세요."
-        )
+        notice = t("alter.msg.apprentice", lang)
     return AlterReply(
         text=text,
         cards=chosen,

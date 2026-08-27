@@ -28,20 +28,49 @@ _JOSA = (
     "가", "이", "은", "는", "을", "를", "에", "의", "도", "만", "로", "과", "와", "나",
 )
 
-#: 한국어 조사/불용어 최소 집합. 형태소 분석기를 붙이지 않는 이유는 배포 단순성이다
+#: 한국어 불용어 최소 집합. 형태소 분석기를 붙이지 않는 이유는 배포 단순성이다
 #: (카드 수백 장 규모에서 이득 < 복잡도 — docs/design.md §7).
-_STOP = {
+_STOP_KO = {
     "그리고", "그런데", "하지만", "어떻게", "무엇", "뭐", "언제", "왜", "제가",
     "저는", "이거", "그거", "저거", "합니다", "하나요", "인가요", "있나요", "때",
     "경우", "관련", "문제", "상황", "해야", "하면", "되나요", "어떤",
 }
 
+#: 영어 불용어. 이게 없으면 "how do I …" 의 기능어가 카드 본문에 걸려 **답하지
+#: 말아야 할 질문에 확신도가 붙는다.** 공백 판정이 이 목록에 직접 달려 있다.
+_STOP_EN = {
+    "the", "a", "an", "and", "or", "but", "if", "of", "on", "in", "at", "to",
+    "for", "with", "from", "by", "as", "is", "are", "was", "were", "be", "been",
+    "do", "does", "did", "have", "has", "had", "can", "could", "should", "would",
+    "will", "shall", "may", "might", "must", "how", "what", "when", "where",
+    "why", "who", "which", "this", "that", "these", "those", "there", "here",
+    "it", "its", "my", "your", "our", "their", "his", "her", "we", "you", "they",
+    "me", "him", "them", "us", "about", "into", "over", "under", "than", "then",
+    "so", "not", "no", "any", "some", "all", "just", "only", "get", "got",
+    "new", "old", "one", "two", "please", "thanks", "hi", "hello",
+}
+
+_STOP = _STOP_KO | _STOP_EN
+
+
+def _is_hangul(token: str) -> bool:
+    return any("\uac00" <= ch <= "\ud7a3" for ch in token)
+
 
 def _stem(token: str) -> str:
-    """조사를 뗀다. 어간이 2글자 미만으로 줄면 원형을 유지한다."""
-    for josa in _JOSA:
-        if token.endswith(josa) and len(token) - len(josa) >= 2:
-            return token[: -len(josa)]
+    """한국어는 조사를 떼고, 영어는 복수형 -s 만 뗀다.
+
+    영어 어간 추출기를 붙이지 않는 이유는 정확도가 아니라 **예측 가능성**이다.
+    이 점수가 공백 판정의 임계값이 되므로, 틀렸을 때 왜 틀렸는지 사람이 즉시
+    설명할 수 있어야 한다.
+    """
+    if _is_hangul(token):
+        for josa in _JOSA:
+            if token.endswith(josa) and len(token) - len(josa) >= 2:
+                return token[: -len(josa)]
+        return token
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
     return token
 
 
@@ -57,10 +86,13 @@ def tokenize(text: str) -> list[str]:
 
 
 def _overlap(query: set[str], field: set[str]) -> float:
-    """겹침 비율. 완전 일치가 안 되면 **부분 일치**(복합명사)로 부분 점수를 준다.
+    """겹침 비율. 한국어 복합명사에만 **부분 일치**로 부분 점수를 준다.
 
-    "플로우마크" 와 "플로우마크가" 는 조사 제거로 잡히지만, "사출압력" 과
-    "압력" 같은 복합명사는 부분 일치가 필요하다.
+    "사출압력" 과 "압력" 은 부분 일치가 필요하다 — 한국어는 띄어쓰기 없이 붙는다.
+    **영어에는 이 규칙을 적용하지 않는다.** 적용하면 "rate" 가 "calibrate" 에,
+    "the" 가 "then" 에 걸려서 *답하지 말아야 할 질문에 확신도가 붙는다.*
+    실제로 그렇게 새는 것을 데모 시드에서 잡았고,
+    ``test_unrelated_english_question_is_always_a_gap`` 가 재발을 막는다.
     """
     if not query:
         return 0.0
@@ -73,8 +105,12 @@ def _overlap(query: set[str], field: set[str]) -> float:
         if token in field:
             hit += 1.0
             continue
+        if not _is_hangul(token):
+            continue  # 라틴 문자는 정확 일치만 — 부분 일치는 오답을 만든다
         if len(token) >= 3 and any(
-            token in f or (len(f) >= 3 and f in token) for f in field
+            token in f or (len(f) >= 3 and f in token)
+            for f in field
+            if _is_hangul(f)
         ):
             hit += 0.6
     return min(hit / denom, 1.0)

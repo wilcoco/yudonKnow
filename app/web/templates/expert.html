@@ -1,52 +1,52 @@
 <!doctype html>
-<html lang="ko">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yudonKnow — 내 지식 남기기</title>
+<title>yudonKnow — {{ L['landing.expert.cta'] }}</title>
 {% include "_style.html" %}
 </head>
 <body>
 <header>
   <a class="brand" href="/">yudon<span>Know</span></a>
   <div class="who">
-    <span>나</span>
-    <input type="text" id="me" placeholder="아이디" value="">
-    <button onclick="loadHome()">열기</button>
+    <span>{{ L['nav.me'] }}</span>
+    <input type="text" id="me" placeholder="{{ L['nav.id'] }}" value="">
+    <button onclick="loadHome()">{{ L['nav.open'] }}</button>
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
 </header>
 
 <main class="wide">
   <div class="err" id="err"></div>
 
-  <!-- ───────────────── 온보딩 ───────────────── -->
+  <!-- ───────────── onboarding ───────────── -->
   <section id="onboard" hidden>
-    <h1>당신 것입니다.</h1>
-    <p class="lead">세 가지만 여쭙습니다. 문서는 요구하지 않습니다.</p>
+    <h1>{{ L['ob.title'] }}</h1>
+    <p class="lead">{{ L['ob.lede'] }}</p>
 
     <div class="card">
-      <p class="t">1. 당신이 없으면 이 팀이 못 하는 일은 무엇인가요?</p>
-      <textarea id="ob_domains" placeholder="예)&#10;신규 금형 초도 양산 때 불량 원인 판독&#10;협력사 품질 사고 초기 대응&#10;설비 이상음으로 고장 예측"></textarea>
-      <p class="quiet">한 줄에 하나씩. 나중에 얼마든지 늘릴 수 있습니다.</p>
+      <p class="t">{{ L['ob.q1'] }}</p>
+      <textarea id="ob_domains" placeholder="{{ L['ob.q1.ph'] }}"></textarea>
+      <p class="quiet">{{ L['ob.q1.note'] }}</p>
     </div>
 
     <div class="card">
-      <p class="t">2. 당신의 말투 — 분신이 이걸로 말합니다</p>
-      <textarea id="ob_sayings" style="min-height:70px" placeholder="자주 하시는 말 (한 줄에 하나)&#10;예) 그거 온도 아니야, 속도부터 봐"></textarea>
-      <textarea id="ob_taboos" style="min-height:70px;margin-top:8px" placeholder="후배에게 절대 하지 말라고 가르치는 것 (한 줄에 하나)&#10;예) 원인 모른 채 설정값 되돌리지 마라"></textarea>
+      <p class="t">{{ L['ob.q2'] }}</p>
+      <textarea id="ob_sayings" style="min-height:70px" placeholder="{{ L['ob.q2.ph1'] }}"></textarea>
+      <textarea id="ob_taboos" style="min-height:70px;margin-top:8px" placeholder="{{ L['ob.q2.ph2'] }}"></textarea>
     </div>
 
     <div class="card">
-      <p class="t">3. 언제까지 계시나요? <span class="quiet">(선택 — 급한 곳부터 파기 위해서입니다)</span></p>
+      <p class="t">{{ L['ob.q3'] }} <span class="quiet">{{ L['ob.q3.note'] }}</span></p>
       <input type="text" id="ob_leaving" placeholder="2026-12-31">
     </div>
 
-    <button class="amber block" onclick="createExpert()">시작하기</button>
+    <button class="amber block" onclick="createExpert()">{{ L['ob.start'] }}</button>
   </section>
 
-  <!-- ───────────────── 홈 ───────────────── -->
+  <!-- ───────────── home ───────────── -->
   <section id="home" hidden>
-    <!-- ① 보람 : 항상 맨 위 -->
     <div class="card hero">
       <div class="badges">
         <span class="b am" id="h_alter"></span>
@@ -57,45 +57,39 @@
       <div id="h_recent"></div>
       <div class="acts">
         <button id="h_toggle" onclick="toggleAlter()"></button>
-        <button onclick="exportCards()">내 카드 내보내기</button>
-        <button onclick="location.href='/alter/'+encodeURIComponent(me())">내 분신 만나보기</button>
+        <button onclick="exportCards()">{{ L['home.export'] }}</button>
+        <button onclick="meetAlter()">{{ L['home.meet'] }}</button>
       </div>
     </div>
 
-    <!-- ② 공백 : 후배가 물었는데 못 답한 것 -->
     <div id="h_gaps"></div>
-
-    <!-- ③ 교정 -->
     <div id="h_contested"></div>
 
-    <!-- ④ 머릿속 지도 -->
-    <h2 class="sec">🗺 머릿속 지도</h2>
+    <h2 class="sec">{{ L['home.map'] }}</h2>
     <div class="card">
       <div id="h_map"></div>
       <div class="row" style="margin-top:10px">
-        <input type="text" id="flag_domain" placeholder="아직 크게 남은 영역에 🚩 깃발 꽂기">
-        <button onclick="addFlag()">꽂기</button>
+        <input type="text" id="flag_domain" placeholder="{{ L['home.flag.ph'] }}">
+        <button onclick="addFlag()">{{ L['home.flag.cta'] }}</button>
       </div>
       <p class="quiet" id="h_hands"></p>
     </div>
 
-    <!-- ⑤ 도구함 -->
-    <h2 class="sec">🧰 도구함 — 오늘 무엇으로 파시겠습니까</h2>
+    <h2 class="sec">{{ L['home.toolbox'] }}</h2>
     <div id="h_suggest"></div>
     <div class="grid g3" id="h_tools"></div>
     <p class="quiet" id="h_locked"></p>
   </section>
 
-  <!-- ───────────────── 발굴 세션 ───────────────── -->
+  <!-- ───────────── excavation session ───────────── -->
   <section id="session" hidden>
     <div class="row" style="align-items:center;margin-bottom:12px">
-      <button onclick="loadHome()">← 홈</button>
+      <button onclick="loadHome()">← {{ L['nav.home'] }}</button>
       <span class="b am" id="s_tool"></span>
       <span class="quiet" id="s_progress"></span>
     </div>
 
     <div class="panes">
-      <!-- 좌: 질문 -->
       <div>
         <div class="card">
           <p class="quiet" id="s_rung"></p>
@@ -104,44 +98,42 @@
         </div>
       </div>
 
-      <!-- 중: 내 답 -->
       <div>
         <div class="card">
-          <textarea id="s_answer" placeholder="말하듯이 적어주세요. 정리하지 않으셔도 됩니다."></textarea>
+          <textarea id="s_answer" placeholder="{{ L['sess.answer.ph'] }}"></textarea>
           <div class="acts">
-            <button class="primary" onclick="sendAnswer(false)">다음 질문</button>
-            <button class="ghost" onclick="sendAnswer(true)">이건 넘길게요</button>
+            <button class="primary" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
+            <button class="ghost" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>
           </div>
         </div>
       </div>
 
-      <!-- 우: 지금 만들어지는 카드 -->
       <div>
         <div class="card">
-          <p class="quiet">지금 만들어지는 판단</p>
+          <p class="quiet">{{ L['sess.building'] }}</p>
           <p class="t" id="s_title">—</p>
           <div id="s_slots" style="margin:8px 0"></div>
           <div class="c" id="s_blocker"></div>
 
           <div style="margin-top:14px">
-            <p class="quiet">🌡 이건 읽어서 되나요?</p>
+            <p class="quiet">{{ L['sess.tacit.q'] }}</p>
             <select id="s_tacit">
-              <option value="speakable">🟢 읽으면 따라 할 수 있다</option>
-              <option value="partial" selected>🟡 읽고 몇 번 해봐야 한다</option>
-              <option value="hands">🔴 손끝이다 — 옆에서 봐야 한다</option>
+              <option value="speakable">{{ L['tacit.speakable'] }}</option>
+              <option value="partial" selected>{{ L['tacit.partial'] }}</option>
+              <option value="hands">{{ L['tacit.hands'] }}</option>
             </select>
-            <p class="quiet" style="margin-top:10px">누가 볼 수 있나요?</p>
+            <p class="quiet" style="margin-top:10px">{{ L['sess.vis.q'] }}</p>
             <select id="s_vis" onchange="visChanged()">
-              <option value="public">사내 공개</option>
-              <option value="targeted">지목한 사람에게만</option>
-              <option value="sealed">봉인 — 내가 정한 날에 열기</option>
-              <option value="private">비공개 — 나만</option>
+              <option value="public">{{ L['vis.public'] }}</option>
+              <option value="targeted">{{ L['vis.targeted'] }}</option>
+              <option value="sealed">{{ L['vis.sealed'] }}</option>
+              <option value="private">{{ L['vis.private'] }}</option>
             </select>
             <input type="text" id="s_vis_arg" hidden style="margin-top:8px">
           </div>
 
           <div class="acts">
-            <button class="amber" onclick="confirmCard()">이대로 남기기</button>
+            <button class="amber" onclick="confirmCard()">{{ L['sess.confirm'] }}</button>
           </div>
           <p class="quiet" id="s_warn"></p>
         </div>
@@ -150,28 +142,36 @@
   </section>
 </main>
 
-<footer>v{{ version }} · 원본 발화는 삭제되지 않습니다. 카드는 해석이고, 해석은 고칠 수 있습니다.</footer>
+<footer>v{{ version }}</footer>
 
 <script>
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
 const $ = id => document.getElementById(id);
 let STATE = {turn:null, card:null, session:null, home:null};
 
 const me = () => $('me').value.trim();
 function show(id){ for(const s of ['onboard','home','session']) $(s).hidden = (s!==id); }
 function err(msg){ $('err').textContent = msg || ''; }
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
 
 async function api(path, opts){
-  const res = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  const sep = path.includes('?') ? '&' : '?';
+  const url = LANG === 'en' ? path : path + sep + 'lang=' + LANG;
+  const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
   const body = await res.json().catch(()=>({}));
-  if(!res.ok){ throw new Error(body.error || body.detail || ('오류 ' + res.status)); }
+  if(!res.ok){ throw new Error(body.error || body.detail || ('HTTP ' + res.status)); }
   return body;
 }
 
-// ── 온보딩 ────────────────────────────────────────────────
+// ── onboarding ───────────────────────────────────────────
 async function createExpert(){
   err('');
   const id = me();
-  if(!id){ err('상단에 아이디를 입력해 주세요.'); return; }
+  if(!id){ err(L['ob.need_id']); return; }
   const leaving = $('ob_leaving').value.trim();
   try{
     await api('/api/experts', {method:'POST', body: JSON.stringify({
@@ -188,7 +188,7 @@ async function createExpert(){
   }catch(e){ err(e.message); }
 }
 
-// ── 홈 ────────────────────────────────────────────────────
+// ── home ────────────────────────────────────────────────
 async function loadHome(){
   err('');
   const id = me();
@@ -202,62 +202,62 @@ async function loadHome(){
   show('home');
 }
 
+function meetAlter(){ location.href = '/alter/' + encodeURIComponent(me()) + qs; }
+
 function renderHome(h){
   $('h_alter').textContent = h.expert.alter_label;
-  $('h_days').textContent = h.expert.days_left === null ? '재직 중'
-    : (h.expert.days_left >= 0 ? 'D-' + h.expert.days_left : '퇴직 후 ' + (-h.expert.days_left) + '일');
+  $('h_days').textContent = h.expert.days_left === null ? L['home.staying']
+    : (h.expert.days_left >= 0 ? 'D-' + h.expert.days_left
+                               : L['home.left'].replace('{}', -h.expert.days_left));
   $('h_headline').textContent = h.legacy.headline;
-  $('h_stats').textContent =
-    `살아있는 판단 ${h.legacy.cards_alive} · 현장 검증 ${h.legacy.cards_verified} · `
-    + `인용 ${h.legacy.citations}회 · 도움됨 ${h.legacy.helped} / 안 맞음 ${h.legacy.missed}`;
+  $('h_stats').textContent = fmt(L['home.stats'], {
+    alive: h.legacy.cards_alive, verified: h.legacy.cards_verified,
+    cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed});
   $('h_recent').innerHTML = (h.legacy.recent||[]).slice(0,4)
     .map(e => `<div class="msg">${esc(e.sentence)}</div>`).join('');
-  $('h_toggle').textContent = h.expert.alter_active ? '내 분신 잠시 멈추기' : '내 분신 다시 켜기';
+  $('h_toggle').textContent = h.expert.alter_active ? L['home.stop_alter'] : L['home.start_alter'];
 
-  // 공백
-  $('h_gaps').innerHTML = h.gaps.length ? `
-    <h2 class="sec">🔴 후배가 물었는데 제가 못 답한 것 ${h.gaps.length}건</h2>` +
-    h.gaps.map(g => `<div class="card alarm">
-      <p class="t">「${esc(g.question)}」</p>
-      <p class="c">${g.count}번 물었습니다${g.askers.length? ' · ' + esc(g.askers.join(', ')) : ''}</p>
-      <div class="acts"><button class="amber" onclick="startSession('ladder')">3분이면 답할 수 있습니다 →</button></div>
-    </div>`).join('') : '';
+  $('h_gaps').innerHTML = h.gaps.length
+    ? `<h2 class="sec">${esc(L['home.gaps.head'].replace('{}', h.gaps.length))}</h2>` +
+      h.gaps.map(g => `<div class="card alarm">
+        <p class="t">「${esc(g.question)}」</p>
+        <p class="c">${esc(L['home.gaps.count'].replace('{}', g.count))}${g.askers.length? ' · ' + esc(g.askers.join(', ')) : ''}</p>
+        <div class="acts"><button class="amber" onclick="startSession('ladder')">${esc(L['home.gaps.cta'])}</button></div>
+      </div>`).join('')
+    : '';
 
-  // 교정
-  $('h_contested').innerHTML = h.contested.length ? `
-    <h2 class="sec">⚠ 후배가 "안 맞았다"고 한 판단 ${h.contested.length}건</h2>` +
-    h.contested.map(c => `<div class="card alarm">
-      <p class="t">${esc(c.title)}</p>
-      <p class="c">도움됨 ${c.helped} / 안 맞음 ${c.missed}</p>
-    </div>`).join('') : '';
+  $('h_contested').innerHTML = h.contested.length
+    ? `<h2 class="sec">${esc(L['home.contested.head'].replace('{}', h.contested.length))}</h2>` +
+      h.contested.map(c => `<div class="card alarm">
+        <p class="t">${esc(c.title)}</p>
+        <p class="c">${esc(fmt(L['home.contested.body'], {helped:c.helped, missed:c.missed}))}</p>
+      </div>`).join('')
+    : '';
 
-  // 지도
   $('h_map').innerHTML = (h.map.domains||[]).map(d => `
     <div style="margin-bottom:10px">
       <div class="row" style="justify-content:space-between">
         <span>${d.flagged?'🚩 ':''}${esc(d.domain)}</span>
-        <span class="quiet">${Math.round(d.coverage*100)}% · 카드 ${d.cards}${d.hands? ' · 🔴'+d.hands:''}</span>
+        <span class="quiet">${Math.round(d.coverage*100)}% · ${esc(L['home.map.cards'].replace('{}', d.cards))}${d.hands? ' · 🔴'+d.hands:''}</span>
       </div>
       <div class="bar ${d.flagged?'flagged':''}"><i style="width:${Math.round(d.coverage*100)}%"></i></div>
-    </div>`).join('') || '<p class="quiet">아직 영역이 없습니다. 아래에서 깃발을 꽂아보세요.</p>';
+    </div>`).join('') || `<p class="quiet">${esc(L['home.map.empty'])}</p>`;
   $('h_hands').textContent = h.legacy.hands_items
-    ? `🔴 손끝 지식 ${h.legacy.hands_items}건은 글로 담기지 않습니다 — 도제 항목으로 따로 모았습니다.` : '';
+    ? L['home.hands'].replace('{}', h.legacy.hands_items) : '';
 
-  // 도구함
   $('h_suggest').innerHTML = (h.suggestions||[]).map(s => `
     <div class="card ok">
       <p class="t">${s.emoji} ${esc(s.name)}</p>
       <p class="c">${esc(s.because)}</p>
-      <div class="acts"><button class="primary" onclick="startSession('${s.key}')">이걸로 시작</button></div>
+      <div class="acts"><button class="primary" onclick="startSession('${s.key}')">${esc(L['home.tool.start'])}</button></div>
     </div>`).join('');
   $('h_tools').innerHTML = (h.toolbox||[]).map(t => `
     <button class="tool" onclick="startSession('${t.key}')">
       <div class="e">${t.emoji}</div><div class="n">${esc(t.name)}</div>
       <div class="p">${esc(t.pitch)}</div>
-      <div class="p" style="margin-top:6px">약 ${t.minutes}분</div>
+      <div class="p" style="margin-top:6px">${esc(L['home.tool.mins'].replace('{}', t.minutes))}</div>
     </button>`).join('');
-  $('h_locked').textContent = h.locked
-    ? `연장 ${h.locked}개는 판단이 몇 개 쌓이면 열립니다. 선택지가 많으면 아무것도 고르지 않게 되니까요.` : '';
+  $('h_locked').textContent = h.locked ? L['home.locked'].replace('{}', h.locked) : '';
 }
 
 async function toggleAlter(){
@@ -284,7 +284,7 @@ async function exportCards(){
   a.click();
 }
 
-// ── 세션 ──────────────────────────────────────────────────
+// ── session ─────────────────────────────────────────────
 async function startSession(instrument){
   err('');
   try{
@@ -293,7 +293,7 @@ async function startSession(instrument){
     STATE.session = s; STATE.turn = s.turn_id; STATE.card = null;
     $('s_tool').textContent = toolName(instrument);
     $('s_question').textContent = s.question;
-    $('s_rung').textContent = s.from_gap ? '후배가 막힌 곳입니다' : '';
+    $('s_rung').textContent = s.from_gap ? L['sess.from_gap'] : '';
     $('s_progress').textContent = `${s.index} / ${s.target}`;
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
     $('s_blocker').textContent = ''; $('s_warn').textContent = '';
@@ -305,37 +305,36 @@ async function startSession(instrument){
 
 function toolName(key){
   const t = (STATE.home?.toolbox||[]).find(t => t.key===key);
-  return t ? t.emoji + ' ' + t.name : '🪜 사다리';
+  return t ? t.emoji + ' ' + t.name : '🪜';
 }
 
 async function loadWrongAnswer(){
   try{
     const w = await api('/api/grade', {method:'POST',
-      body: JSON.stringify({expert: me(), topic: '최근 자주 겪는 상황'})});
+      body: JSON.stringify({expert: me(), topic: (STATE.home?.map?.domains?.[0]?.domain) || 'recent work'})});
     $('s_wrong').innerHTML = `<div class="card alarm" style="margin-top:12px">
-      <p class="quiet">제가 낸 답입니다. 맞습니까?</p>
+      <p class="quiet">${esc(L['sess.wrong.prompt'])}</p>
       <p class="t">${esc(w.wrong_answer)}</p>
       <p class="c">${esc(w.why_tempting||'')}</p>
-      <p class="quiet">틀렸다면 어디가 틀렸는지만 오른쪽에 적어주세요.</p></div>`;
-  }catch(e){ /* 오답 생성 실패는 세션을 막지 않는다 */ }
+      <p class="quiet">${esc(L['sess.wrong.note'])}</p></div>`;
+  }catch(e){ /* a failed wrong-answer must never block the session */ }
 }
 
 async function sendAnswer(skip){
   err('');
   const answer = $('s_answer').value.trim();
-  if(!skip && !answer){ err('한 줄만이라도 적어주세요. 정 어려우면 넘기셔도 됩니다.'); return; }
+  if(!skip && !answer){ err(L['sess.need_answer']); return; }
   try{
     const r = await api('/api/turns/'+STATE.turn, {method:'POST',
       body: JSON.stringify({answer, skip})});
     STATE.turn = r.turn_id; STATE.card = r.card;
     $('s_question').textContent = r.question;
-    $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? ' · 슬슬 마무리해도 좋습니다' : '');
+    $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
     $('s_answer').value = '';
     $('s_title').textContent = r.card.title || '—';
     $('s_slots').innerHTML = r.report.slots
-      .map(s => `<span class="slot ${s.filled?'on':''}">${s.ko}</span>`).join('');
-    $('s_blocker').textContent = r.report.blocker
-      ? '신호(무엇을 보고 아는가)가 비면 후배가 이 판단을 쓸 수 없습니다.' : '';
+      .map(s => `<span class="slot ${s.filled?'on':''}">${esc(s.label)}</span>`).join('');
+    $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
     $('s_wrong').innerHTML = '';
   }catch(e){ err(e.message); }
 }
@@ -344,13 +343,13 @@ function visChanged(){
   const v = $('s_vis').value;
   const arg = $('s_vis_arg');
   arg.hidden = (v === 'public' || v === 'private');
-  arg.placeholder = v === 'targeted' ? '누구에게? (아이디)' : '언제 열까요? (2026-12-31)';
+  arg.placeholder = v === 'targeted' ? L['vis.who.ph'] : L['vis.when.ph'];
   arg.value = '';
 }
 
 async function confirmCard(){
   err('');
-  if(!STATE.card){ err('아직 판단이 만들어지지 않았습니다. 한 번만 더 답해주세요.'); return; }
+  if(!STATE.card){ err(L['sess.no_card']); return; }
   const vis = $('s_vis').value, arg = $('s_vis_arg').value.trim();
   try{
     const r = await api('/api/cards/'+STATE.card.id+'/confirm', {method:'POST', body: JSON.stringify({
@@ -359,18 +358,14 @@ async function confirmCard(){
       for_whom: vis === 'targeted' ? arg : '',
       open_at: vis === 'sealed' && arg ? arg : null,
     })});
-    let msg = '남겼습니다.';
-    if(r.filled_gap) msg += ` 후배가 막혔던 「${r.filled_gap}」이 이걸로 뚫립니다.`;
+    let msg = L['sess.saved'];
+    if(r.filled_gap) msg += L['sess.filled_gap'].replace('{}', r.filled_gap);
     if(r.warning) msg += ' ' + r.warning;
     $('s_warn').textContent = msg;
     setTimeout(loadHome, 1400);
   }catch(e){ err(e.message); }
 }
 
-function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
-  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-// 부팅
 $('me').value = localStorage.getItem('ydk_me') || '';
 loadHome();
 </script>

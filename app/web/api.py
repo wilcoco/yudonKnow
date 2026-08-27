@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Generator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from app import __version__
 from app.capture.instruments import INSTRUMENTS, LADDER
 from app.capture.llm import get_llm
 from app.config import settings
+from app.i18n import pick
 from app.store import db, service
 
 router = APIRouter(prefix="/api")
@@ -25,6 +26,18 @@ def get_session() -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+def get_lang(
+    lang: str | None = Query(default=None),
+    accept_language: str | None = Header(default=None),
+) -> str:
+    """``?lang=`` 우선, 없으면 브라우저가 보낸 ``Accept-Language``, 없으면 영어.
+
+    대회 규정 6조가 영어 지원을 통과 조건으로 두므로 기본값은 영어다. 유돈의
+    브라우저는 한국어를 먼저 보내니 한국어로 뜬다 (``app/i18n.py``).
+    """
+    return pick(accept_language, lang)
 
 
 # ----------------------------------------------------------------- 요청 모델
@@ -106,7 +119,7 @@ def health(session: Session = Depends(get_session)) -> dict:
 
 
 @router.get("/instruments")
-def instruments(cards: int = 0) -> dict:
+def instruments(cards: int = 0, lang: str = Depends(get_lang)) -> dict:
     """도구함. **AI 가 고르지 않는다** — 무엇이 열려 있는지만 알려준다."""
     from app.capture.instruments import unlocked
 
@@ -114,9 +127,9 @@ def instruments(cards: int = 0) -> dict:
     return {
         "instruments": [
             {
-                "key": i.key, "emoji": i.emoji, "name": i.name, "pitch": i.pitch,
-                "minutes": i.minutes, "opener": i.opener,
+                "key": i.key, "emoji": i.emoji, "minutes": i.minutes,
                 "fills": list(i.fills), "unlocked": i.key in open_keys,
+                **i.localized(lang),
             }
             for i in INSTRUMENTS
         ],
@@ -125,7 +138,11 @@ def instruments(cards: int = 0) -> dict:
 
 
 @router.post("/experts")
-def upsert_expert(body: ExpertIn, session: Session = Depends(get_session)) -> dict:
+def upsert_expert(
+    body: ExpertIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
     row = service.ensure_expert(
         session,
         body.id,
@@ -134,11 +151,13 @@ def upsert_expert(body: ExpertIn, session: Session = Depends(get_session)) -> di
         taboos="\n".join(body.taboos),
         leaving_on=body.leaving_on,
     )
-    return {"expert": row.id, "alter": service.persona_of(row).label}
+    return {"expert": row.id, "alter": service.persona_of(row).label(lang)}
 
 
 @router.get("/experts")
-def list_experts(session: Session = Depends(get_session)) -> dict:
+def list_experts(
+    session: Session = Depends(get_session), lang: str = Depends(get_lang)
+) -> dict:
     from sqlalchemy import select
 
     rows = session.scalars(select(db.Expert)).all()
@@ -147,7 +166,7 @@ def list_experts(session: Session = Depends(get_session)) -> dict:
             {
                 "id": r.id,
                 "name": r.display_name or r.id,
-                "alter": service.persona_of(r).label,
+                "alter": service.persona_of(r).label(lang),
                 "active": r.alter_active,
                 "days_left": service.days_left(r),
             }
@@ -157,8 +176,12 @@ def list_experts(session: Session = Depends(get_session)) -> dict:
 
 
 @router.get("/experts/{expert}/home")
-def home(expert: str, session: Session = Depends(get_session)) -> dict:
-    return service.expert_home(session, expert)
+def home(
+    expert: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.expert_home(session, expert, lang=lang)
 
 
 @router.post("/experts/{expert}/alter")
@@ -179,56 +202,109 @@ def export(expert: str, session: Session = Depends(get_session)) -> dict:
 
 
 @router.post("/sessions")
-def start_session(body: SessionIn, session: Session = Depends(get_session)) -> dict:
-    return service.start_session(session, body.expert, instrument=body.instrument)
+def start_session(
+    body: SessionIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.start_session(
+        session, body.expert, instrument=body.instrument, lang=lang
+    )
 
 
 @router.post("/turns/{turn_id}")
-def answer(turn_id: str, body: AnswerIn, session: Session = Depends(get_session)) -> dict:
-    return service.answer_turn(session, turn_id, body.answer, skip=body.skip)
+def answer(
+    turn_id: str,
+    body: AnswerIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.answer_turn(
+        session, turn_id, body.answer, skip=body.skip, lang=lang
+    )
 
 
 @router.post("/cards/{card_id}/confirm")
-def confirm(card_id: str, body: ConfirmIn, session: Session = Depends(get_session)) -> dict:
+def confirm(
+    card_id: str,
+    body: ConfirmIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
     return service.confirm_card(
         session, card_id, edits=body.edits, tacitness=body.tacitness,
         visibility=body.visibility, for_whom=body.for_whom, open_at=body.open_at,
+        lang=lang,
     )
 
 
 @router.post("/cards/{card_id}/dormant")
-def dormant(card_id: str, session: Session = Depends(get_session)) -> dict:
-    return service.dormant_card(session, card_id)
+def dormant(
+    card_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.dormant_card(session, card_id, lang=lang)
 
 
 @router.post("/cards/{card_id}/report")
-def report(card_id: str, body: AnchorIn, session: Session = Depends(get_session)) -> dict:
+def report(
+    card_id: str,
+    body: AnchorIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
     return service.report_anchor(
         session, card_id, body.verdict, reporter=body.reporter, detail=body.detail,
-        metric=body.metric, baseline=body.baseline, observed=body.observed,
+        metric=body.metric, baseline=body.baseline, observed=body.observed, lang=lang,
     )
 
 
 @router.post("/alter/{expert}/ask")
-def ask(expert: str, body: AskIn, session: Session = Depends(get_session)) -> dict:
-    return service.ask_alter(session, expert, body.question, asker=body.asker)
+def ask(
+    expert: str,
+    body: AskIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.ask_alter(
+        session, expert, body.question, asker=body.asker, lang=lang
+    )
 
 
 @router.post("/flags")
-def flag(body: FlagIn, session: Session = Depends(get_session)) -> dict:
-    return service.flag_domain(session, body.expert, body.domain, body.note)
+def flag(
+    body: FlagIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.flag_domain(
+        session, body.expert, body.domain, body.note, lang=lang
+    )
 
 
 @router.post("/grade")
-def grade(body: GradeIn, session: Session = Depends(get_session)) -> dict:
-    return service.grade_prompt(session, body.expert, body.topic)
+def grade(
+    body: GradeIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.grade_prompt(session, body.expert, body.topic, lang=lang)
 
 
 @router.post("/thanks")
-def thanks(body: ThanksIn, session: Session = Depends(get_session)) -> dict:
-    return service.thank(session, body.expert, body.message, actor=body.actor)
+def thanks(
+    body: ThanksIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.thank(
+        session, body.expert, body.message, actor=body.actor, lang=lang
+    )
 
 
 @router.get("/admin/board")
-def board(session: Session = Depends(get_session)) -> dict:
-    return service.admin_board(session)
+def board(
+    session: Session = Depends(get_session), lang: str = Depends(get_lang)
+) -> dict:
+    return service.admin_board(session, lang=lang)

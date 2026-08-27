@@ -14,15 +14,16 @@ from app.core.card import CardStatus
 from app.store import service
 
 
-def _leave_a_judgment(session, expert="hong", **confirm):
+def _leave_a_judgment(session, expert="hong", lang="ko", **confirm):
     """전문가가 판단 하나를 남기는 최소 경로 (연장: 사다리)."""
     service.ensure_expert(session, expert, display_name="홍길동 수석")
-    started = service.start_session(session, expert)
+    started = service.start_session(session, expert, lang=lang)
     service.answer_turn(
         session,
         started["turn_id"],
         "신규 금형 초도 양산에서 플로우마크가 게이트 반대편에만 나왔다. "
         "압력 그래프 초기 피크가 느슨한 걸 보고 온도가 아니라 초기 사출 속도 문제로 봤다.",
+        lang=lang,
     )
     card_id = session.get(__import__("app.store.db", fromlist=["db"]).Session,
                           started["session_id"]).card_id
@@ -41,6 +42,7 @@ def _leave_a_judgment(session, expert="hong", **confirm):
             "rationale": "온도가 원인이면 전면에 고르게 나온다",
             "exceptions": ["재생재 30% 초과 시 안 통한다"],
         },
+        lang=lang,
         **confirm,
     )
     return card_id, result
@@ -51,12 +53,19 @@ def test_the_wheel_closes(session):
     card_id, _ = _leave_a_judgment(session)
 
     reply = service.ask_alter(
-        session, "hong", "플로우마크가 한쪽만 나오는데요", asker="kim"
+        session, "hong", "플로우마크가 한쪽만 나오는데요", asker="kim", lang="ko"
     )
 
     assert reply["is_gap"] is False
     assert card_id in [c["id"] for c in reply["cards"]], "승인한 판단이 인용되지 않았다"
     assert reply["persona"] == "홍길동 수석의 분신"
+
+    # 같은 카드가 영어 화면에서도 그대로 인용된다 — 영어 지원은 규정 6조의
+    # 통과 조건이고, 바퀴는 언어를 타지 않아야 한다.
+    english = service.ask_alter(
+        session, "hong", "flow marks on one side only", asker="lee", lang="en"
+    )
+    assert english["persona"] == "홍길동 수석's alter"
 
 
 def test_unknown_question_becomes_a_gap_in_the_experts_queue(session):
@@ -116,24 +125,34 @@ def test_the_ledger_gives_the_expert_something_back(session):
         session, card_id, "helped", reporter="kim", detail="야간 라인 정지를 막았다"
     )
 
-    home = service.expert_home(session, "hong")
-    assert home["legacy"]["citations"] >= 1
-    assert home["legacy"]["askers"] == 1
-    assert home["legacy"]["helped"] == 1
-    assert any("도움" in e["sentence"] for e in home["legacy"]["recent"])
+    ko = service.expert_home(session, "hong", lang="ko")
+    assert ko["legacy"]["citations"] >= 1
+    assert ko["legacy"]["askers"] == 1
+    assert ko["legacy"]["helped"] == 1
+    assert any("도움" in e["sentence"] for e in ko["legacy"]["recent"])
+
+    en = service.expert_home(session, "hong", lang="en")
+    assert any("helped" in e["sentence"] for e in en["legacy"]["recent"])
+    assert "juniors asked" in en["legacy"]["headline"]
 
 
 def test_confirm_refuses_a_card_without_cues(session):
     """신호 없는 판단은 남길 수 없다 — 후배가 쓸 수 없기 때문이다."""
     service.ensure_expert(session, "hong", display_name="홍길동 수석")
-    started = service.start_session(session, "hong")
-    service.answer_turn(session, started["turn_id"], "그때그때 상황 봐서 판단한다.")
+    started = service.start_session(session, "hong", lang="ko")
+    service.answer_turn(
+        session, started["turn_id"], "그때그때 상황 봐서 판단한다.", lang="ko"
+    )
     from app.store import db
 
     card_id = session.get(db.Session, started["session_id"]).card_id
     with pytest.raises(service.ServiceError) as exc:
-        service.confirm_card(session, card_id)
+        service.confirm_card(session, card_id, lang="ko")
     assert "신호" in str(exc.value)
+
+    with pytest.raises(service.ServiceError) as exc_en:
+        service.confirm_card(session, card_id, lang="en")
+    assert "Cues are empty" in str(exc_en.value)
 
 
 def test_sealed_card_stays_shut_until_the_day_the_expert_chose(session):
@@ -153,7 +172,9 @@ def test_expert_can_stop_their_own_alter(session):
     row.alter_active = False
     session.commit()
 
-    reply = service.ask_alter(session, "hong", "플로우마크가 한쪽만 나와요", asker="kim")
+    reply = service.ask_alter(
+        session, "hong", "플로우마크가 한쪽만 나와요", asker="kim", lang="ko"
+    )
     assert reply["is_gap"] is True
     assert "멈춰" in reply["text"]
 
@@ -169,10 +190,12 @@ def test_export_carries_the_cards_and_the_pic_graph(session):
 def test_filling_a_gap_is_recorded_as_legacy(session):
     """후배가 막혔던 곳을 뚫어준 것 — 전문가가 가장 보람을 느끼는 사건."""
     service.ensure_expert(session, "hong", display_name="홍길동 수석")
-    service.ask_alter(session, "hong", "플로우마크가 한쪽만 나오는데요", asker="kim")
+    service.ask_alter(
+        session, "hong", "플로우마크가 한쪽만 나오는데요", asker="kim", lang="ko"
+    )
 
     _, result = _leave_a_judgment(session)
     assert result["filled_gap"]
 
-    home = service.expert_home(session, "hong")
+    home = service.expert_home(session, "hong", lang="ko")
     assert any("뚫어" in e["sentence"] for e in home["legacy"]["recent"])

@@ -1,55 +1,61 @@
 <!doctype html>
-<html lang="ko">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yudonKnow — 승계 리스크 보드</title>
+<title>yudonKnow — {{ L['landing.admin.cta'] }}</title>
 {% include "_style.html" %}
 </head>
 <body>
 <header>
   <a class="brand" href="/">yudon<span>Know</span></a>
-  <div class="who"><span>관리자</span></div>
+  <div class="who">
+    <span>{{ L['nav.admin'] }}</span>
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
+  </div>
 </header>
 
 <main class="wide">
-  <h1>누가 나가면 무엇이 비나</h1>
-  <p class="lead">정렬 순서가 곧 개입 순서입니다. 맨 위부터 인터뷰를 배정하세요.</p>
+  <h1>{{ L['admin.title'] }}</h1>
+  <p class="lead">{{ L['admin.lede'] }}</p>
   <div id="board"></div>
-  <p class="quiet" style="margin-top:24px">
-    ※ 이 화면은 <b>개인 성과 지표가 아닙니다.</b> 감시로 쓰이는 순간 발굴이 멈춥니다.
-    커버리지 %는 항상 🔴 손끝 비율과 함께 읽으세요 — 담지 <b>못한</b> 양이 거기 있습니다.
-  </p>
+  <p class="quiet" style="margin-top:24px">{{ L['admin.caveat'] | safe }}</p>
 </main>
 
 <footer>v{{ version }}</footer>
 
 <script>
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
 
 (async function(){
-  const r = await fetch('/api/admin/board').then(r=>r.json());
+  const r = await fetch('/api/admin/board' + qs).then(r=>r.json());
   const el = document.getElementById('board');
   if(!r.board || !r.board.length){
-    el.innerHTML = '<div class="card"><p class="c">아직 등록된 전문가가 없습니다.</p></div>';
+    el.innerHTML = `<div class="card"><p class="c">${esc(L['admin.empty'])}</p></div>`;
     return;
   }
+  const HIGH = L['risk.high'], LOW = L['risk.low'];
   el.innerHTML = r.board.map(b => `
-    <div class="card ${b.level==='심각'?'alarm':b.level==='저'?'ok':''}">
+    <div class="card ${b.level===HIGH?'alarm':b.level===LOW?'ok':''}">
       <div class="badges">
-        <span class="b ${b.level==='심각'?'warn':b.level==='저'?'ok':''}">리스크 ${esc(b.level)}</span>
-        <span class="b">${b.days_left===null?'재직 중':'D-'+b.days_left}</span>
-        <span class="b">카드 ${b.cards}</span>
-        ${b.gaps? `<span class="b warn">미답 공백 ${b.gaps}</span>`:''}
+        <span class="b ${b.level===HIGH?'warn':b.level===LOW?'ok':''}">${esc(fmt(L['admin.risk'],{}).replace('{}', b.level))}</span>
+        <span class="b">${b.days_left===null?esc(L['home.staying']):'D-'+b.days_left}</span>
+        <span class="b">${esc(L['admin.cards'].replace('{}', b.cards))}</span>
+        ${b.gaps? `<span class="b warn">${esc(L['admin.gaps'].replace('{}', b.gaps))}</span>`:''}
       </div>
       <p class="t">${esc(b.name)}</p>
       <div class="bar"><i style="width:${Math.round(b.coverage*100)}%"></i></div>
-      <p class="c">커버리지 ${Math.round(b.coverage*100)}% ·
-        🔴 손끝 ${Math.round(b.hands_ratio*100)}% ·
-        가장 빈 영역: ${esc(b.weakest||'—')}</p>
+      <p class="c">${esc(fmt(L['admin.cov'], {
+        cov: Math.round(b.coverage*100),
+        hands: Math.round(b.hands_ratio*100),
+        weak: b.weakest || '—'}))}</p>
       <div class="acts">
-        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}'">분신에게 물어보기</button>
+        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}'+${JSON.stringify(qs)}">${esc(L['admin.ask'])}</button>
       </div>
     </div>`).join('');
 })();

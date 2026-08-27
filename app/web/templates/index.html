@@ -1,75 +1,68 @@
 <!doctype html>
-<html lang="ko">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yudonKnow — 선배는 떠나도, 판단은 남는다</title>
+<title>yudonKnow — {{ L['app.tagline'] }}</title>
 {% include "_style.html" %}
 </head>
 <body>
 <header>
   <a class="brand" href="/">yudon<span>Know</span></a>
   <div class="who">
-    {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>stub 모드 · 동선은 그대로 돕니다</span>{% endif %}
+    {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>{{ L['stub.mode'] }}</span>{% endif %}
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
 </header>
 
 <main>
-  <h1>선배는 떠나도, 판단은 남는다.</h1>
-  <p class="lead">
-    퇴직과 함께 사라지는 것은 문서가 아니라 <b>상황을 읽는 눈</b>입니다.<br>
-    yudonKnow 는 문서를 요구하지 않습니다. <b>암묵지를 스스로 파낼 연장</b>을 드리고,
-    파낸 판단을 <b>분신</b>으로 남깁니다.
-  </p>
+  <h1>{{ L['app.tagline'] }}</h1>
+  <p class="lead">{{ L['app.sub'] }}</p>
 
   <div class="card hero">
-    <p class="t">여기 남기는 것은 당신 것입니다.</p>
-    <div class="c">· 지금은 나만 보기 (비공개)　· 내가 정한 날에 열기 (봉인)　· 특정 후배에게만 (지목)
-· 언제든 전량 내보내기　· 분신이 헛소리하면 당신이 끕니다
-· 실패담은 인사 기록과 연결되지 않습니다</div>
+    <p class="t">{{ L['landing.yours.title'] }}</p>
+    <div class="c">{{ L['landing.yours.body'] }}</div>
   </div>
 
-  <h2 class="sec">누구로 들어오시나요</h2>
+  <h2 class="sec">{{ L['landing.who'] }}</h2>
   <div class="grid g3">
     <div class="card">
-      <p class="t">🧰 전문가</p>
-      <p class="c">연장을 골라 스스로 팝니다. 3분이면 판단 하나가 남습니다.</p>
-      <div class="acts"><button class="amber" onclick="location.href='/expert'">내 지식 남기기</button></div>
+      <p class="t">🧰 {{ L['nav.expert'] }}</p>
+      <p class="c">{{ L['landing.expert.body'] }}</p>
+      <div class="acts"><button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button></div>
     </div>
     <div class="card">
-      <p class="t">💬 후배</p>
-      <p class="c">선배의 분신에게 묻습니다. 근거 카드가 항상 함께 옵니다.</p>
+      <p class="t">💬 {{ L['nav.junior'] }}</p>
+      <p class="c">{{ L['landing.junior.body'] }}</p>
       <div class="row" style="margin-top:10px">
-        <input type="text" id="who" placeholder="선배 아이디 (예: hong)">
+        <input type="text" id="who" placeholder="{{ L['landing.junior.ph'] }}">
       </div>
-      <div class="acts"><button class="primary" onclick="go()">분신에게 묻기</button></div>
+      <div class="acts"><button class="primary" onclick="ask()">{{ L['landing.junior.cta'] }}</button></div>
     </div>
     <div class="card">
-      <p class="t">📊 관리자</p>
-      <p class="c">누가 나가면 무엇이 비는지. 정렬 순서가 곧 개입 순서입니다.</p>
-      <div class="acts"><button onclick="location.href='/admin'">승계 리스크 보드</button></div>
+      <p class="t">📊 {{ L['nav.admin'] }}</p>
+      <p class="c">{{ L['landing.admin.body'] }}</p>
+      <div class="acts"><button onclick="go('/admin')">{{ L['landing.admin.cta'] }}</button></div>
     </div>
   </div>
 
-  <h2 class="sec">한 바퀴</h2>
-  <div class="card">
-    <div class="c">① 연장을 골라 판다 → ② 판단 카드 → ③ 내가 승인 (공개 범위도 내가)
-④ 후배가 분신에게 묻는다 → ⑤ 내 카드로 답한다 <b>+ 근거를 함께 편다</b>
-⑥ 후배가 결과를 보고한다 → <b>✔ 현장 검증</b>
-⑦ 분신이 못 답한 것은 내 큐로 돌아온다 → 다음에 팔 곳이 정해진다
-⑧ 쓰인 흔적이 나에게 돌아온다 — <b>보람</b></div>
-  </div>
+  <h2 class="sec">{{ L['landing.wheel'] }}</h2>
+  <div class="card"><div class="c">{{ L['landing.wheel.body'] }}</div></div>
 </main>
 
 <footer>
-  v{{ version }} · 설계 정본은 <code>docs/design.md</code>, 연장은 <code>docs/self-excavation.md</code>
+  v{{ version }} · <code>docs/design.md</code> · <code>docs/self-excavation.md</code>
 </footer>
 
 <script>
-function go(){
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const q = LANG === 'en' ? '' : ('?lang=' + LANG);
+function go(path){ location.href = path + q; }
+function ask(){
   const id = document.getElementById('who').value.trim();
-  if(!id){ alert('선배 아이디를 입력해 주세요.'); return; }
-  location.href = '/alter/' + encodeURIComponent(id);
+  if(!id){ alert(L['landing.ask.need_id']); return; }
+  go('/alter/' + encodeURIComponent(id));
 }
 </script>
 </body>
