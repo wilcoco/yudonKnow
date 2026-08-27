@@ -1,0 +1,430 @@
+"""발굴 — 질문 만들기와 카드 뽑기.
+
+두 갈래가 있고, 둘 다 여기서 나온다:
+
+* **사다리 모드** — AI 가 운전한다. 5단 사다리(``docs/elicitation-protocol.md``).
+* **연장 모드** — 전문가가 운전한다. 12개 연장(``docs/self-excavation.md``).
+
+LLM 이 없어도 (stub) 질문은 나온다 — 규칙 기반 사다리가 있기 때문이다.
+카드 구조화만 규칙 기반으로 떨어진다. **동선이 키에 인질 잡히지 않게.**
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from dataclasses import dataclass, field
+from typing import Any
+
+from app.capture.instruments import BY_KEY, LADDER, slot_label
+from app.capture.llm import BaseLLM
+from app.core.card import SLOTS, Card, Tacitness
+
+log = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------- 사다리
+
+#: 5단 사다리. 순서가 방법론이다 — 사건 하나에서 시작해 규칙으로 올라간다.
+#: 정본: ``docs/elicitation-protocol.md``. 영문은 규정 6조(영어 지원) 대응.
+_RUNGS: dict[str, tuple[tuple[str, str], ...]] = {
+    "ko": (
+        ("recall", "최근 6개월 중, 당신이 없었으면 팀이 크게 잘못됐을 순간을 하나만 떠올려 주세요."),
+        ("cue", "그때 무엇을 보고 그렇게 판단하셨나요? 화면? 소리? 냄새? 손끝 느낌?"),
+        ("counterfactual", "5년차 후배가 그 상황이었다면 뭘 했을 것 같나요? 그게 왜 틀렸을까요?"),
+        ("boundary", "이 판단이 안 통하는 경우가 있나요? 언제 이 규칙을 버리시나요?"),
+        ("failure", "이 판단으로 크게 틀렸던 적이 있나요? 그때 무슨 일이 있었나요?"),
+    ),
+    "en": (
+        ("recall", "Think of one moment in the last six months when this team would "
+                   "have gone badly wrong without you."),
+        ("cue", "What did you see that told you? A screen? A sound? A smell? "
+                "Something in your hands?"),
+        ("counterfactual", "If someone five years in had been standing there, what "
+                           "would they have done? Why would that be wrong?"),
+        ("boundary", "Is there a case where this judgment does not hold? When do you "
+                     "drop the rule?"),
+        ("failure", "Has this judgment ever been badly wrong? What happened?"),
+    ),
+}
+
+#: 빈 칸을 채우러 가는 질문. 사다리가 끝나도 카드가 비면 여기서 계속 판다.
+_SLOT_QUESTIONS: dict[str, dict[str, str]] = {
+    "ko": {
+        "situation": "이 판단이 나오는 상황을 한 줄로 잡아주세요. 언제, 어디서 벌어지나요?",
+        "cues": "무엇을 보고 아시나요? 남들은 그냥 지나치는 것 중에 당신만 보는 것.",
+        "judgment": "그래서 결론이 뭔가요? 한 문장으로.",
+        "action": "구체적으로 무엇부터 하시나요? 순서대로.",
+        "rationale": "왜 그렇게 되나요? 원리를 아는 대로만.",
+        "exceptions": "이 규칙이 안 통하는 경우가 있나요? 하나라도.",
+        "failure": "이걸로 틀렸던 적이 있나요? 없으면 넘기셔도 됩니다.",
+    },
+    "en": {
+        "situation": "Pin the situation in one line. When and where does this happen?",
+        "cues": "What tells you? The thing others walk past and you don't.",
+        "judgment": "So what's the call? One sentence.",
+        "action": "What do you actually do first? In order.",
+        "rationale": "Why does it work that way? Only as far as you know.",
+        "exceptions": "Is there a case where this rule doesn't hold? Even one.",
+        "failure": "Has this ever been wrong? Skip it if not.",
+    },
+}
+
+
+def rungs(lang: str = "en") -> tuple[tuple[str, str], ...]:
+    return _RUNGS.get(lang, _RUNGS["en"])
+
+
+def slot_question(slot: str, lang: str = "en") -> str:
+    return _SLOT_QUESTIONS.get(lang, _SLOT_QUESTIONS["en"]).get(slot, "")
+
+
+#: 하위 호환 — 기존 호출부와 테스트가 참조한다.
+LADDER_RUNGS = _RUNGS["ko"]
+SLOT_QUESTIONS = _SLOT_QUESTIONS["ko"]
+
+_SYSTEM_KO = """너는 은퇴를 앞둔 숙련 전문가에게서 암묵지를 캐내는 발굴 도우미다.
+전문가는 이미 남기고 싶어 한다 — 설득하지 마라. 꺼내기만 도와라.
+
+지켜야 할 것:
+1. 너는 묻는 사람이다. 답을 제안하지 마라. 전문가가 말하게 하라.
+2. 한 번에 질문 하나. 복합 질문 금지.
+3. 전문가가 쓴 현장 용어를 표준어로 고치지 마라. 그 단어가 지식이다.
+4. 일반론이 나오면 사건으로 되돌려라 — "구체적으로 그런 적이 언제였나요?"
+5. "감으로 안다"가 나오면 두 번까지만 파고, 세 번째엔 넘어가라.
+   말로 안 되는 것을 억지로 말하게 만들지 마라.
+6. 전문가를 평가하거나 칭찬하지 마라. 되읽어주고 다음을 물어라.
+7. 한국어로, 존댓말로, 짧게 묻는다."""
+
+_SYSTEM_EN = """You are an excavation assistant drawing tacit knowledge out of a
+veteran expert who is about to retire. They already want to leave it behind — do
+not sell them on it. Just help them get it out.
+
+Rules:
+1. You are the one asking. Do not propose answers. Let the expert talk.
+2. One question at a time. Never compound questions.
+3. Do not correct the expert's shop-floor vocabulary into standard terms. That
+   vocabulary IS the knowledge.
+4. When you get a generality, steer back to an event — "when specifically did
+   that happen?"
+5. If they say "I just know it by feel", probe twice at most, then move on. Never
+   force someone to verbalise what does not go into words.
+6. Do not evaluate or praise the expert. Read it back, then ask the next thing.
+7. Ask in English, plainly and briefly."""
+
+
+def _system(lang: str) -> str:
+    return _SYSTEM_KO if lang == "ko" else _SYSTEM_EN
+
+
+@dataclass
+class Question:
+    text: str
+    rung: str = ""
+    instrument: str = LADDER
+    #: 이 질문이 채우려는 카드 칸
+    targets: str = ""
+    #: 규칙 기반으로 만들어졌는가 (LLM 미연결/실패)
+    fallback: bool = False
+
+
+def next_question(
+    llm: BaseLLM,
+    *,
+    instrument: str = LADDER,
+    card: Card | None = None,
+    history: list[tuple[str, str]] | None = None,
+    gap_question: str = "",
+    lang: str = "en",
+) -> Question:
+    """다음 질문 하나.
+
+    우선순위: ① 후배의 공백 → ② 카드의 빈 칸 → ③ 사다리 진행.
+    ①이 맨 앞인 것이 이 설계의 핵심이다 — **인터뷰 주제는 현장 수요가 정한다.**
+    """
+    history = history or []
+
+    if gap_question:
+        if lang == "ko":
+            text = ("후배가 이걸 물었는데 분신이 답하지 못했습니다.\n\n"
+                    f"「{gap_question}」\n\n어떻게 보십니까?")
+        else:
+            text = ("A junior asked this and your alter could not answer it.\n\n"
+                    f"\u201c{gap_question}\u201d\n\nHow do you see it?")
+        return Question(text=text, rung="gap", instrument=instrument)
+
+    if instrument != LADDER and not history:
+        tool = BY_KEY.get(instrument)
+        if tool:
+            return Question(
+                text=tool.localized(lang)["opener"], instrument=instrument, rung="opener"
+            )
+
+    # 카드의 빈 칸을 채우러 간다.
+    target = ""
+    if card is not None:
+        missing = card.missing
+        if missing:
+            target = missing[0]
+
+    ladder = rungs(lang)
+    rung = ladder[min(len(history), len(ladder) - 1)]
+    fallback_text = slot_question(target, lang) if target else rung[1]
+
+    if not history:
+        return Question(text=ladder[0][1], rung="recall", instrument=instrument)
+
+    prompt = _build_probe_prompt(history, target, instrument, lang)
+    try:
+        text = llm.answer(_system(lang), prompt).strip()
+    except Exception as exc:
+        log.warning("질문 생성 실패, 규칙 기반 대체: %s", exc)
+        text = ""
+    if not text or text.startswith("⚠"):
+        return Question(
+            text=fallback_text, rung=rung[0], instrument=instrument,
+            targets=target, fallback=True,
+        )
+    return Question(text=text, rung=rung[0], instrument=instrument, targets=target)
+
+
+def _build_probe_prompt(
+    history: list[tuple[str, str]], target: str, instrument: str, lang: str = "en"
+) -> str:
+    ko = lang == "ko"
+    lines = ["지금까지의 대화:" if ko else "The conversation so far:"]
+    for q, a in history[-6:]:
+        lines.append(
+            f"질문: {q}\n전문가: {a}" if ko else f"Question: {q}\nExpert: {a}"
+        )
+    tool = BY_KEY.get(instrument)
+    if tool and instrument != LADDER:
+        loc = tool.localized(lang)
+        lines.append(
+            (f"\n지금 쓰는 연장: {loc['name']} — {loc['pitch']}") if ko
+            else (f"\nInstrument in use: {loc['name']} — {loc['pitch']}")
+        )
+    if target:
+        label = slot_label(target, lang)
+        lines.append(
+            (f"\n지금 비어 있는 칸: **{label}**. 이 칸을 채우는 질문 하나만 만들어라.")
+            if ko else
+            (f"\nThe empty field right now: **{label}**. Write exactly one question "
+             "that fills it.")
+        )
+    else:
+        lines.append(
+            "\n사다리 다음 단으로 파고드는 질문 하나만 만들어라." if ko
+            else "\nWrite exactly one question that digs into the next rung."
+        )
+    lines.append(
+        "질문 문장만 출력해라. 머리말·설명 금지." if ko
+        else "Output the question sentence only. No preamble, no explanation."
+    )
+    return "\n".join(lines)
+
+
+# ------------------------------------------------------------- 오답 채점기
+
+_WRONG_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "wrong_answer": {
+            "type": "string",
+            "description": "그럴듯하지만 틀린 판단. 초보가 실제로 할 법한 오답이어야 한다.",
+        },
+        "why_tempting": {"type": "string", "description": "왜 그럴듯한가 (한 줄)"},
+    },
+    "required": ["wrong_answer", "why_tempting"],
+    "additionalProperties": False,
+}
+
+
+def wrong_answer(
+    llm: BaseLLM, topic: str, domain: str = "", *, lang: str = "en"
+) -> dict[str, str]:
+    """⚖️ 오답 채점기 — **그럴듯하지만 틀린** 판단을 만든다.
+
+    원리: 사람은 자기 지식은 설명 못 해도 남의 오답은 3초 만에 잡아낸다.
+    백지 대비 발굴 효율이 가장 높은 연장이라 도구함 기본 노출에 들어간다.
+    """
+    if lang == "ko":
+        prompt = (
+            f"'{domain or '현장'}' 영역에서 다음 상황에 대해, **초보자가 흔히 하는 "
+            f"그럴듯한 오답**을 하나 만들어라. 명백히 우스운 답 말고, 경력 3년차가 "
+            f"자신 있게 말할 법한 답이어야 한다. 정답을 쓰지 마라.\n\n상황: {topic}"
+        )
+    else:
+        prompt = (
+            f"In the '{domain or 'shop floor'}' domain, write one **plausible but "
+            "wrong** judgment a beginner commonly makes about the situation below. "
+            "Not an obviously silly answer — something a three-year veteran would "
+            f"say with confidence. Do not write the correct answer.\n\n"
+            f"Situation: {topic}"
+        )
+    try:
+        raw = llm.extract(prompt, _WRONG_SCHEMA)
+    except Exception as exc:
+        log.warning("오답 생성 실패: %s", exc)
+        raw = {}
+    if not raw:
+        if lang == "ko":
+            return {
+                "wrong_answer": f"{topic} — 매뉴얼대로 표준 설정값으로 되돌리면 해결됩니다.",
+                "why_tempting": "대부분의 경우 통하지만, 원인을 못 짚어서 재발한다.",
+                "fallback": "1",
+            }
+        return {
+            "wrong_answer": f"{topic} — just reset everything to the standard values "
+                            "in the manual and it clears up.",
+            "why_tempting": "It works most of the time, which is why it hides the "
+                            "real cause and the problem comes back.",
+            "fallback": "1",
+        }
+    return raw
+
+
+# --------------------------------------------------------------- 카드 포획
+
+_CARD_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string", "description": "이 판단을 한 줄로. 조건절로 쓰면 좋다."},
+        "domain": {"type": "string", "description": "영역 이름 (짧게)"},
+        "situation": {"type": "string", "description": "언제/어디서 벌어지는 상황"},
+        "cues": {
+            "type": "array",
+            "description": "무엇을 보고 아는가. 전문가가 실제로 말한 신호만. 지어내지 마라.",
+            "items": {"type": "string"},
+        },
+        "judgment": {"type": "string", "description": "그래서 내리는 판단"},
+        "action": {"type": "array", "description": "조치 순서", "items": {"type": "string"}},
+        "rationale": {"type": "string", "description": "왜 그런가 (원리)"},
+        "exceptions": {
+            "type": "array",
+            "description": "안 통하는 경우. 없으면 빈 배열.",
+            "items": {"type": "string"},
+        },
+        "failure": {"type": "string", "description": "실제로 틀렸던 사례. 없으면 빈 문자열."},
+        "unspeakable": {
+            "type": "array",
+            "description": "말로 담기지 않은 것 (손끝 감각·소리·냄새). 담기지 않는다는 사실 자체가 보존해야 할 정보다.",
+            "items": {"type": "string"},
+        },
+        "risk": {"type": "string", "enum": ["high", "mid", "low"]},
+    },
+    "required": [
+        "title", "domain", "situation", "cues", "judgment", "action",
+        "rationale", "exceptions", "failure", "unspeakable", "risk",
+    ],
+    "additionalProperties": False,
+}
+
+_CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기서 **판단 카드** 하나를 뽑아라.
+
+절대 규칙:
+- **전문가가 말하지 않은 것을 지어내지 마라.** 빈 칸은 빈 채로 둬라.
+  빈 칸은 다음 질문의 근거가 되므로, 채워진 척하는 것이 가장 나쁘다.
+- 전문가의 현장 용어를 그대로 살려라. 표준어로 고치지 마라.
+- 'cues'(무엇을 보고 아는가)가 이 카드의 핵심이다. 전문가가 실제로 든 신호만 적어라.
+- 손끝 감각·소리·냄새처럼 글로 담기지 않는 것은 'unspeakable' 에 적어라.
+  담기지 않는다는 사실 자체가 기록이다.
+
+[대화]
+{transcript}
+"""
+
+
+@dataclass
+class CardDraft:
+    """포획된 카드 초안. 승인 전까지 분신이 인용하지 않는다."""
+
+    data: dict[str, Any] = field(default_factory=dict)
+    fallback: bool = False
+
+    def to_card(self, *, id: str, expert: str, instrument: str, source_turn: str) -> Card:
+        d = self.data
+        card = Card(
+            id=id,
+            expert=expert,
+            title=str(d.get("title", ""))[:200],
+            domain=str(d.get("domain", "")),
+            situation=str(d.get("situation", "")),
+            cues=[str(x) for x in d.get("cues", []) if str(x).strip()],
+            judgment=str(d.get("judgment", "")),
+            action=[str(x) for x in d.get("action", []) if str(x).strip()],
+            rationale=str(d.get("rationale", "")),
+            exceptions=[str(x) for x in d.get("exceptions", []) if str(x).strip()],
+            failure=str(d.get("failure", "")),
+            unspeakable=[str(x) for x in d.get("unspeakable", []) if str(x).strip()],
+            risk=str(d.get("risk", "mid")),
+            instrument=instrument,
+            source_turn=source_turn,
+        )
+        # 말로 안 되는 것이 남았으면 온도계를 🔴 로 올려둔다 (전문가가 바꿀 수 있다).
+        if card.unspeakable:
+            card.tacitness = Tacitness.HANDS
+        return card
+
+
+_SENTENCE = re.compile(r"(?<=[.!?。？！])\s+|\n+")
+
+
+def capture(
+    llm: BaseLLM, history: list[tuple[str, str]], *, lang: str = "en"
+) -> CardDraft:
+    """대화 → 카드 초안. 실패해도 **원본은 증발하지 않는다.**"""
+    joiner = (
+        (lambda q, a: f"질문: {q}\n전문가: {a}") if lang == "ko"
+        else (lambda q, a: f"Question: {q}\nExpert: {a}")
+    )
+    transcript = "\n".join(joiner(q, a) for q, a in history)
+    try:
+        raw = llm.extract(_CAPTURE_PROMPT.format(transcript=transcript), _CARD_SCHEMA)
+    except Exception as exc:
+        log.warning("카드 구조화 실패, 규칙 기반 대체: %s", exc)
+        raw = {}
+    if raw:
+        return CardDraft(data=raw)
+    return _fallback(history)
+
+
+def _fallback(history: list[tuple[str, str]]) -> CardDraft:
+    """LLM 없이도 카드가 만들어진다 — 구조는 비고, 원본은 살아남는다.
+
+    빈 칸을 지어내 채우지 않는 것이 중요하다. 비어 있어야 다음 질문이 나온다.
+    """
+    answers = [a for _, a in history if a.strip()]
+    body = "\n".join(answers)
+    first = next(iter(_SENTENCE.split(body)), body)[:200] if body else ""
+    return CardDraft(
+        data={
+            "title": first or "제목 없는 판단",
+            "domain": "",
+            "situation": answers[0][:300] if answers else "",
+            "cues": [],
+            "judgment": "",
+            "action": [],
+            "rationale": "",
+            "exceptions": [],
+            "failure": "",
+            "unspeakable": [],
+            "risk": "mid",
+        },
+        fallback=True,
+    )
+
+
+def slot_report(card: Card, lang: str = "en") -> dict[str, Any]:
+    """인터뷰 화면 오른쪽 패널 — 어느 칸이 비었고 다음에 뭘 물을지."""
+    return {
+        "filled": [slot_label(s, lang) for s in card.filled],
+        "missing": [slot_label(s, lang) for s in card.missing],
+        "completeness": round(card.completeness, 2),
+        "citable": card.citable(),
+        "blocker": slot_label("cues", lang) if not card.cues else "",
+        "next_question": slot_question(card.missing[0], lang) if card.missing else "",
+        "slots": [
+            {"key": s, "label": slot_label(s, lang), "filled": s in card.filled}
+            for s in SLOTS
+        ],
+    }

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yudonKnow — {{ L['app.tagline'] }}</title>
+{% include "_style.html" %}
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who">
+    {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>{{ L['stub.mode'] }}</span>{% endif %}
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
+  </div>
+</header>
+
+<main>
+  <h1>{{ L['app.tagline'] }}</h1>
+  <p class="lead">{{ L['app.sub'] }}</p>
+
+  <div class="card hero">
+    <p class="t">{{ L['landing.yours.title'] }}</p>
+    <div class="c">{{ L['landing.yours.body'] }}</div>
+  </div>
+
+  <h2 class="sec">{{ L['landing.who'] }}</h2>
+  <div class="grid g3">
+    <div class="card">
+      <p class="t">🧰 {{ L['nav.expert'] }}</p>
+      <p class="c">{{ L['landing.expert.body'] }}</p>
+      <div class="acts"><button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button></div>
+    </div>
+    <div class="card">
+      <p class="t">💬 {{ L['nav.junior'] }}</p>
+      <p class="c">{{ L['landing.junior.body'] }}</p>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="who" placeholder="{{ L['landing.junior.ph'] }}">
+      </div>
+      <div class="acts"><button class="primary" onclick="ask()">{{ L['landing.junior.cta'] }}</button></div>
+    </div>
+    <div class="card">
+      <p class="t">📊 {{ L['nav.admin'] }}</p>
+      <p class="c">{{ L['landing.admin.body'] }}</p>
+      <div class="acts"><button onclick="go('/admin')">{{ L['landing.admin.cta'] }}</button></div>
+    </div>
+  </div>
+
+  <h2 class="sec">{{ L['landing.wheel'] }}</h2>
+  <div class="card"><div class="c">{{ L['landing.wheel.body'] }}</div></div>
+</main>
+
+<footer>
+  v{{ version }} · <code>docs/design.md</code> · <code>docs/self-excavation.md</code>
+</footer>
+
+<script>
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const q = LANG === 'en' ? '' : ('?lang=' + LANG);
+function go(path){ location.href = path + q; }
+function ask(){
+  const id = document.getElementById('who').value.trim();
+  if(!id){ alert(L['landing.ask.need_id']); return; }
+  go('/alter/' + encodeURIComponent(id));
+}
+</script>
+</body>
+</html>

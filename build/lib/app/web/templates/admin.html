@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yudonKnow — {{ L['landing.admin.cta'] }}</title>
+{% include "_style.html" %}
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who">
+    <span>{{ L['nav.admin'] }}</span>
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
+  </div>
+</header>
+
+<main class="wide">
+  <h1>{{ L['admin.title'] }}</h1>
+  <p class="lead">{{ L['admin.lede'] }}</p>
+  <div id="board"></div>
+  <p class="quiet" style="margin-top:24px">{{ L['admin.caveat'] | safe }}</p>
+</main>
+
+<footer>v{{ version }}</footer>
+
+<script>
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
+
+(async function(){
+  const r = await fetch('/api/admin/board' + qs).then(r=>r.json());
+  const el = document.getElementById('board');
+  if(!r.board || !r.board.length){
+    el.innerHTML = `<div class="card"><p class="c">${esc(L['admin.empty'])}</p></div>`;
+    return;
+  }
+  const HIGH = L['risk.high'], LOW = L['risk.low'];
+  el.innerHTML = r.board.map(b => `
+    <div class="card ${b.level===HIGH?'alarm':b.level===LOW?'ok':''}">
+      <div class="badges">
+        <span class="b ${b.level===HIGH?'warn':b.level===LOW?'ok':''}">${esc(fmt(L['admin.risk'],{}).replace('{}', b.level))}</span>
+        <span class="b">${b.days_left===null?esc(L['home.staying']):'D-'+b.days_left}</span>
+        <span class="b">${esc(L['admin.cards'].replace('{}', b.cards))}</span>
+        ${b.gaps? `<span class="b warn">${esc(L['admin.gaps'].replace('{}', b.gaps))}</span>`:''}
+      </div>
+      <p class="t">${esc(b.name)}</p>
+      <div class="bar"><i style="width:${Math.round(b.coverage*100)}%"></i></div>
+      <p class="c">${esc(fmt(L['admin.cov'], {
+        cov: Math.round(b.coverage*100),
+        hands: Math.round(b.hands_ratio*100),
+        weak: b.weakest || '—'}))}</p>
+      <div class="acts">
+        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}'+${JSON.stringify(qs)}">${esc(L['admin.ask'])}</button>
+      </div>
+    </div>`).join('');
+})();
+</script>
+</body>
+</html>

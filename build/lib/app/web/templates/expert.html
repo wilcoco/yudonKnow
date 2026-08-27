@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yudonKnow — {{ L['landing.expert.cta'] }}</title>
+{% include "_style.html" %}
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who">
+    <span>{{ L['nav.me'] }}</span>
+    <input type="text" id="me" placeholder="{{ L['nav.id'] }}" value="">
+    <button onclick="loadHome()">{{ L['nav.open'] }}</button>
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
+  </div>
+</header>
+
+<main class="wide">
+  <div class="err" id="err"></div>
+
+  <!-- ───────────── onboarding ───────────── -->
+  <section id="onboard" hidden>
+    <h1>{{ L['ob.title'] }}</h1>
+    <p class="lead">{{ L['ob.lede'] }}</p>
+
+    <div class="card">
+      <p class="t">{{ L['ob.q1'] }}</p>
+      <textarea id="ob_domains" placeholder="{{ L['ob.q1.ph'] }}"></textarea>
+      <p class="quiet">{{ L['ob.q1.note'] }}</p>
+    </div>
+
+    <div class="card">
+      <p class="t">{{ L['ob.q2'] }}</p>
+      <textarea id="ob_sayings" style="min-height:70px" placeholder="{{ L['ob.q2.ph1'] }}"></textarea>
+      <textarea id="ob_taboos" style="min-height:70px;margin-top:8px" placeholder="{{ L['ob.q2.ph2'] }}"></textarea>
+    </div>
+
+    <div class="card">
+      <p class="t">{{ L['ob.q3'] }} <span class="quiet">{{ L['ob.q3.note'] }}</span></p>
+      <input type="text" id="ob_leaving" placeholder="2026-12-31">
+    </div>
+
+    <button class="amber block" onclick="createExpert()">{{ L['ob.start'] }}</button>
+  </section>
+
+  <!-- ───────────── home ───────────── -->
+  <section id="home" hidden>
+    <div class="card hero">
+      <div class="badges">
+        <span class="b am" id="h_alter"></span>
+        <span class="b" id="h_days"></span>
+      </div>
+      <p class="t" id="h_headline"></p>
+      <div class="c" id="h_stats"></div>
+      <div id="h_recent"></div>
+      <div class="acts">
+        <button id="h_toggle" onclick="toggleAlter()"></button>
+        <button onclick="exportCards()">{{ L['home.export'] }}</button>
+        <button onclick="meetAlter()">{{ L['home.meet'] }}</button>
+      </div>
+    </div>
+
+    <div id="h_gaps"></div>
+    <div id="h_contested"></div>
+
+    <h2 class="sec">{{ L['home.map'] }}</h2>
+    <div class="card">
+      <div id="h_map"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="flag_domain" placeholder="{{ L['home.flag.ph'] }}">
+        <button onclick="addFlag()">{{ L['home.flag.cta'] }}</button>
+      </div>
+      <p class="quiet" id="h_hands"></p>
+    </div>
+
+    <h2 class="sec">{{ L['home.toolbox'] }}</h2>
+    <div id="h_suggest"></div>
+    <div class="grid g3" id="h_tools"></div>
+    <p class="quiet" id="h_locked"></p>
+  </section>
+
+  <!-- ───────────── excavation session ───────────── -->
+  <section id="session" hidden>
+    <div class="row" style="align-items:center;margin-bottom:12px">
+      <button onclick="loadHome()">← {{ L['nav.home'] }}</button>
+      <span class="b am" id="s_tool"></span>
+      <span class="quiet" id="s_progress"></span>
+    </div>
+
+    <div class="panes">
+      <div>
+        <div class="card">
+          <p class="quiet" id="s_rung"></p>
+          <p class="t" id="s_question" style="font-size:17px;line-height:1.6"></p>
+          <div id="s_wrong"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <textarea id="s_answer" placeholder="{{ L['sess.answer.ph'] }}"></textarea>
+          <div class="acts">
+            <button class="primary" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
+            <button class="ghost" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <p class="quiet">{{ L['sess.building'] }}</p>
+          <p class="t" id="s_title">—</p>
+          <div id="s_slots" style="margin:8px 0"></div>
+          <div class="c" id="s_blocker"></div>
+
+          <div style="margin-top:14px">
+            <p class="quiet">{{ L['sess.tacit.q'] }}</p>
+            <select id="s_tacit">
+              <option value="speakable">{{ L['tacit.speakable'] }}</option>
+              <option value="partial" selected>{{ L['tacit.partial'] }}</option>
+              <option value="hands">{{ L['tacit.hands'] }}</option>
+            </select>
+            <p class="quiet" style="margin-top:10px">{{ L['sess.vis.q'] }}</p>
+            <select id="s_vis" onchange="visChanged()">
+              <option value="public">{{ L['vis.public'] }}</option>
+              <option value="targeted">{{ L['vis.targeted'] }}</option>
+              <option value="sealed">{{ L['vis.sealed'] }}</option>
+              <option value="private">{{ L['vis.private'] }}</option>
+            </select>
+            <input type="text" id="s_vis_arg" hidden style="margin-top:8px">
+          </div>
+
+          <div class="acts">
+            <button class="amber" onclick="confirmCard()">{{ L['sess.confirm'] }}</button>
+          </div>
+          <p class="quiet" id="s_warn"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>v{{ version }}</footer>
+
+<script>
+const LANG = {{ lang | tojson }};
+const L = {{ L | tojson }};
+const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+const $ = id => document.getElementById(id);
+let STATE = {turn:null, card:null, session:null, home:null};
+
+const me = () => $('me').value.trim();
+function show(id){ for(const s of ['onboard','home','session']) $(s).hidden = (s!==id); }
+function err(msg){ $('err').textContent = msg || ''; }
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
+
+async function api(path, opts){
+  const sep = path.includes('?') ? '&' : '?';
+  const url = LANG === 'en' ? path : path + sep + 'lang=' + LANG;
+  const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  const body = await res.json().catch(()=>({}));
+  if(!res.ok){ throw new Error(body.error || body.detail || ('HTTP ' + res.status)); }
+  return body;
+}
+
+// ── onboarding ───────────────────────────────────────────
+async function createExpert(){
+  err('');
+  const id = me();
+  if(!id){ err(L['ob.need_id']); return; }
+  const leaving = $('ob_leaving').value.trim();
+  try{
+    await api('/api/experts', {method:'POST', body: JSON.stringify({
+      id, display_name: id,
+      sayings: $('ob_sayings').value.split('\n').filter(s=>s.trim()),
+      taboos: $('ob_taboos').value.split('\n').filter(s=>s.trim()),
+      leaving_on: leaving || null,
+    })});
+    for(const d of $('ob_domains').value.split('\n').map(s=>s.trim()).filter(Boolean)){
+      await api('/api/flags', {method:'POST', body: JSON.stringify({expert:id, domain:d})});
+    }
+    localStorage.setItem('ydk_me', id);
+    loadHome();
+  }catch(e){ err(e.message); }
+}
+
+// ── home ────────────────────────────────────────────────
+async function loadHome(){
+  err('');
+  const id = me();
+  if(!id){ show('onboard'); return; }
+  localStorage.setItem('ydk_me', id);
+  let home;
+  try{ home = await api('/api/experts/'+encodeURIComponent(id)+'/home'); }
+  catch(e){ show('onboard'); return; }
+  STATE.home = home;
+  renderHome(home);
+  show('home');
+}
+
+function meetAlter(){ location.href = '/alter/' + encodeURIComponent(me()) + qs; }
+
+function renderHome(h){
+  $('h_alter').textContent = h.expert.alter_label;
+  $('h_days').textContent = h.expert.days_left === null ? L['home.staying']
+    : (h.expert.days_left >= 0 ? 'D-' + h.expert.days_left
+                               : L['home.left'].replace('{}', -h.expert.days_left));
+  $('h_headline').textContent = h.legacy.headline;
+  $('h_stats').textContent = fmt(L['home.stats'], {
+    alive: h.legacy.cards_alive, verified: h.legacy.cards_verified,
+    cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed});
+  $('h_recent').innerHTML = (h.legacy.recent||[]).slice(0,4)
+    .map(e => `<div class="msg">${esc(e.sentence)}</div>`).join('');
+  $('h_toggle').textContent = h.expert.alter_active ? L['home.stop_alter'] : L['home.start_alter'];
+
+  $('h_gaps').innerHTML = h.gaps.length
+    ? `<h2 class="sec">${esc(L['home.gaps.head'].replace('{}', h.gaps.length))}</h2>` +
+      h.gaps.map(g => `<div class="card alarm">
+        <p class="t">「${esc(g.question)}」</p>
+        <p class="c">${esc(L['home.gaps.count'].replace('{}', g.count))}${g.askers.length? ' · ' + esc(g.askers.join(', ')) : ''}</p>
+        <div class="acts"><button class="amber" onclick="startSession('ladder')">${esc(L['home.gaps.cta'])}</button></div>
+      </div>`).join('')
+    : '';
+
+  $('h_contested').innerHTML = h.contested.length
+    ? `<h2 class="sec">${esc(L['home.contested.head'].replace('{}', h.contested.length))}</h2>` +
+      h.contested.map(c => `<div class="card alarm">
+        <p class="t">${esc(c.title)}</p>
+        <p class="c">${esc(fmt(L['home.contested.body'], {helped:c.helped, missed:c.missed}))}</p>
+      </div>`).join('')
+    : '';
+
+  $('h_map').innerHTML = (h.map.domains||[]).map(d => `
+    <div style="margin-bottom:10px">
+      <div class="row" style="justify-content:space-between">
+        <span>${d.flagged?'🚩 ':''}${esc(d.domain)}</span>
+        <span class="quiet">${Math.round(d.coverage*100)}% · ${esc(L['home.map.cards'].replace('{}', d.cards))}${d.hands? ' · 🔴'+d.hands:''}</span>
+      </div>
+      <div class="bar ${d.flagged?'flagged':''}"><i style="width:${Math.round(d.coverage*100)}%"></i></div>
+    </div>`).join('') || `<p class="quiet">${esc(L['home.map.empty'])}</p>`;
+  $('h_hands').textContent = h.legacy.hands_items
+    ? L['home.hands'].replace('{}', h.legacy.hands_items) : '';
+
+  $('h_suggest').innerHTML = (h.suggestions||[]).map(s => `
+    <div class="card ok">
+      <p class="t">${s.emoji} ${esc(s.name)}</p>
+      <p class="c">${esc(s.because)}</p>
+      <div class="acts"><button class="primary" onclick="startSession('${s.key}')">${esc(L['home.tool.start'])}</button></div>
+    </div>`).join('');
+  $('h_tools').innerHTML = (h.toolbox||[]).map(t => `
+    <button class="tool" onclick="startSession('${t.key}')">
+      <div class="e">${t.emoji}</div><div class="n">${esc(t.name)}</div>
+      <div class="p">${esc(t.pitch)}</div>
+      <div class="p" style="margin-top:6px">${esc(L['home.tool.mins'].replace('{}', t.minutes))}</div>
+    </button>`).join('');
+  $('h_locked').textContent = h.locked ? L['home.locked'].replace('{}', h.locked) : '';
+}
+
+async function toggleAlter(){
+  const active = !STATE.home.expert.alter_active;
+  await api('/api/experts/'+encodeURIComponent(me())+'/alter',
+    {method:'POST', body: JSON.stringify({active})});
+  loadHome();
+}
+
+async function addFlag(){
+  const d = $('flag_domain').value.trim();
+  if(!d) return;
+  await api('/api/flags', {method:'POST', body: JSON.stringify({expert:me(), domain:d})});
+  $('flag_domain').value = '';
+  loadHome();
+}
+
+async function exportCards(){
+  const data = await api('/api/experts/'+encodeURIComponent(me())+'/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = me() + '-cards.json';
+  a.click();
+}
+
+// ── session ─────────────────────────────────────────────
+async function startSession(instrument){
+  err('');
+  try{
+    const s = await api('/api/sessions', {method:'POST',
+      body: JSON.stringify({expert: me(), instrument})});
+    STATE.session = s; STATE.turn = s.turn_id; STATE.card = null;
+    $('s_tool').textContent = toolName(instrument);
+    $('s_question').textContent = s.question;
+    $('s_rung').textContent = s.from_gap ? L['sess.from_gap'] : '';
+    $('s_progress').textContent = `${s.index} / ${s.target}`;
+    $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    $('s_blocker').textContent = ''; $('s_warn').textContent = '';
+    $('s_wrong').innerHTML = '';
+    if(instrument === 'wrong') loadWrongAnswer();
+    show('session');
+  }catch(e){ err(e.message); }
+}
+
+function toolName(key){
+  const t = (STATE.home?.toolbox||[]).find(t => t.key===key);
+  return t ? t.emoji + ' ' + t.name : '🪜';
+}
+
+async function loadWrongAnswer(){
+  try{
+    const w = await api('/api/grade', {method:'POST',
+      body: JSON.stringify({expert: me(), topic: (STATE.home?.map?.domains?.[0]?.domain) || 'recent work'})});
+    $('s_wrong').innerHTML = `<div class="card alarm" style="margin-top:12px">
+      <p class="quiet">${esc(L['sess.wrong.prompt'])}</p>
+      <p class="t">${esc(w.wrong_answer)}</p>
+      <p class="c">${esc(w.why_tempting||'')}</p>
+      <p class="quiet">${esc(L['sess.wrong.note'])}</p></div>`;
+  }catch(e){ /* a failed wrong-answer must never block the session */ }
+}
+
+async function sendAnswer(skip){
+  err('');
+  const answer = $('s_answer').value.trim();
+  if(!skip && !answer){ err(L['sess.need_answer']); return; }
+  try{
+    const r = await api('/api/turns/'+STATE.turn, {method:'POST',
+      body: JSON.stringify({answer, skip})});
+    STATE.turn = r.turn_id; STATE.card = r.card;
+    $('s_question').textContent = r.question;
+    $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
+    $('s_answer').value = '';
+    $('s_title').textContent = r.card.title || '—';
+    $('s_slots').innerHTML = r.report.slots
+      .map(s => `<span class="slot ${s.filled?'on':''}">${esc(s.label)}</span>`).join('');
+    $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
+    $('s_wrong').innerHTML = '';
+  }catch(e){ err(e.message); }
+}
+
+function visChanged(){
+  const v = $('s_vis').value;
+  const arg = $('s_vis_arg');
+  arg.hidden = (v === 'public' || v === 'private');
+  arg.placeholder = v === 'targeted' ? L['vis.who.ph'] : L['vis.when.ph'];
+  arg.value = '';
+}
+
+async function confirmCard(){
+  err('');
+  if(!STATE.card){ err(L['sess.no_card']); return; }
+  const vis = $('s_vis').value, arg = $('s_vis_arg').value.trim();
+  try{
+    const r = await api('/api/cards/'+STATE.card.id+'/confirm', {method:'POST', body: JSON.stringify({
+      tacitness: $('s_tacit').value,
+      visibility: vis,
+      for_whom: vis === 'targeted' ? arg : '',
+      open_at: vis === 'sealed' && arg ? arg : null,
+    })});
+    let msg = L['sess.saved'];
+    if(r.filled_gap) msg += L['sess.filled_gap'].replace('{}', r.filled_gap);
+    if(r.warning) msg += ' ' + r.warning;
+    $('s_warn').textContent = msg;
+    setTimeout(loadHome, 1400);
+  }catch(e){ err(e.message); }
+}
+
+$('me').value = localStorage.getItem('ydk_me') || '';
+loadHome();
+</script>
+</body>
+</html>
