@@ -32,7 +32,14 @@
 1. <https://aistudio.google.com/apikey> → **Create API key**
 2. ①에서 만든 프로젝트를 고른다
 
-### (B) Vertex AI — Cloud Run 배포에는 이쪽이 낫다
+### (B) Gemini Enterprise Agent Platform — Cloud Run 배포에는 이쪽이 낫다
+
+> ⚠️ **콘솔에서 "Vertex AI" 를 찾지 말 것.** 2026-04-22 Next '26 에서
+> **Gemini Enterprise Agent Platform (formerly Vertex AI)** 로 개명됐고,
+> 2026-05-21 부터 콘솔 메뉴에 "Vertex AI" 라는 이름이 안 나온다.
+> **폐지가 아니라 개명이다** — 엔드포인트(`aiplatform.googleapis.com`)도,
+> 우리가 쓰는 SDK 호출부도 그대로다. 자세한 건 `docs/platform-note.md`.
+
 - 키가 아예 필요 없다. Cloud Run 의 **서비스 계정 자격증명이 그대로 먹는다.**
 - 유출될 키가 없으니 운영이 안전하고, 심사 기간 내내 살아 있어야 하는 데모에 유리하다.
 - 내가 프로젝트 ID 만 받으면 설정한다.
@@ -52,7 +59,7 @@
 
 | API | 왜 필요한가 |
 |---|---|
-| Vertex AI API | 필수요건 ① Gemini |
+| `aiplatform.googleapis.com` | 필수요건 ① Gemini. 개명 후에도 **API 이름은 그대로**다 |
 | Cloud Run Admin API | 필수요건 ③ 호스팅 |
 | Cloud Build API | 소스 → 컨테이너 빌드 |
 | Artifact Registry API | 빌드된 이미지 보관 |

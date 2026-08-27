@@ -30,9 +30,11 @@
 
 | # | 요건 | 상태 |
 |---|---|---|
-| ① | **Gemini 3.5+** (Gemini API 또는 Vertex AI) | ✅ `app/capture/llm.py::GeminiLLM` |
-| ② | **Google 에이전트 프레임워크** (ADK / GenAI SDK / Antigravity SDK / GenKit) | 🟡 GenAI SDK 로 최소 충족. **ADK 에이전트 얹는 중** |
+| ① | **Gemini 3.5+** (Gemini API 또는 Vertex AI → 現 **Gemini Enterprise Agent Platform**) | ✅ `app/capture/llm.py::GeminiLLM` |
+| ② | **Google 에이전트 프레임워크** (ADK / GenAI SDK / Antigravity SDK / GenKit) | 🟡 GenAI SDK 로 최소 충족. **ADK 2.0 에이전트 얹는 중** |
 | ③ | **GCP 인프라 1개 이상** (Cloud Run / Cloud SQL / Firestore / GKE / Pub/Sub) | ⬜ Cloud Run + Cloud SQL 예정 |
+
+> 플랫폼 개명(2026-04-22) 영향 분석은 `docs/platform-note.md`. **요약: 우리 코드는 손댈 것이 없다.**
 
 ## 왜 Collaborative Partner 인가
 
