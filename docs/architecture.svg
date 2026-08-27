@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800"
+     role="img" aria-label="yudonKnow request path: browsers hit FastAPI on Cloud Run, service.py orchestrates, app/core computes retrieval confidence, and the gap gate decides before any model call — below the floor the request becomes a gap and Gemini is never called; above it the two-method LLM seam calls Gemini 3.5 through the Google GenAI SDK on Vertex using the runtime service account. Cloud SQL Postgres holds the state.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3c443d"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9c3a2c"/>
+    </marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8a5a18"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#0f6a59"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="800" fill="#F1F3F0"/>
+
+  <text x="44" y="52" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="13"
+        letter-spacing="2.4" fill="#8a5a18">YUDONKNOW — REQUEST PATH</text>
+  <text x="44" y="78" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b665e">
+    The model sits at the far edge. Nothing it says decides anything.
+  </text>
+
+  <!-- ── Cloud Run 경계 ───────────────────────────────────────── -->
+  <rect x="298" y="112" width="602" height="530" rx="6" fill="#FFFFFF" stroke="#b9c2ba"
+        stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="316" y="136" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12"
+        letter-spacing="1.6" fill="#0f6a59">GOOGLE CLOUD RUN · container, scale-to-zero</text>
+
+  <!-- ── 클라이언트 ───────────────────────────────────────────── -->
+  <text x="44" y="168" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12"
+        letter-spacing="1.6" fill="#7b857d">BROWSER</text>
+  <g fill="#FFFFFF" stroke="#3c443d" stroke-width="1.4">
+    <rect x="44" y="186" width="212" height="58" rx="4"/>
+    <rect x="44" y="262" width="212" height="58" rx="4"/>
+    <rect x="44" y="338" width="212" height="58" rx="4"/>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="14.5" fill="#1c231e">
+    <text x="60" y="212">/expert</text>
+    <text x="60" y="288">/alter/{id}</text>
+    <text x="60" y="364">/admin</text>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">
+    <text x="60" y="231">toolbox · gap queue · ledger</text>
+    <text x="60" y="307">ask · evidence · field report</text>
+    <text x="60" y="383">succession risk board</text>
+  </g>
+
+  <!-- ── 앱 층 ────────────────────────────────────────────────── -->
+  <g fill="#FFFFFF" stroke="#3c443d" stroke-width="1.4">
+    <rect x="326" y="176" width="238" height="62" rx="4"/>
+    <rect x="326" y="270" width="238" height="62" rx="4"/>
+  </g>
+  <rect x="326" y="364" width="238" height="96" rx="4" fill="#DEEDE8" stroke="#0f6a59" stroke-width="1.8"/>
+
+  <g font-family="Helvetica, Arial, sans-serif" font-size="14.5" fill="#1c231e">
+    <text x="342" y="203">app/web — FastAPI</text>
+    <text x="342" y="297">app/store/service.py</text>
+    <text x="342" y="392" fill="#0f6a59" font-weight="bold">app/core</text>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">
+    <text x="342" y="222">Jinja screens + JSON API · i18n</text>
+    <text x="342" y="316">orchestration · one wheel</text>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2c4a41">
+    <text x="342" y="412">dependency-free — no framework,</text>
+    <text x="342" y="429">no ORM, no SDK</text>
+    <text x="342" y="449" font-style="italic">retrieval · confidence · coverage · ledger</text>
+  </g>
+
+  <!-- ── 관문 ─────────────────────────────────────────────────── -->
+  <rect x="622" y="364" width="252" height="96" rx="4" fill="#FFFFFF" stroke="#8a5a18" stroke-width="2.4"/>
+  <text x="638" y="392" font-family="Helvetica, Arial, sans-serif" font-size="15"
+        font-weight="bold" fill="#8a5a18">gap gate</text>
+  <text x="638" y="414" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12.5"
+        fill="#1c231e">confidence ≥ 0.35 ?</text>
+  <text x="638" y="437" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">decided in plain Python</text>
+  <text x="638" y="453" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">from retrieval scores</text>
+
+  <!-- ── 접합면 ───────────────────────────────────────────────── -->
+  <rect x="622" y="176" width="252" height="96" rx="4" fill="#FFFFFF" stroke="#3c443d" stroke-width="1.4"/>
+  <text x="638" y="204" font-family="Helvetica, Arial, sans-serif" font-size="14.5" fill="#1c231e">app/capture/llm.py</text>
+  <text x="638" y="228" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12.5" fill="#0f6a59">answer() · extract()</text>
+  <text x="638" y="250" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">the only seam — text in, text out.</text>
+  <text x="638" y="265" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">Anthropic adapter kept as proof.</text>
+
+  <!-- ── 공백 큐 ──────────────────────────────────────────────── -->
+  <rect x="622" y="524" width="252" height="86" rx="4" fill="#F4DED9" stroke="#9c3a2c" stroke-width="2"/>
+  <text x="638" y="551" font-family="Helvetica, Arial, sans-serif" font-size="14.5"
+        font-weight="bold" fill="#9c3a2c">gap queue</text>
+  <text x="638" y="573" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#5b2820">“I will not make it up.”</text>
+  <text x="638" y="593" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#5b2820">Sets where the expert digs next.</text>
+
+  <!-- ── Gemini ───────────────────────────────────────────────── -->
+  <rect x="944" y="176" width="216" height="120" rx="4" fill="#FFFFFF" stroke="#0f6a59" stroke-width="2"/>
+  <text x="962" y="204" font-family="Helvetica, Arial, sans-serif" font-size="15"
+        font-weight="bold" fill="#0f6a59">Gemini 3.5</text>
+  <text x="962" y="226" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#2c4a41">Google GenAI SDK</text>
+  <text x="962" y="246" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#2c4a41">Gemini Enterprise Agent</text>
+  <text x="962" y="262" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#2c4a41">Platform (Vertex)</text>
+  <text x="962" y="284" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">service account — no API key</text>
+
+  <!-- ── Cloud SQL ────────────────────────────────────────────── -->
+  <rect x="326" y="676" width="330" height="76" rx="4" fill="#FFFFFF" stroke="#0f6a59" stroke-width="2"/>
+  <text x="344" y="704" font-family="Helvetica, Arial, sans-serif" font-size="15"
+        font-weight="bold" fill="#0f6a59">Cloud SQL — PostgreSQL</text>
+  <text x="344" y="726" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#2c4a41">cards · sessions · gaps · anchors · ledger</text>
+  <text x="344" y="743" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7b857d">raw utterances are never deleted · unix socket</text>
+
+  <!-- ── 화살표 ───────────────────────────────────────────────── -->
+  <g stroke="#3c443d" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M256 215 L300 215 L300 207 L320 207"/>
+    <path d="M256 291 L288 291 L288 213 L320 213"/>
+    <path d="M256 367 L280 367 L280 219 L320 219"/>
+    <line x1="445" y1="238" x2="445" y2="264"/>
+    <line x1="445" y1="332" x2="445" y2="358"/>
+    <line x1="564" y1="412" x2="616" y2="412"/>
+  </g>
+  <text x="590" y="404" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11"
+        fill="#5b665e" text-anchor="middle">score</text>
+
+  <!-- 관문 → 모델 (통과) -->
+  <g stroke="#0f6a59" stroke-width="2" fill="none" marker-end="url(#ag)">
+    <line x1="748" y1="358" x2="748" y2="278"/>
+    <line x1="874" y1="212" x2="938" y2="212"/>
+  </g>
+  <text x="756" y="322" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5" fill="#0f6a59">pass — cards + question</text>
+  <text x="906" y="202" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="#0f6a59" text-anchor="middle">text</text>
+  <g stroke="#0f6a59" stroke-width="1.4" fill="none" marker-end="url(#ag)" stroke-dasharray="5 4">
+    <line x1="938" y1="248" x2="878" y2="248"/>
+  </g>
+
+  <!-- 관문 → 공백 (차단) -->
+  <g stroke="#9c3a2c" stroke-width="2.4" fill="none" marker-end="url(#ar)">
+    <line x1="748" y1="460" x2="748" y2="518"/>
+  </g>
+  <text x="762" y="486" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12"
+        font-weight="bold" fill="#9c3a2c">below floor →</text>
+  <text x="762" y="503" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12"
+        font-weight="bold" fill="#9c3a2c">the model is never called</text>
+
+  <!-- 저장소 — service.py 에 붙는다. app/core 는 의존성 0 이라 DB 를 모르므로
+       그 상자를 관통하지 않게 왼쪽 레인으로 돌린다. -->
+  <g stroke="#0f6a59" stroke-width="1.5" fill="none"
+     marker-start="url(#ag)" marker-end="url(#ag)">
+    <path d="M340 332 L316 332 L316 656 L392 656 L392 668"/>
+  </g>
+  <text x="352" y="552" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11"
+        fill="#0f6a59" transform="rotate(-90 352 552)" text-anchor="middle">read / write</text>
+
+  <!-- ── 되돌아오는 경로 ──────────────────────────────────────────
+       바퀴를 돌리는 것은 앞으로 가는 화살표가 아니라 이 둘이다.
+       클라이언트 상자와 세로 라벨을 피해 바깥으로 돌린다. -->
+  <g stroke="#8a5a18" stroke-width="2" fill="none" marker-end="url(#ab)" stroke-dasharray="6 4">
+    <path d="M622 640 L24 640 L24 158 L150 158 L150 180"/>
+  </g>
+  <text x="60" y="632" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5"
+        fill="#8a5a18">unanswered → where to dig next</text>
+
+  <g stroke="#8a5a18" stroke-width="2" fill="none" marker-end="url(#ab)" stroke-dasharray="6 4">
+    <path d="M256 291 L286 291 L286 600 L336 600 L336 670"/>
+  </g>
+  <text x="272" y="452" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5"
+        fill="#8a5a18" transform="rotate(-90 272 452)" text-anchor="middle">field report → ✔ verified</text>
+
+  <!-- 범례 -->
+  <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5">
+    <line x1="944" y1="700" x2="972" y2="700" stroke="#0f6a59" stroke-width="2"/>
+    <text x="982" y="704" fill="#0f6a59">model / storage path</text>
+    <line x1="944" y1="724" x2="972" y2="724" stroke="#9c3a2c" stroke-width="2.4"/>
+    <text x="982" y="728" fill="#9c3a2c">refusal — no model call</text>
+    <line x1="944" y1="748" x2="972" y2="748" stroke="#8a5a18" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="982" y="752" fill="#8a5a18">feedback to the expert</text>
+  </g>
+</svg>
