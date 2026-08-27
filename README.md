@@ -1,12 +1,24 @@
 # yudonKnow
 
+> **Most AI answers your questions. This one asks you.**
+>
 > **The senior leaves. The judgment stays.**
 
-When an expert retires, what walks out is not documents — it is the eye that
-reads a situation. yudonKnow hands them **instruments to dig that out
-themselves**, freezes each call into a **judgment card**, and leaves behind an
-**alter** that speaks only from those cards, so the people staying keep working
-with it.
+Ask a retiring expert how he knows a molding defect is a speed problem and not
+a temperature problem and he says *"you just see it."* He is not withholding.
+**He genuinely does not know what he knows until someone asks him the right
+question** — which is why a blank handover document, a wiki, and a RAG chatbot
+over company files all fail in the same place.
+
+So the interview is the product. yudonKnow is an agent that **interviews** the
+expert — the way a human knowledge engineer would, using probes taken from the
+cognitive-task-analysis literature — freezes each call into a **judgment card**,
+and leaves behind an **alter** that speaks only from those cards, so the people
+staying keep working with it.
+
+The inversion is the whole design: **the human is the source, the agent is the
+interviewer.** Everything downstream — what a card contains, what the alter may
+say, when it must refuse — follows from taking that seriously.
 
 Built for the **All Things Agentic Hackathon** · category **Collaborative
 Partner** · [한국어 README](README.ko.md)
@@ -61,11 +73,13 @@ and the **legacy ledger** is why the expert comes back for session four.
 
 ### Six things that make it different
 
-1. **A toolbox, not a text editor.** Twelve self-excavation instruments; the
-   expert picks, the agent only recommends. The strongest is the *Wrong-Answer
-   Grader* — the agent proposes a plausible but wrong judgment and the expert
-   grabs a red pen. People cannot explain their own expertise, but they catch
-   someone else's error in three seconds.
+1. **The agent interviews; the expert never picks a method.** The expert types
+   one thing that happened. From there the agent asks, reflects back what it
+   understood (*"so — cues: … have I got that right?"*), and follows the answer.
+   Twelve instruments sit behind that, but the expert is never handed a menu.
+   The strongest is the *Wrong-Answer Grader* — the agent proposes a plausible
+   but wrong judgment and the expert grabs a red pen. People cannot explain
+   their own expertise, but they catch someone else's error in three seconds.
 2. **Judgment cards, not documents.** One situation-call per card: situation,
    **cues**, judgment, action, rationale, **exceptions**, and the war story of
    when it went wrong. Cues and exceptions never make it into a procedure
@@ -84,6 +98,35 @@ and the **legacy ledger** is why the expert comes back for session four.
    know" is a design that fails.
 6. **The gap goes back to the expert.** Unanswered questions queue on their home
    screen, ranked by how many juniors asked and how soon they leave.
+
+---
+
+### The questions are not improvised
+
+The interview follows published elicitation research rather than prompt taste
+([`docs/elicitation-protocol.md`](docs/elicitation-protocol.md)):
+
+- **Entry — ACTA Knowledge Audit** (Militello & Hutton, 1998). Eight probes,
+  each calling for a *different kind* of story: anomalies, equipment
+  difficulties, noticing, past & future, job smarts, self-monitoring, big
+  picture, improvising. The Critical Decision Method's classic opener — "your
+  hardest incident" — is excellent for depth but too narrow as a door: the
+  knowledge people use quietly every day is never recalled as *hard*. The entry
+  probe rotates, because one question only ever returns one kind of knowledge.
+- **Depth — Critical Decision Method** (Klein et al., 1989; Hoffman et al.,
+  1998). Progressive deepening: cues → strategies → what a less experienced
+  person would have done wrong → boundaries → failures.
+- **A limit we designed around.** Nisbett & Wilson (1977) showed people have no
+  introspective access to their own decision processes; Ericsson & Simon (1984)
+  concluded that after-the-fact *explanation* is not usable data. So `cues`
+  ("what did you see") is treated as observation and is the hard gate for
+  citation, while `rationale` ("why does it work") is treated as the most
+  confabulation-prone field and never blocks a card. The gate is not a hunch —
+  it is where the literature says the reliable signal is.
+
+This tool is still recall-based, so it does not meet the Ericsson & Simon bar
+for concurrent verbalisation. Recall bias is **reduced, not solved**, and the
+protocol says so.
 
 ---
 

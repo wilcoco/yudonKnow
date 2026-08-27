@@ -8,8 +8,9 @@
 ## Elevator pitch (한 줄, 200자 이내)
 
 ```
-An agent that interviews a retiring expert to dig out the judgment they can't
-write down, then stays behind as their alter — so juniors keep working with it.
+Most AI answers your questions. This one asks you. An agent interviews a
+retiring expert to dig out the judgment they can't write down, then stays
+behind as their alter so juniors keep working with it.
 ```
 
 ---
@@ -17,6 +18,11 @@ write down, then stays behind as their alter — so juniors keep working with it
 ## Project Story (Markdown — 그대로 붙여넣는다)
 
 ```markdown
+## Most AI answers your questions. This one asks you.
+
+Every AI product I had built until now waited to be asked. This one is
+backwards, and the reason it is backwards is the entire project.
+
 ## Yudon is my friend
 
 He retires in a few years. He wants to leave what he knows to the people
@@ -26,6 +32,18 @@ I watched him try. Open a blank document and he stops at "what do I even
 write." Twenty years of judgment does not come out on request. Ask him how he
 knows a molding defect is a speed problem and not a temperature problem, and
 he says: *"you just see it."*
+
+He is not withholding anything. **He does not know what he knows until someone
+asks him the right question.** That is not a motivation problem and not a
+writing problem — it is an *interviewing* problem, and interviewing is a skill
+that has a literature behind it. Extracting tacit knowledge has always required
+a human knowledge engineer sitting across the table. There are not enough of
+them, they are expensive, and they do not scale to every retiring expert in
+every plant.
+
+So the agent takes that seat. The human is the source; the agent is the
+interviewer. That inversion decides everything downstream — what a card holds,
+what the alter may say, and when it has to refuse.
 
 That sentence is the entire problem with institutional knowledge loss. On
 LinkedIn it gets discussed as brain drain, and the proposed fix is always the
@@ -205,6 +223,31 @@ person, and you have to ask well.
 **Naming a specific successor unlocks more than addressing "the org."** Write
 "for the organization" and you get platitudes. Write "for Kim, three months
 from now" and you get the truth.
+
+**The literature already knew things I was about to get wrong.** I had built
+the interview on the Critical Decision Method's classic opener — *"the hardest
+call you ever made."* It is superb for depth and too narrow as a door: the
+knowledge an expert uses quietly every day is never recalled as *hard*. ACTA's
+Knowledge Audit (Militello & Hutton, 1998) opens eight doors instead of one,
+and one of them — *"have the instruments ever said one thing while your
+judgment said another?"* — is **literally Yudon's first card**: the mold
+thermometer reads normal, and that is exactly where everyone gets fooled. I had
+captured that card by luck. Now the tool asks for it on purpose.
+
+**And one finding told me a design decision was right for a reason I hadn't
+known.** Nisbett & Wilson (1977) showed people have no introspective access to
+their own decision processes; Ericsson & Simon (1984) concluded that
+after-the-fact explanation is not usable data. My schema already made `cues`
+("what did you see") the hard gate for citation while letting `rationale`
+("why does it work") stay empty. I had done that on instinct, to keep juniors
+from getting rules they could not apply. The literature says the same thing
+from the other side: observation reports are comparatively reliable,
+self-explanation is where confabulation lives. The gate is in the right place.
+
+The honest counterpart: this tool is recall-based, so it does not meet the
+Ericsson & Simon bar for concurrent verbalisation. Recall bias is reduced, not
+solved. The protocol document says so, and the coverage number refuses to
+reach 1.0 for the same reason.
 
 ## Challenges
 
