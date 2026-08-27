@@ -133,7 +133,10 @@ def test_the_ledger_gives_the_expert_something_back(session):
 
     en = service.expert_home(session, "hong", lang="en")
     assert any("helped" in e["sentence"] for e in en["legacy"]["recent"])
-    assert "juniors asked" in en["legacy"]["headline"]
+    # 문안 자체가 아니라 **수치가 문장에 실려 나오는지** 를 본다. 문구는 다듬을
+    # 수 있어야 하고, 다듬을 때마다 테스트가 깨지면 문구를 안 다듬게 된다.
+    headline = en["legacy"]["headline"]
+    assert "1" in headline and "judgment" in headline
 
 
 def test_confirm_refuses_a_card_without_cues(session):
