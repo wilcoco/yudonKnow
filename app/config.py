@@ -1,9 +1,12 @@
 """환경 설정 — 전부 환경변수, 전부 기본값 있음.
 
-원칙 (alter-ai/coral 에서 이식): **키 없이도 뜬다.** ANTHROPIC_API_KEY 가 없으면
+원칙 (alter-ai/coral 에서 이식): **키 없이도 뜬다.** LLM 키가 없으면
 인터뷰어·분신이 규칙 기반으로 떨어지고, DATABASE_URL 이 없으면 SQLite 파일로
 떨어진다. 배포가 설정에 인질로 잡히지 않게 하려는 것 — 발굴→카드→분신→공백→닻
 동선은 stub 에서도 그대로 돈다.
+
+기저 LLM 은 **Gemini 가 기본**이고 Anthropic 이 대체다 (`capture/llm.py`).
+어느 쪽도 없으면 stub. 공급자를 못 박고 싶으면 ``YDK_LLM_PROVIDER`` 로 고른다.
 """
 
 from __future__ import annotations
@@ -28,7 +31,10 @@ def _i(name: str, default: int) -> int:
 
 
 def _normalize_db_url(url: str) -> str:
-    """Railway/Heroku 의 ``postgres://`` 를 SQLAlchemy 2.x 드라이버 URL 로."""
+    """Railway/Heroku 의 ``postgres://`` 를 SQLAlchemy 2.x 드라이버 URL 로.
+
+    Cloud SQL 은 ``postgresql://`` 로 주는데 그것도 같은 경로로 정규화된다.
+    """
     if url.startswith("postgres://"):
         return "postgresql+psycopg://" + url[len("postgres://") :]
     if url.startswith("postgresql://"):
@@ -39,8 +45,17 @@ def _normalize_db_url(url: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     # -- LLM (교체 가능 부품: 텍스트 in/out 경계에서만 접합) -----------------
+    #: ``auto`` (기본, Gemini→Anthropic→stub) · ``gemini`` · ``anthropic`` · ``stub``
+    provider: str
+    #: Gemini API 키. Vertex AI 를 쓰면 없어도 된다.
+    google_api_key: str | None
+    gemini_model: str
+    #: 채우면 Gemini API 대신 **Vertex AI** 로 붙는다 (GCP 프로젝트 ID).
+    vertex_project: str | None
+    vertex_location: str
+    #: 대체 기저. 없어도 서비스는 뜬다.
     anthropic_api_key: str | None
-    model: str
+    anthropic_model: str
     max_tokens: int
 
     # -- 저장소 ------------------------------------------------------------
@@ -67,8 +82,12 @@ class Settings:
     unlock_after_cards: int
 
     @property
+    def gemini_enabled(self) -> bool:
+        return bool(self.google_api_key or self.vertex_project)
+
+    @property
     def llm_enabled(self) -> bool:
-        return bool(self.anthropic_api_key)
+        return bool(self.gemini_enabled or self.anthropic_api_key)
 
 
 def load_settings() -> Settings:
@@ -81,8 +100,17 @@ def load_settings() -> Settings:
         db_url = f"sqlite:///{data_dir / 'yudonknow.db'}"
 
     return Settings(
+        provider=os.environ.get("YDK_LLM_PROVIDER", "auto").strip().lower() or "auto",
+        google_api_key=(
+            os.environ.get("GOOGLE_API_KEY")
+            or os.environ.get("GEMINI_API_KEY")
+            or None
+        ),
+        gemini_model=os.environ.get("YDK_GEMINI_MODEL", "gemini-3.5-pro"),
+        vertex_project=os.environ.get("YDK_VERTEX_PROJECT") or None,
+        vertex_location=os.environ.get("YDK_VERTEX_LOCATION", "us-central1"),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY") or None,
-        model=os.environ.get("YDK_MODEL", "claude-opus-5"),
+        anthropic_model=os.environ.get("YDK_ANTHROPIC_MODEL", "claude-opus-4-5"),
         max_tokens=_i("YDK_MAX_TOKENS", 8000),
         database_url=db_url,
         interview_turns=_i("YDK_INTERVIEW_TURNS", 7),
