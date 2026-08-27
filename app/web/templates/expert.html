@@ -87,6 +87,11 @@
     <div class="card">
       <p class="t" id="h_probe">{{ L['home.story.q'] }}</p>
       <textarea id="story" placeholder="{{ L['home.story.ph'] }}"></textarea>
+      {% if llm_enabled %}
+      <div class="row" style="margin-top:6px">
+        <button class="ghost" id="mic_h" onclick="toggleMic('story', this)">🎙 {{ L['sess.mic'] }}</button>
+      </div>
+      {% endif %}
       <p class="quiet">{{ L['home.story.note'] }}</p>
       <div class="acts">
         <button class="primary" onclick="startStory()">{{ L['home.story.cta'] }}</button>
@@ -137,6 +142,9 @@
           <div class="acts">
             <button class="primary" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
             <button class="ghost" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>
+            {% if llm_enabled %}
+            <button class="ghost" id="mic_s" onclick="toggleMic('s_answer', this)">🎙 {{ L['sess.mic'] }}</button>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -389,6 +397,47 @@ async function exportCards(){
   a.click();
 }
 
+// 🎙 말로 답하기 — 전사는 답 칸에 채워질 뿐 바로 제출되지 않는다.
+// 전문가가 고친 것이 기계 전사보다 우선한다 (CLAUDE.md 설계 원칙).
+let MIC = null;
+async function toggleMic(target, btn){
+  if(MIC){   // 녹음 중 → 정지·전사
+    MIC.stop(); return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia){ err(L['sess.mic.unsupported']); return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ err(L['sess.mic.denied']); return; }
+  const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+  const rec = new MediaRecorder(stream, {mimeType: mime});
+  const chunks = [];
+  const label = btn.textContent;
+  rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    MIC = null; stream.getTracks().forEach(t => t.stop());
+    btn.textContent = label; btn.disabled = true;
+    try{
+      const blob = new Blob(chunks, {type: mime});
+      const b64 = await new Promise((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result.split(',')[1]); r.onerror = no;
+        r.readAsDataURL(blob);
+      });
+      const out = await api('/api/transcribe', {method:'POST',
+        body: JSON.stringify({audio_b64: b64, mime})});
+      if(out.text){
+        const box = $(target);
+        box.value = (box.value ? box.value + '\n' : '') + out.text;
+        box.focus();
+      } else { err(L['sess.mic.empty']); }
+    }catch(e){ err(e.message); }
+    finally{ btn.disabled = false; }
+  };
+  rec.start();
+  MIC = rec;
+  btn.textContent = '⏹ ' + L['sess.mic.stop'];
+}
+
 // ── session ─────────────────────────────────────────────
 async function startSession(instrument){
   err('');
@@ -466,6 +515,10 @@ async function sendAnswer(skip){
     say('said', skip ? L['sess.skip'] : answer);
     say('echo', r.reflection);
     say('ask', r.question);
+    $('s_rung').textContent =
+      r.rung === 'deepen' ? L['sess.why.deepen']
+      : (r.targets && r.report ? L['sess.why'].replace('{}',
+          (r.report.slots.find(x => x.key === r.targets)?.label) || r.targets) : '');
     $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
     $('s_answer').value = '';
     $('s_title').textContent = r.card.title || '—';

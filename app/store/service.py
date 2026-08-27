@@ -255,6 +255,7 @@ def answer_turn(
         "turn_id": next_turn.id,
         "question": question.text,
         "rung": question.rung,
+        "targets": question.targets,
         "fallback": question.fallback,
         "index": answered + 1,
         "target": settings.interview_turns,

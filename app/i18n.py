@@ -315,6 +315,27 @@ CATALOG: dict[str, dict[str, str]] = {
     },
 
     # ── 발굴 세션 ─────────────────────────────────────────────────────
+    #: 🎙 말로 답하기 — "전문가가 말하는 편이 훨씬 잘 나온다" (roadmap P1-1).
+    #: 소리내어 하기(think-aloud)가 Ericsson & Simon 의 수행 중 발화 기준을
+    #: 만족하는 유일한 연장인데, 키보드로는 성립하지 않는다.
+    "sess.mic": {"en": "Speak instead", "ko": "말로 답하기"},
+    "sess.mic.stop": {"en": "Stop & transcribe", "ko": "그만 말하고 받아적기"},
+    "sess.mic.unsupported": {
+        "en": "This browser cannot record audio.", "ko": "이 브라우저는 녹음을 지원하지 않습니다.",
+    },
+    "sess.mic.denied": {
+        "en": "Microphone permission was refused.", "ko": "마이크 권한이 거절되었습니다.",
+    },
+    "sess.mic.empty": {
+        "en": "Could not hear anything — try once more.", "ko": "들리는 말이 없었습니다 — 한 번만 다시요.",
+    },
+    #: 면접자가 왜 이걸 묻는지 숨기지 않는다 — Collaborative Partner 는
+    #: "leads the way" 다. 길을 이끌면 어디로 가는지 말해줘야 한다.
+    "sess.why": {"en": "Filling in: {}", "ko": "지금 채우는 칸 — {}"},
+    "sess.why.deepen": {
+        "en": "\"It depends\" can't be handed down — so let's go to one actual day.",
+        "ko": "'그때그때 다르다'는 물려줄 수 없어서, 실제 있었던 하루로 내려갑니다.",
+    },
     "sess.reflect": {
         "en": "So — {label}: {body}\nHave I got that right? If not, say it again "
               "your way and I will take yours.",

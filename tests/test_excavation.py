@@ -144,3 +144,59 @@ def test_doc_questions_join_the_same_gap_queue(session):
     started = service.start_session(session, "hong", lang="ko")
     assert started["from_gap"] is True
     assert "절차서" in started["question"], "문서발 질문을 후배 질문처럼 말했다"
+
+
+def test_a_hedge_is_never_accepted_as_a_cue(session):
+    """**"그냥 감으로" 는 신호가 아니다.**
+
+    얼버무림이 `신호` 칸에 들어가면 인용 게이트를 통과하는 쓰레기 카드가 된다.
+    후배가 "그때그때 다르다" 를 판단 근거로 받는 것 — 이 도구가 존재하는 이유가
+    정확히 그 실패를 막는 것이다. 얼버무림은 도제 항목(unspeakable)으로 간다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    started = service.start_session(session, "hong", instrument="moment", lang="ko")
+    r = service.answer_turn(session, started["turn_id"], _DIG[0], lang="ko")
+    r = service.answer_turn(
+        session, r["turn_id"], "그때그때 다르죠, 그냥 감으로 합니다", lang="ko"
+    )
+
+    card = service.row_to_card(
+        session.get(db.CardRow, session.get(db.Session, started["session_id"]).card_id)
+    )
+    assert card.cues == [], "얼버무림이 신호에 들어갔다"
+    assert any("감으로" in u for u in card.unspeakable), "도제 항목으로 남지 않았다"
+
+
+def test_first_hedge_gets_one_deepening_probe_not_the_next_topic(session):
+    """얼버무림 1회차: 넘어가지 않고 같은 칸을 **사건 하나**로 다시 판다.
+
+    사람 지식공학자가 절대 넘어가지 않는 자리다 — 일반론은 물려줄 수 없다
+    (CDM: 사건 → 신호 → 규칙. docs/elicitation-protocol.md §0).
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    started = service.start_session(session, "hong", instrument="moment", lang="ko")
+    r = service.answer_turn(session, started["turn_id"], _DIG[0], lang="ko")
+    r = service.answer_turn(
+        session, r["turn_id"], "그때그때 다르죠, 그냥 감으로 합니다", lang="ko"
+    )
+
+    assert r["rung"] == "deepen", "얼버무림인데 다음 주제로 넘어갔다"
+    assert "그날" in r["question"], "사건 하나로 끌어내리는 질문이 아니다"
+    assert r["targets"] == "cues", "같은 칸을 다시 파지 않았다"
+
+
+def test_second_hedge_moves_on_instead_of_forcing_words(session):
+    """얼버무림 2회차: 강요하지 않는다.
+
+    억지 언어화는 지어낸 신호를 만든다. 두 번 물어서 안 나오면 그건 정말
+    말로 안 되는 것이고, 도제 항목으로 남긴 채 다음 칸으로 간다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    started = service.start_session(session, "hong", instrument="moment", lang="ko")
+    r = service.answer_turn(session, started["turn_id"], _DIG[0], lang="ko")
+    r = service.answer_turn(session, r["turn_id"], "그냥 감으로 하는 거죠", lang="ko")
+    assert r["rung"] == "deepen"
+    r = service.answer_turn(session, r["turn_id"], "정말 말로는 못 해요, 보면 알아요", lang="ko")
+
+    assert r["rung"] != "deepen", "말로 안 되는 것을 세 번째 강요했다"
+    assert r["targets"] != "cues", "다음 칸으로 넘어가지 않았다"

@@ -249,6 +249,22 @@ Ericsson & Simon bar for concurrent verbalisation. Recall bias is reduced, not
 solved. The protocol document says so, and the coverage number refuses to
 reach 1.0 for the same reason.
 
+## What would make this professional, not just kind
+
+Goodwill gets the first cards. It does not survive contact with an org chart.
+For a company to run this **professionally**, the retiree should be paid in
+proportion to how much their alter actually gets used — a small usage royalty
+tied to citations and "it helped" reports, and paid gap-filling sessions after
+departure (which also answers who fills the queue once the expert is gone).
+
+The ledger was built for gratitude, but it turns out to be audit-grade for
+settlement — precisely because it refuses vanity metrics. It counts only
+citations and explicit field reports, so the same numbers that give the expert
+their pride can, under an HR policy, give them their fee. The boundary that
+matters: settle on **field-verified use**, never on card count — pay per card
+and you get thin cards. That policy lives in HR, not in code; what the product
+contributes is a ledger clean enough to settle on.
+
 ## Challenges
 
 **Korean text matching without a morphological analyzer.** Korean particles

@@ -35,6 +35,8 @@ class BaseLLM(Protocol):
 
     def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]: ...
 
+    def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str: ...
+
 
 class StubLLM:
     """키 없이 뜨는 모드. **답을 지어내는 대신 stub 임을 밝힌다.**
@@ -53,6 +55,9 @@ class StubLLM:
 
     def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         return {}
+
+    def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str:
+        return ""   # 가짜 전사를 만들지 않는다 — 화면은 이 경우 마이크를 숨긴다
 
 
 # ------------------------------------------------------------------ Gemini
@@ -126,6 +131,29 @@ class GeminiLLM:
         )
         return (response.text or "").strip()
 
+    def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str:
+        """현장 발화 → 텍스트. **정리하지 않는다** — 원본 발화가 자료다.
+
+        요약·문어체 교정을 시키지 않는 것이 중요하다. 흐트러진 말 그대로가
+        "messy unstructured stream" 의 실물이고, 정리는 카드 구조화가 한다.
+        """
+        instruction = (
+            "다음 음성을 받아 적어라. 요약하지 말고, 문어체로 고치지 말고, "
+            "말한 그대로 적어라. 전사문만 출력하라."
+            if lang == "ko" else
+            "Transcribe this audio. Do not summarise, do not clean it up — "
+            "write exactly what was said. Output the transcript only."
+        )
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=[
+                self._types.Part.from_bytes(data=audio, mime_type=mime),
+                instruction,
+            ],
+            config=self._types.GenerateContentConfig(max_output_tokens=self._max_tokens),
+        )
+        return (response.text or "").strip()
+
     def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         """스키마 강제 구조화 추출 (카드 포획·오답 생성이 쓴다)."""
         response = self._client.models.generate_content(
@@ -145,7 +173,14 @@ class GeminiLLM:
 
 
 class AnthropicLLM:
-    """Anthropic Messages API 접합. 대체 기저 — 교체 가능성의 실물 증거다."""
+    """Anthropic Messages API 접합. 대체 기저 — 교체 가능성의 실물 증거다.
+
+    오디오 전사는 지원하지 않는다 — 이 기저로 바꾸면 화면이 마이크를 숨긴다.
+    기저 교체가 기능 강등으로 이어질 수 있음을 감추지 않는 것도 계약의 일부다.
+    """
+
+    def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str:
+        return ""
 
     def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
         import anthropic

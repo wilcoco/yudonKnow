@@ -94,6 +94,11 @@ class GradeIn(BaseModel):
     topic: str
 
 
+class TranscribeIn(BaseModel):
+    audio_b64: str          # 브라우저 MediaRecorder 산출물 (webm/ogg/mp4)
+    mime: str = "audio/webm"
+
+
 class DocumentIn(BaseModel):
     expert: str
     text: str
@@ -281,6 +286,22 @@ def ask(
     return service.ask_alter(
         session, expert, body.question, asker=body.asker, lang=lang
     )
+
+
+@router.post("/transcribe")
+def transcribe(body: TranscribeIn, lang: str = Depends(get_lang)) -> dict:
+    """음성 → 텍스트. 결과는 **답 칸에 채워질 뿐, 바로 제출되지 않는다** —
+    전문가가 고친 것이 기계 전사보다 우선한다."""
+    import base64
+
+    try:
+        audio = base64.b64decode(body.audio_b64, validate=True)
+    except Exception:
+        raise service.ServiceError("잘못된 오디오 데이터입니다")
+    if len(audio) > 15_000_000:   # ~15MB ≈ 수 분 분량이면 충분하다
+        raise service.ServiceError("녹음이 너무 깁니다 — 3분 안쪽으로 잘라주세요")
+    text = get_llm().transcribe(audio, body.mime, lang=lang)
+    return {"text": text, "supported": bool(text) or settings.llm_enabled}
 
 
 @router.post("/documents")

@@ -114,6 +114,47 @@ _SLOT_QUESTIONS: dict[str, dict[str, str]] = {
 }
 
 
+#: 얼버무림 — "그때그때 다르다" 계열. 이 말이 나오면 사람 지식공학자는
+#: 절대 다음 질문으로 넘어가지 않는다. 일반론은 적용할 수 없는 지식이고,
+#: CDM 의 핵심 수가 정확히 **일반론을 사건 하나로 끌어내리기**다
+#: (docs/elicitation-protocol.md §0). 판정은 단어 목록으로 한다 — LLM 에게
+#: "얼버무림인지 판단해 달라" 고 부탁하지 않는다.
+_HEDGES = (
+    "그때그때", "그때 그때", "케바케", "상황에 따라", "상황마다", "감으로",
+    "감이지", "그냥 감", "보면 알", "보면 안다", "느낌으로", "느낌이지",
+    "딱히 기준", "말로 못", "말로는 못", "설명이 안", "몸이 기억",
+    "it depends", "case by case", "gut feeling", "by feel", "just know",
+    "you just see", "hard to explain", "can't explain", "muscle memory",
+)
+
+
+def is_hedge(answer: str) -> bool:
+    text = " ".join((answer or "").lower().split())
+    return any(h in text for h in _HEDGES) and len(text) < 120
+
+
+#: 같은 칸을 **사건 하나**로 다시 파는 질문. 얼버무림 1회차에 쓴다.
+_DEEPEN: dict[str, dict[str, str]] = {
+    "ko": {
+        "cues": "그럼 마지막으로 그렇게 판단하셨던 날로 가보죠. 그날, 그 자리에서 무엇이 보였습니까? 화면·소리·냄새·손끝 중 하나만.",
+        "judgment": "일반론 말고요 — 가장 최근 그 한 번, 그날은 결론이 뭐였습니까?",
+        "exceptions": "최근에 이 규칙을 버린 적이 한 번이라도 있습니까? 그날은 뭐가 달랐습니까?",
+        "_": "일반론 말고, 마지막 한 번의 실제 사건으로만 말씀해 주세요. 그날 무슨 일이 있었습니까?",
+    },
+    "en": {
+        "cues": "Then take me to the last day you made that call. In that moment, what did you actually see? Screen, sound, smell, or hands — pick one.",
+        "judgment": "Not in general — the most recent single time. What was the call that day?",
+        "exceptions": "Has there been even one time recently you dropped this rule? What was different that day?",
+        "_": "Not in general — just the last single time it happened. What happened that day?",
+    },
+}
+
+
+def deepen_question(slot: str, lang: str = "en") -> str:
+    bank = _DEEPEN.get(lang, _DEEPEN["en"])
+    return bank.get(slot, bank["_"])
+
+
 def rungs(lang: str = "en") -> tuple[tuple[str, str], ...]:
     return _RUNGS.get(lang, _RUNGS["en"])
 
@@ -227,6 +268,23 @@ def next_question(
 
     if not history:
         return Question(text=ladder[0][1], rung="recall", instrument=instrument)
+
+    # 얼버무림 규칙 — "그때그때 다르다" 는 답이 아니라 신호다.
+    # 1회차: 같은 칸을 **사건 하나**로 다시 판다 (LLM 을 거치지 않는다 —
+    # 이 수는 결정적이어야 하고, 화면에서 왜 같은 칸을 다시 묻는지 보여야 한다).
+    # 2회차: 강요하지 않는다. 억지 언어화는 지어낸 신호를 만든다. 그 말은
+    # capture 가 unspeakable(도제 항목)로 보내고, 여기서는 다음 칸으로 넘어간다.
+    last = history[-1][1] if history else ""
+    prev = history[-2][1] if len(history) > 1 else ""
+    if target and is_hedge(last):
+        if not is_hedge(prev):
+            return Question(
+                text=deepen_question(target, lang), rung="deepen",
+                instrument=instrument, targets=target,
+            )
+        if card is not None and len(card.missing) > 1:
+            target = card.missing[1]
+            fallback_text = slot_question(target, lang)
 
     prompt = _build_probe_prompt(history, target, instrument, lang)
     try:
@@ -578,6 +636,13 @@ def _fallback(
     for slot, answer in slots or ():
         answer = answer.strip()
         if not slot or not answer or slot not in data:
+            continue
+        if is_hedge(answer):
+            # "그냥 감" 은 신호가 아니다 — 인용 게이트를 통과하는 쓰레기 카드를
+            # 만드는 대신, 담기지 않았다는 사실 자체를 도제 항목으로 남긴다
+            # (elicitation-protocol §1-2). 억지로 언어화시키지 않는다.
+            if answer[:200] not in data["unspeakable"]:
+                data["unspeakable"].append(answer[:200])
             continue
         if slot in _LIST_SLOTS:
             parts = [p.strip() for p in _SENTENCE.split(answer) if p.strip()]
