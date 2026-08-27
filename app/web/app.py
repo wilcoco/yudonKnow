@@ -110,6 +110,12 @@ def _experts_for(lang: str) -> list[dict]:
                 c for c in service.cards_of(session, r.id)
                 if c.status not in (CardStatus.DRAFT, CardStatus.DORMANT)
             ]
+            if not cards:
+                # 남긴 것이 아직 없으면 분신도 아직 없다. 명부에 빈 분신을
+                # 세우면 ① 처음 온 사람에게 고장으로 보이고 ② 심사 기간에
+                # 온보딩만 해 본 사람들로 명부가 오염된다. 본인은 /expert 로
+                # 들어가면 그대로 이어서 팔 수 있다.
+                continue
             domains = [c.domain for c in cards if c.domain]
             items.append({
                 "id": r.id,
