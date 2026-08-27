@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yudonKnow — 분신에게 묻기</title>
+{% include "_style.html" %}
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who">
+    <span>나</span>
+    <input type="text" id="asker" placeholder="내 아이디">
+  </div>
+</header>
+
+<main class="wide">
+  <div class="badges" style="margin-bottom:10px">
+    <span class="b am" id="label">{{ expert_id }}의 분신</span>
+    <span class="b" id="days"></span>
+  </div>
+  <p class="quiet" style="margin-top:0">
+    이 답은 사람이 아니라 <b>남겨진 판단 카드</b>에서 나옵니다. 근거 없이는 한 문장도 만들지 않습니다.
+  </p>
+
+  <div class="row" style="margin:16px 0 6px">
+    <input type="text" id="q" placeholder="선배에게 묻듯이 물어보세요 — 예) 플로우마크가 한쪽만 나와요"
+           onkeydown="if(event.key==='Enter')ask()">
+    <button class="primary" onclick="ask()">묻기</button>
+  </div>
+  <div class="err" id="err"></div>
+
+  <div class="panes" style="grid-template-columns:1fr" id="out"></div>
+</main>
+
+<footer>v{{ version }} · 분신은 사람을 사칭하지 않습니다. 모르면 모른다고 말합니다.</footer>
+
+<script>
+const EXPERT = {{ expert_id | tojson }};
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function api(path, opts){
+  const res = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  const body = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(body.error || body.detail || ('오류 ' + res.status));
+  return body;
+}
+
+(async function boot(){
+  $('asker').value = localStorage.getItem('ydk_me') || '';
+  try{
+    const l = await api('/api/experts');
+    const e = (l.experts||[]).find(x => x.id === EXPERT);
+    if(e){
+      $('label').textContent = e.alter;
+      $('days').textContent = e.days_left === null ? '재직 중'
+        : (e.days_left >= 0 ? '재직 D-' + e.days_left : '이미 떠나셨습니다');
+    }
+  }catch(e){}
+})();
+
+async function ask(){
+  const q = $('q').value.trim();
+  if(!q) return;
+  $('err').textContent = '';
+  localStorage.setItem('ydk_me', $('asker').value.trim());
+  try{
+    const r = await api('/api/alter/'+encodeURIComponent(EXPERT)+'/ask', {method:'POST',
+      body: JSON.stringify({question:q, asker: $('asker').value.trim()})});
+    render(q, r);
+    $('q').value = '';
+  }catch(e){ $('err').textContent = e.message; }
+}
+
+function render(q, r){
+  const wrap = document.createElement('div');
+  wrap.className = 'card' + (r.is_gap ? ' alarm' : '');
+  let html = `<p class="quiet">Q ${esc(q)}</p>`;
+
+  if(r.is_gap){
+    html += `<div class="gap">${esc(r.text).replace(/\n/g,'<br>')}</div>
+      <p class="quiet">모른다고 말하는 것도 이 분신의 기능입니다. 지어내지 않습니다.</p>`;
+  } else {
+    html += `<p class="t" style="font-size:16px">${esc(r.persona)}</p>
+             <div class="c" style="color:var(--ink);font-size:14.5px">${esc(r.text).replace(/\n/g,'<br>')}</div>`;
+    if(r.apprentice_notice)
+      html += `<div class="gap" style="margin-top:10px">🔴 ${esc(r.apprentice_notice)}</div>`;
+    if(r.contested.length)
+      html += `<div class="gap" style="margin-top:10px">⚠ 이 판단은 최근 안 맞았다는 보고가 있습니다.</div>`;
+
+    html += `<h2 class="sec">근거</h2>`;
+    for(const c of r.cards){
+      html += `<div class="card ${c.verified?'ok':''}" style="margin:0 0 10px">
+        <div class="badges">
+          ${c.verified ? '<span class="b ok">✔ 현장 검증</span>' : '<span class="b">아직 검증 전</span>'}
+          <span class="b">${esc(c.domain||'미분류')}</span>
+          <span class="b">${c.tacitness==='hands'?'🔴 손끝':c.tacitness==='partial'?'🟡 반쯤':'🟢 읽으면 됨'}</span>
+        </div>
+        <p class="t">${esc(c.title)}</p>
+        ${c.cues.length? `<p class="c"><b>무엇을 보고 아는가</b><br>· ${c.cues.map(esc).join('<br>· ')}</p>`:''}
+        ${c.action.length? `<p class="c"><b>조치</b><br>${c.action.map(esc).join(' → ')}</p>`:''}
+        ${c.exceptions.length? `<p class="c" style="color:var(--danger)"><b>⚠ 예외 — 여기선 이 규칙 버리세요</b><br>· ${c.exceptions.map(esc).join('<br>· ')}</p>`:''}
+        ${c.failure? `<p class="c" style="color:var(--amber)"><b>실패담</b><br>${esc(c.failure)}</p>`:''}
+        ${c.unspeakable.length? `<p class="c">🔴 글로 안 담긴 부분: ${c.unspeakable.map(esc).join(' / ')}</p>`:''}
+        <div class="acts">
+          <button class="primary" onclick="report('${c.id}','helped',this)">이대로 해서 잘 됐다</button>
+          <button onclick="report('${c.id}','missed',this)">안 맞았다</button>
+        </div>
+      </div>`;
+    }
+    if(r.stubbed) html += `<p class="quiet">LLM 미연결 — 카드 원문을 그대로 보여드렸습니다.</p>`;
+  }
+  wrap.innerHTML = html;
+  $('out').prepend(wrap);
+}
+
+async function report(cardId, verdict, btn){
+  const detail = verdict === 'helped'
+    ? (prompt('무엇이 좋아졌나요? (선택)') || '')
+    : (prompt('무엇이 달랐나요? 선배에게 그대로 전해집니다.') || '');
+  try{
+    await api('/api/cards/'+cardId+'/report', {method:'POST', body: JSON.stringify({
+      verdict, reporter: $('asker').value.trim(), detail })});
+    btn.parentElement.innerHTML = verdict === 'helped'
+      ? '<span class="quiet">보고했습니다. 선배 화면에 바로 뜹니다 — 당신의 30초가 선배의 보람이 됩니다.</span>'
+      : '<span class="quiet">전달했습니다. 선배가 이 판단을 다시 봅니다.</span>';
+  }catch(e){ $('err').textContent = e.message; }
+}
+</script>
+</body>
+</html>

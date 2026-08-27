@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yudonKnow — 승계 리스크 보드</title>
+{% include "_style.html" %}
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who"><span>관리자</span></div>
+</header>
+
+<main class="wide">
+  <h1>누가 나가면 무엇이 비나</h1>
+  <p class="lead">정렬 순서가 곧 개입 순서입니다. 맨 위부터 인터뷰를 배정하세요.</p>
+  <div id="board"></div>
+  <p class="quiet" style="margin-top:24px">
+    ※ 이 화면은 <b>개인 성과 지표가 아닙니다.</b> 감시로 쓰이는 순간 발굴이 멈춥니다.
+    커버리지 %는 항상 🔴 손끝 비율과 함께 읽으세요 — 담지 <b>못한</b> 양이 거기 있습니다.
+  </p>
+</main>
+
+<footer>v{{ version }}</footer>
+
+<script>
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+(async function(){
+  const r = await fetch('/api/admin/board').then(r=>r.json());
+  const el = document.getElementById('board');
+  if(!r.board || !r.board.length){
+    el.innerHTML = '<div class="card"><p class="c">아직 등록된 전문가가 없습니다.</p></div>';
+    return;
+  }
+  el.innerHTML = r.board.map(b => `
+    <div class="card ${b.level==='심각'?'alarm':b.level==='저'?'ok':''}">
+      <div class="badges">
+        <span class="b ${b.level==='심각'?'warn':b.level==='저'?'ok':''}">리스크 ${esc(b.level)}</span>
+        <span class="b">${b.days_left===null?'재직 중':'D-'+b.days_left}</span>
+        <span class="b">카드 ${b.cards}</span>
+        ${b.gaps? `<span class="b warn">미답 공백 ${b.gaps}</span>`:''}
+      </div>
+      <p class="t">${esc(b.name)}</p>
+      <div class="bar"><i style="width:${Math.round(b.coverage*100)}%"></i></div>
+      <p class="c">커버리지 ${Math.round(b.coverage*100)}% ·
+        🔴 손끝 ${Math.round(b.hands_ratio*100)}% ·
+        가장 빈 영역: ${esc(b.weakest||'—')}</p>
+      <div class="acts">
+        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}'">분신에게 물어보기</button>
+      </div>
+    </div>`).join('');
+})();
+</script>
+</body>
+</html>
