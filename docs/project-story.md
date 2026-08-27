@@ -39,6 +39,63 @@ works.
 
 **yudonKnow** — what Yudon knows, and what you don't.
 
+## The gap that makes this worth building
+
+APQC surveyed 1,000 organizations for *Navigating the Great Retirement with KM
+& AI*. Two numbers from it sit next to each other:
+
+- **92%** do not consistently capture knowledge from soon-to-be retirees.
+- **58%** of C-suite respondents are *very worried* about exactly that loss.
+
+They know. They still don't do it. Two more numbers say why: **85%** have not
+operationalised AI for knowledge management, and **41%** rarely or never even
+attempt to collect know-how from people who are leaving. Meanwhile the share of
+US manufacturing workers over 55 has gone from roughly 10% to roughly 25% since
+1995.
+
+That gap between knowing and doing is the whole thesis. It is not a motivation
+problem. It is a tooling problem.
+
+## Standing on cognitive task analysis, and where I step off it
+
+Eliciting tacit knowledge is a solved research problem. The **Critical Decision
+Method** (Klein, Calderwood & MacGregor, 1989) and **ACTA** (Militello &
+Hutton, 1998) have been doing this in firefighting, aviation, military and
+medicine for three decades. My five-rung elicitation ladder is CDM's structure
+— recall a specific non-routine incident, probe the cues, run the
+counterfactual, find the boundary, mine the failure. I did not invent that and
+I don't claim to.
+
+What stopped CDM from reaching Yudon is not the method. It is that a CDM
+interview takes a trained knowledge engineer two to four hours, and the
+analysis takes several times longer again. That price is affordable if you are
+a nuclear plant or an air force. It is not affordable for a mould shop with one
+retiring expert. The knowledge-acquisition bottleneck that killed the expert
+systems era was never a methodology failure — it was a unit-cost failure.
+
+**An LLM removes that constraint.** That is the actual reason this is buildable
+now, and it is an economic change, not a methodological one.
+
+Three places where I deliberately step off the lineage:
+
+1. **The analyst is gone.** CDM assumes a trained interviewer. Here the expert
+   drives and picks their own instrument. That buys reach and costs me the bias
+   correction a human analyst provided — the gap queue is my only external
+   check, and it is not a complete one. That trade is written down in
+   `docs/design.md` §8, not hidden.
+2. **CTA stops at extraction.** It produces a report, a cognitive demands
+   table, a training curriculum. Nobody designs the path by which a junior
+   pulls that back out mid-shift. Here the output is a working alter, and the
+   wheel closes: cited → applied → reported → gap → dug again.
+3. **Verification comes from the field, not from authority.** CTA validates by
+   expert review. The ✔ badge here comes only from a junior reporting what
+   actually happened when they used the card.
+
+The last one matters most to me. The literature treats Collins' *somatic* tacit
+knowledge as a concept; I count it as an operating metric. The 🔴 share — what
+did **not** go into words — is reported next to coverage, always, and coverage
+is capped at 0.95 so the system can never claim it got everything.
+
 ## What it does
 
 **1. It hands the expert a toolbox, not a text editor.**
@@ -78,6 +135,17 @@ Confidence is computed in plain Python from retrieval scores. Below the floor,
 the LLM is **never called at all** and the question becomes a gap. Asking a
 model to "say you don't know if you don't know" is a design that fails. A test
 named `test_gap_decision_never_calls_the_llm` enforces the structure.
+
+This one nearly bit me. When I seeded an English demo dataset, the alter
+answered *"how do I calibrate the new UV bank"* with a confident, completely
+unrelated card. Two causes: I had Korean stopwords but no English ones, so
+"how / do / the" matched card text; and my partial-match rule for Korean
+compound nouns fired on Latin script, where `"rate"` is a substring of
+`"calibrate"` and `"the"` of `"then"`. For a product whose entire premise is
+that the junior *cannot evaluate the answer*, a confident wrong answer is not a
+bug — it is the failure mode that kills the product. Partial matching is now
+Korean-only, and `test_unrelated_english_question_is_always_a_gap` keeps it
+that way.
 
 **6. The gap goes back to the expert, and that closes the loop.**
 Unanswered questions queue up on the expert's home screen, ranked by how many
@@ -126,6 +194,13 @@ stake.
 **Saying "I don't know" well is a feature, not a failure mode.** The moment
 the alter fabricates, a junior who cannot evaluate the answer loses all reason
 to trust it, and the product is dead.
+
+**Most "tribal knowledge AI" products mine documents, which is the opposite
+problem.** The tools I looked at ingest work orders, technician notes and
+failure histories to generate SOPs. That extracts from what was already
+written down — and what was already written down is precisely not the tacit
+part. You cannot mine your way to the thing nobody recorded. You have to ask a
+person, and you have to ask well.
 
 **Naming a specific successor unlocks more than addressing "the org."** Write
 "for the organization" and you get platitudes. Write "for Kim, three months
@@ -186,7 +261,7 @@ built during the Submission Period.
 ## Built with (태그 — 최대 25개)
 
 ```
-gemini · google-ai-studio · vertex-ai · google-adk · google-genai-sdk
+gemini · gemini-enterprise-agent-platform · google-ai-studio · vertex-ai · google-adk · google-genai-sdk
 google-cloud · cloud-run · cloud-sql · secret-manager · artifact-registry
 python · fastapi · sqlalchemy · pydantic · uvicorn · jinja2 · postgresql
 sqlite · docker · html · css · javascript · pytest
