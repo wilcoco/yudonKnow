@@ -141,11 +141,25 @@ def test_alter_label_never_impersonates():
 
 # ----------------------------------------------------------------- 도구함
 
-def test_toolbox_starts_with_only_two_instruments():
-    """선택지가 많으면 아무것도 고르지 않는다 (self-excavation §5)."""
-    keys = {i.key for i in unlocked(0)}
-    assert keys == {"moment", "wrong"}
-    assert len(unlocked(3)) > 2
+def test_every_instrument_is_available_from_the_first_day():
+    """연장은 처음부터 전부 보인다.
+
+    v0.1 은 2개만 열었다. 선택지 과부하가 이탈 원인이라는 근거는 지금도 맞지만,
+    감추면 ① 이 도구의 차별점을 쓰는 사람이 모르고 ② 오늘 필요한 연장이 잠겨
+    있으면 할 수 있는 게 없다. 과부하는 아래 테스트대로 **추천**이 막는다.
+    """
+    assert unlocked(0) == unlocked(99), "첫날과 나중에 쓸 수 있는 연장이 다르다"
+    assert len(unlocked(0)) > 2
+
+
+def test_overload_is_held_back_by_the_suggestion_not_by_hiding():
+    """추천은 몇 개만 세운다 — 목록을 다 읽지 않아도 오늘 할 일이 정해진다.
+
+    연장을 다 보여주기로 한 이상, 과부하를 막는 책임은 전적으로 여기에 있다.
+    이 상한이 풀리면 첫 화면이 12개짜리 메뉴판이 된다.
+    """
+    suggestions = recommend([make_card()], lang="ko", card_count=9)
+    assert 0 < len(suggestions) <= 3
 
 
 def test_recommendation_puts_the_juniors_gap_first():

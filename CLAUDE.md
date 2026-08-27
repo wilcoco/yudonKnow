@@ -25,9 +25,11 @@
 | **분신은 사칭하지 않는다** — 표시는 언제나 "OOO의 분신" | `test_alter_label_never_impersonates` |
 | **통제권은 전문가에게** — 비공개·봉인·지목·분신 정지 | `test_sealed_card_stays_shut...` 외 |
 | **커버리지는 1.0 에 닿지 않는다** (천장 0.95) | `test_coverage_never_claims_completeness` |
-| **도구함은 2개로 시작** — 선택지 과부하는 이탈 1번 원인 | `test_toolbox_starts_with_only_two_instruments` |
+| **연장은 처음부터 전부 보인다.** 과부하는 감추기가 아니라 **추천 3개 상한**으로 막는다 | `test_every_instrument_is_available_from_the_first_day` · `test_overload_is_held_back_by_the_suggestion_not_by_hiding` |
 | **`app/core` 는 프레임워크·DB 를 import 하지 않는다** | `tests/test_isolation.py` |
 | **한 바퀴가 닫힌다** — 승인 카드가 후배 답에 실제로 인용된다 | `test_the_wheel_closes` |
+| **발굴만으로 카드가 채워진다** — 기저 없이도. 답은 그 답을 끌어낸 질문의 칸에 들어간다 (`Turn.targets`) | `tests/test_excavation.py` |
+| **카드는 파낸 언어로 산다** — 검색은 언어를 넘지 않는다 | `test_the_wheel_closes` (영어 질문 → 공백) |
 
 ## 설계 원칙 (위반 금지)
 - LLM 은 **산출물 층위**로만 접합 (텍스트 in/out). 교체 가능성이 전략 자산.
@@ -60,6 +62,10 @@
 - 진입점 `app/web/app.py`, 오케스트레이션 `app/store/service.py`.
 - 화면: `/` 랜딩 · `/expert` 전문가(온보딩·홈·발굴 3단) · `/alter/{id}` 후배 ·
   `/admin` 승계 리스크 보드.
-- 테스트 34개 통과. stub 모드(키 없음)에서도 전 동선 동작 확인.
+- 테스트 44개 통과. stub 모드(키 없음)에서도 **발굴 → 카드 → 승인 → 인용**
+  전 동선 동작 확인 (`tests/test_excavation.py` 가 손으로 칸을 채우지 않고 판다).
+  stub 에서 강등되는 것은 **품질**이다: 질문 생성이 규칙 기반으로 떨어지고,
+  카드 구조화가 "답을 겨냥한 칸에 넣기"로 떨어지고, 분신이 카드 원문을 그대로
+  낸다. 동선이 끊기지는 않는다.
 - **코드를 고치기 전에 `docs/design.md` §7(의도적으로 안 하는 것)을 읽을 것.**
   거기 적힌 것은 미구현이지 미완성이 아니다.

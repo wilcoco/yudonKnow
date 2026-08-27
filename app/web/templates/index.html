@@ -16,6 +16,8 @@
 </header>
 
 <main>
+  <p class="quiet" style="font-family:var(--mono,inherit);letter-spacing:.02em;margin-bottom:6px">
+    {{ L['landing.inversion'] }}</p>
   <h1>{{ L['app.tagline'] }}</h1>
   <p class="lead">{{ L['app.sub'] }}</p>
 
@@ -34,6 +36,16 @@
     <div class="card">
       <p class="t">💬 {{ L['nav.junior'] }}</p>
       <p class="c">{{ L['landing.junior.body'] }}</p>
+      {% if experts %}
+      {# 아이디를 추측하게 두지 않는다. 화면 언어로 판 사람이 앞에 온다 —
+         못 읽을 카드를 찾아 주는 것은 답이 아니기 때문이다 (design.md §7). #}
+      <p class="c" style="margin-top:10px;font-size:12px;opacity:.7">{{ L['landing.junior.pick'] }}</p>
+      <div class="row" style="margin-top:4px">
+        {% for e in experts %}
+        <button onclick="go('/alter/{{ e.id }}')">{{ e.name }} · {{ e.lang|upper }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
       <div class="row" style="margin-top:10px">
         <input type="text" id="who" placeholder="{{ L['landing.junior.ph'] }}">
       </div>

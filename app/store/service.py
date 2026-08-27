@@ -125,14 +125,28 @@ def ensure_expert(session: OrmSession, expert_id: str, **fields: Any) -> db.Expe
     return row
 
 
-def persona_of(row: db.Expert) -> Persona:
+def persona_of(row: db.Expert, *, card_count: int = 0) -> Persona:
     return Persona(
         expert=row.id,
         display_name=row.display_name,
         sayings=_lines(row.sayings),
         taboos=_lines(row.taboos),
         active=row.alter_active,
+        lang=row.lang,
+        card_count=card_count,
     )
+
+
+def _confirmed_count(session: OrmSession, expert: str) -> int:
+    """이 사람이 실제로 남긴 카드 수. 언어 경계 문안이 이 숫자에 달려 있다 —
+    0 이면 정말 안 남긴 것이고, 0 이 아니면 못 읽는 것뿐이다."""
+    dead = (CardStatus.DRAFT.value, CardStatus.DORMANT.value)
+    return session.scalar(
+        select(func.count()).select_from(db.CardRow).where(
+            db.CardRow.expert == expert,
+            db.CardRow.status.notin_(dead),
+        )
+    ) or 0
 
 
 def days_left(row: db.Expert) -> int | None:
@@ -176,7 +190,8 @@ def start_session(
         lang=lang,
     )
     turn = db.Turn(
-        id=_uid("t"), session_id=row.id, question=question.text, rung=question.rung
+        id=_uid("t"), session_id=row.id, question=question.text, rung=question.rung,
+        targets=question.targets,
     )
     session.add(turn)
     session.commit()
@@ -221,15 +236,21 @@ def answer_turn(
         get_llm(), instrument=sess.instrument, card=card, history=history, lang=lang
     )
     next_turn = db.Turn(
-        id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung
+        id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung,
+        targets=question.targets,
     )
     session.add(next_turn)
     session.commit()
 
     answered = sum(1 for _, a in history if a)
+    filled_slot = turn.targets or interview.RUNG_SLOT.get(turn.rung, "")
     return {
         "card": card_view(card),
         "report": interview.slot_report(card, lang),
+        # 되읽어주기 — 오해는 그 자리에서 잡는다 (elicitation-protocol §2).
+        "reflection": (
+            "" if turn.skipped else interview.reflect(card, filled_slot, lang)
+        ),
         "turn_id": next_turn.id,
         "question": question.text,
         "rung": question.rung,
@@ -247,13 +268,34 @@ def _history(session: OrmSession, session_id: str) -> list[tuple[str, str]]:
     return [(t.question, t.answer) for t in turns if t.answer and not t.skipped]
 
 
+def _slot_history(session: OrmSession, session_id: str) -> list[tuple[str, str]]:
+    """(겨냥한 칸, 답) 쌍. 기저가 없을 때 카드를 채우는 유일한 근거다.
+
+    ``targets`` 가 비면 그 단(rung)이 무엇을 물었는지로 떨어진다. 둘 다 없으면
+    넣지 않는다 — 어느 칸인지 모르는 답을 아무 데나 넣지 않기 위해서다.
+    """
+    turns = session.scalars(
+        select(db.Turn).where(db.Turn.session_id == session_id).order_by(db.Turn.created_at)
+    ).all()
+    pairs: list[tuple[str, str]] = []
+    for turn in turns:
+        if not turn.answer or turn.skipped:
+            continue
+        slot = turn.targets or interview.RUNG_SLOT.get(turn.rung, "")
+        if slot:
+            pairs.append((slot, turn.answer))
+    return pairs
+
+
 def _upsert_card(
     session: OrmSession, sess: db.Session, history: list[tuple[str, str]],
     *, lang: str = LANG_DEFAULT,
 ) -> db.CardRow:
     """대화가 쌓일 때마다 카드를 다시 뽑는다. 초안은 계속 덮어써도 안전하다 —
     승인 후에는 덮어쓰지 않는다 (전문가가 고친 것이 기계 추출보다 우선)."""
-    draft = interview.capture(get_llm(), history, lang=lang)
+    draft = interview.capture(
+        get_llm(), history, lang=lang, slots=_slot_history(session, sess.id)
+    )
     if sess.card_id:
         row = session.get(db.CardRow, sess.card_id)
         if row is not None and row.status != CardStatus.DRAFT.value:
@@ -274,6 +316,9 @@ def _upsert_card(
     write_card(row, card)
     row.instrument = sess.instrument
     row.source_turn = sess.id
+    #: 카드는 파낸 언어로 산다. 검색이 언어를 넘지 않는 근거가 이 한 줄이다
+    #: (docs/design.md §7) — 찾아 줘도 못 읽는 카드는 답이 아니기 때문이다.
+    row.lang = lang
     return row
 
 
@@ -360,7 +405,7 @@ def ask_alter(
 ) -> dict[str, Any]:
     """후배의 질문 한 번. 답했으면 인용을, 못 답했으면 공백을 남긴다."""
     expert_row = get_expert(session, expert, lang=lang)
-    persona = persona_of(expert_row)
+    persona = persona_of(expert_row, card_count=_confirmed_count(session, expert))
     cards = cards_of(session, expert)
 
     reply: AlterReply = respond(
@@ -373,7 +418,7 @@ def ask_alter(
         explore_quota=settings.explore_quota,
         confidence_floor=settings.confidence_floor,
         days_left=days_left(expert_row),
-        alternatives=_other_experts(session, expert),
+        alternatives=_other_experts(session, expert, lang=lang),
         lang=lang,
     )
 
@@ -407,11 +452,17 @@ def ask_alter(
     return {"ask_id": ask.id, "persona": persona.label(lang), **reply.as_dict()}
 
 
-def _other_experts(session: OrmSession, expert: str) -> list[str]:
+def _other_experts(
+    session: OrmSession, expert: str, *, lang: str = ""
+) -> list[str]:
+    """다른 전문가. 물어본 언어로 판 사람만 세운다 — 못 읽을 사람을 권하면
+    막다른 길을 하나 더 놓는 것이다."""
     rows = session.scalars(
-        select(db.Expert).where(db.Expert.id != expert).limit(3)
+        select(db.Expert).where(db.Expert.id != expert)
     ).all()
-    return [r.display_name or r.id for r in rows]
+    if lang:
+        rows = [r for r in rows if r.lang == lang]
+    return [r.display_name or r.id for r in rows][:3]
 
 
 def _record_gap(session: OrmSession, expert: str, question: str, asker: str) -> None:
@@ -675,14 +726,16 @@ def expert_home(
                 for d in risk.domains
             ],
         },
+        # 오늘의 입구 질문 (ACTA 지식 감사). 화면은 이걸 그대로 띄운다.
+        "entry_probe": dict(
+            zip(("kind", "question"), interview.entry_probe(len(live), lang))
+        ),
         "toolbox": [
             {"key": i.key, "emoji": i.emoji, "minutes": i.minutes, **i.localized(lang)}
             for i in unlocked(len(live), threshold=settings.unlock_after_cards)
         ],
-        "locked": max(
-            0,
-            len(unlocked(999)) - len(unlocked(len(live), threshold=settings.unlock_after_cards)),
-        ),
+        "locked": 0,          # 잠기는 연장은 없다 — 화면 하위호환용으로 남긴다
+        "tool_total": len(unlocked(999)),
         "suggestions": [
             {
                 "key": s.instrument.key, "emoji": s.instrument.emoji,

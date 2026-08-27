@@ -26,6 +26,12 @@
     <p class="lead">{{ L['ob.lede'] }}</p>
 
     <div class="card">
+      <p class="t">{{ L['ob.q0'] }}</p>
+      <input type="text" id="ob_name" placeholder="{{ L['ob.q0.ph'] }}">
+      <p class="quiet">{{ L['ob.q0.note'] }}</p>
+    </div>
+
+    <div class="card">
       <p class="t">{{ L['ob.q1'] }}</p>
       <textarea id="ob_domains" placeholder="{{ L['ob.q1.ph'] }}"></textarea>
       <p class="quiet">{{ L['ob.q1.note'] }}</p>
@@ -39,7 +45,7 @@
 
     <div class="card">
       <p class="t">{{ L['ob.q3'] }} <span class="quiet">{{ L['ob.q3.note'] }}</span></p>
-      <input type="text" id="ob_leaving" placeholder="2026-12-31">
+      <input type="date" id="ob_leaving">
     </div>
 
     <button class="amber block" onclick="createExpert()">{{ L['ob.start'] }}</button>
@@ -75,10 +81,25 @@
       <p class="quiet" id="h_hands"></p>
     </div>
 
-    <h2 class="sec">{{ L['home.toolbox'] }}</h2>
+    <!-- 사건 하나에서 시작한다 (docs/elicitation-protocol.md §0).
+         도구를 먼저 고르게 하면 전문가에게 도구 지식을 요구하는 셈이다. -->
+    <h2 class="sec">{{ L['home.story'] }}</h2>
+    <div class="card">
+      <p class="t" id="h_probe">{{ L['home.story.q'] }}</p>
+      <textarea id="story" placeholder="{{ L['home.story.ph'] }}"></textarea>
+      <p class="quiet">{{ L['home.story.note'] }}</p>
+      <div class="acts">
+        <button class="primary" onclick="startStory()">{{ L['home.story.cta'] }}</button>
+      </div>
+    </div>
+
     <div id="h_suggest"></div>
-    <div class="grid g3" id="h_tools"></div>
-    <p class="quiet" id="h_locked"></p>
+
+    <details style="margin-top:18px">
+      <summary class="quiet">{{ L['home.toolbox.more'] }}</summary>
+      <div class="grid g3" id="h_tools" style="margin-top:12px"></div>
+      <p class="quiet" id="h_locked"></p>
+    </details>
   </section>
 
   <!-- ───────────── excavation session ───────────── -->
@@ -89,17 +110,12 @@
       <span class="quiet" id="s_progress"></span>
     </div>
 
-    <div class="panes">
+    <div class="panes2">
       <div>
-        <div class="card">
-          <p class="quiet" id="s_rung"></p>
-          <p class="t" id="s_question" style="font-size:17px;line-height:1.6"></p>
-          <div id="s_wrong"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="card">
+        <div id="s_thread" class="thread"></div>
+        <p class="quiet" id="s_rung"></p>
+        <div id="s_wrong"></div>
+        <div class="card" style="margin-top:12px">
           <textarea id="s_answer" placeholder="{{ L['sess.answer.ph'] }}"></textarea>
           <div class="acts">
             <button class="primary" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
@@ -158,20 +174,38 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
 
+// 서버 오류를 **사람이 읽을 수 있는 한 줄**로. FastAPI 검증 실패(422)의
+// `detail` 은 객체 배열이라, 그대로 두면 화면에 [object Object] 가 뜬다.
+function readError(body, status){
+  if(typeof body?.error === 'string') return body.error;
+  const d = body?.detail;
+  if(typeof d === 'string') return d;
+  if(Array.isArray(d)){
+    const parts = d.map(x => {
+      const field = Array.isArray(x?.loc) ? x.loc[x.loc.length-1] : '';
+      const msg = x?.msg || '';
+      return field ? `${field}: ${msg}` : msg;
+    }).filter(Boolean);
+    if(parts.length) return parts.join(' / ');
+  }
+  return 'HTTP ' + status;
+}
+
 async function api(path, opts){
   const sep = path.includes('?') ? '&' : '?';
   const url = LANG === 'en' ? path : path + sep + 'lang=' + LANG;
   const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
   const body = await res.json().catch(()=>({}));
-  if(!res.ok){ throw new Error(body.error || body.detail || ('HTTP ' + res.status)); }
+  if(!res.ok){ throw new Error(readError(body, res.status)); }
   return body;
 }
 
 // ── onboarding ───────────────────────────────────────────
 async function createExpert(){
   err('');
-  const id = me();
-  if(!id){ err(L['ob.need_id']); return; }
+  const id = ($('ob_name').value.trim() || me());
+  if(!id){ err(L['ob.need_id']); $('ob_name').focus(); return; }
+  $('me').value = id;
   const leaving = $('ob_leaving').value.trim();
   try{
     await api('/api/experts', {method:'POST', body: JSON.stringify({
@@ -186,6 +220,28 @@ async function createExpert(){
     localStorage.setItem('ydk_me', id);
     loadHome();
   }catch(e){ err(e.message); }
+}
+
+// 전문가가 적은 이야기 한 덩어리로 세션을 연다.
+//
+// 도구를 고르게 하지 않는다 — 새 사건에는 사다리가 맞고, 무엇으로 팔지는
+// **카드에 뭐가 비었는지**가 정한다(recommend). 적은 문장은 버려지지 않고
+// 사다리 1단의 답으로 그대로 들어가므로, 전문가는 같은 말을 두 번 하지 않는다.
+async function startStory(){
+  err('');
+  const text = $('story').value.trim();
+  if(!text){ $('story').focus(); return; }
+  const btn = event?.target; if(btn) btn.disabled = true;
+  try{
+    const started = await api('/api/sessions', {method:'POST', body: JSON.stringify({
+      expert: me(), instrument: 'ladder',
+    })});
+    const turn = await api('/api/turns/' + encodeURIComponent(started.turn_id),
+      {method:'POST', body: JSON.stringify({session_id: started.session_id, answer: text})});
+    $('story').value = '';
+    enterSession(started, turn, text);
+  }catch(e){ err(e.message); }
+  finally{ if(btn) btn.disabled = false; }
 }
 
 // ── home ────────────────────────────────────────────────
@@ -257,7 +313,9 @@ function renderHome(h){
       <div class="p">${esc(t.pitch)}</div>
       <div class="p" style="margin-top:6px">${esc(L['home.tool.mins'].replace('{}', t.minutes))}</div>
     </button>`).join('');
-  $('h_locked').textContent = h.locked ? L['home.locked'].replace('{}', h.locked) : '';
+  if(h.entry_probe?.question) $('h_probe').textContent = h.entry_probe.question;
+  $('h_locked').textContent = h.tool_total
+    ? L['home.all_tools'].replace('{}', h.tool_total) : '';
 }
 
 async function toggleAlter(){
@@ -292,7 +350,8 @@ async function startSession(instrument){
       body: JSON.stringify({expert: me(), instrument})});
     STATE.session = s; STATE.turn = s.turn_id; STATE.card = null;
     $('s_tool').textContent = toolName(instrument);
-    $('s_question').textContent = s.question;
+    $('s_thread').innerHTML = '';
+    say('ask', s.question);
     $('s_rung').textContent = s.from_gap ? L['sess.from_gap'] : '';
     $('s_progress').textContent = `${s.index} / ${s.target}`;
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
@@ -301,6 +360,35 @@ async function startSession(instrument){
     if(instrument === 'wrong') loadWrongAnswer();
     show('session');
   }catch(e){ err(e.message); }
+}
+
+// 이야기 한 덩어리로 들어온 세션. 1단은 이미 답했으므로 **2단부터** 보인다.
+function enterSession(s, r, firstAnswer){
+  STATE.session = s; STATE.turn = r.turn_id; STATE.card = r.card;
+  $('s_tool').textContent = toolName(s.instrument);
+  $('s_rung').textContent = s.from_gap ? L['sess.from_gap'] : '';
+  $('s_answer').value = ''; $('s_wrong').innerHTML = ''; $('s_warn').textContent = '';
+  $('s_thread').innerHTML = '';
+  say('ask', s.question);
+  say('said', firstAnswer);
+  say('echo', r.reflection);
+  say('ask', r.question);
+  $('s_progress').textContent = `${r.index} / ${r.target}`;
+  $('s_title').textContent = r.card.title || '—';
+  $('s_slots').innerHTML = r.report.slots
+    .map(x => `<span class="slot ${x.filled?'on':''}">${esc(x.label)}</span>`).join('');
+  $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
+  show('session');
+}
+
+// 인터뷰 기록지에 한 마디 붙인다. kind: ask(면접자) · said(전문가) · echo(되읽기)
+function say(kind, text){
+  if(!text) return;
+  const el = document.createElement('div');
+  el.className = 'turn ' + kind;
+  el.textContent = text;
+  $('s_thread').appendChild(el);
+  el.scrollIntoView({behavior:'smooth', block:'end'});
 }
 
 function toolName(key){
@@ -328,7 +416,9 @@ async function sendAnswer(skip){
     const r = await api('/api/turns/'+STATE.turn, {method:'POST',
       body: JSON.stringify({answer, skip})});
     STATE.turn = r.turn_id; STATE.card = r.card;
-    $('s_question').textContent = r.question;
+    say('said', skip ? L['sess.skip'] : answer);
+    say('echo', r.reflection);
+    say('ask', r.question);
     $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
     $('s_answer').value = '';
     $('s_title').textContent = r.card.title || '—';

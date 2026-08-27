@@ -86,9 +86,43 @@ def _ctx(request: Request) -> dict:
     }
 
 
+def _experts_for(lang: str) -> list[dict]:
+    """랜딩에 띄울 전문가 목록.
+
+    아이디를 **추측하게 두지 않는다.** 예시 아이디 하나만 놓아두면 영어로 들어온
+    사람이 한국어로 판 전문가에게 영어로 묻게 되고, 돌아오는 것은 전부 "남기지
+    않은 영역입니다" 다 — 카드가 있는데도. 화면 언어와 같은 언어로 판 사람을
+    앞에 세운다.
+    """
+    session = db.SessionLocal()
+    try:
+        from sqlalchemy import select
+
+        rows = session.scalars(select(db.Expert)).all()
+        items = [
+            {
+                "id": r.id,
+                "name": r.display_name or r.id,
+                "lang": r.lang,
+                "same": r.lang == lang,
+            }
+            for r in rows
+            if r.alter_active
+        ]
+    except Exception as exc:  # 목록 실패가 랜딩을 막아서는 안 된다
+        log.warning("전문가 목록 조회 실패: %s", exc)
+        items = []
+    finally:
+        session.close()
+    return sorted(items, key=lambda e: (not e["same"], e["name"]))
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return TEMPLATES.TemplateResponse(request, "index.html", _ctx(request))
+    ctx = _ctx(request)
+    return TEMPLATES.TemplateResponse(
+        request, "index.html", ctx | {"experts": _experts_for(ctx["lang"])}
+    )
 
 
 @app.get("/expert", response_class=HTMLResponse)

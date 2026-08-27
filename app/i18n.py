@@ -68,6 +68,10 @@ CATALOG: dict[str, dict[str, str]] = {
     },
 
     # ── 랜딩 ──────────────────────────────────────────────────────────
+    "landing.inversion": {
+        "en": "Most AI answers your questions. This one asks you.",
+        "ko": "대부분의 AI 는 당신의 질문에 답합니다. 이건 당신에게 묻습니다.",
+    },
     "landing.yours.title": {
         "en": "What you leave here is yours.",
         "ko": "여기 남기는 것은 당신 것입니다.",
@@ -92,7 +96,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Ask the senior's alter. The source card always comes with the answer.",
         "ko": "선배의 분신에게 묻습니다. 근거 카드가 항상 함께 옵니다.",
     },
-    "landing.junior.ph": {"en": "senior's id (e.g. yudon)", "ko": "선배 아이디 (예: yudon)"},
+    "landing.junior.ph": {"en": "senior's id", "ko": "선배 아이디"},
+    "landing.junior.pick": {"en": "Whose alter?", "ko": "누구의 분신에게"},
     "landing.junior.cta": {"en": "Ask the alter", "ko": "분신에게 묻기"},
     "landing.admin.body": {
         "en": "Who leaves, and what goes with them. The sort order is the intervention order.",
@@ -161,6 +166,22 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "(선택 — 급한 곳부터 파기 위해서입니다)",
     },
     "ob.start": {"en": "Start", "ko": "시작하기"},
+    #: 로그인이 없는 도구다. 이름은 화면 구석이 아니라 **첫 질문**으로 받는다 —
+    #: 처음 온 사람은 상단 입력칸이 필수인 줄 모른다.
+    "ob.q0": {
+        "en": "0. What should we call you?",
+        "ko": "0. 어떻게 불러드릴까요?",
+    },
+    "ob.q0.ph": {
+        "en": "your name or employee id — e.g. hong",
+        "ko": "성함이나 사번 — 예) 홍길동",
+    },
+    "ob.q0.note": {
+        "en": "No password. This is the name your alter will carry, and how you come "
+              "back to your own cards.",
+        "ko": "비밀번호는 없습니다. 분신이 달고 다닐 이름이자, 내 카드로 다시 "
+              "돌아오는 열쇠입니다.",
+    },
     "ob.need_id": {
         "en": "Enter your id at the top first.", "ko": "상단에 아이디를 입력해 주세요.",
     },
@@ -195,36 +216,67 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "helped {helped} / missed {missed}",
         "ko": "도움됨 {helped} / 안 맞음 {missed}",
     },
-    "home.map": {"en": "🗺 Map of what's in your head", "ko": "🗺 머릿속 지도"},
+    "home.map": {"en": "🗺 Work to hand over", "ko": "🗺 이관할 업무"},
     "home.map.cards": {"en": "cards {}", "ko": "카드 {}"},
     "home.map.empty": {
-        "en": "No areas yet. Plant a flag below.",
-        "ko": "아직 영역이 없습니다. 아래에서 깃발을 꽂아보세요.",
+        "en": "Nothing listed yet. Add the work you need to hand over.",
+        "ko": "아직 없습니다. 이관할 업무를 적어주세요.",
     },
     "home.flag.ph": {
-        "en": "🚩 Plant a flag on an area still untouched",
-        "ko": "아직 크게 남은 영역에 🚩 깃발 꽂기",
+        "en": "Add work to hand over — e.g. first response to a supplier quality incident",
+        "ko": "이관할 업무 추가 — 예) 협력사 품질 사고 초기 대응",
     },
-    "home.flag.cta": {"en": "Plant", "ko": "꽂기"},
+    "home.flag.cta": {"en": "Add", "ko": "추가"},
     "home.hands": {
         "en": "🔴 {} of these do not go into words — they are collected separately "
               "as apprenticeship items.",
         "ko": "🔴 손끝 지식 {}건은 글로 담기지 않습니다 — 도제 항목으로 따로 모았습니다.",
     },
+    #: 사건 하나에서 시작한다 (docs/elicitation-protocol.md §0). 도구를 먼저
+    #: 고르게 하면 전문가에게 도구 지식을 요구하는 셈이 된다.
+    "home.story": {"en": "🔨 Start with one thing that happened",
+                   "ko": "🔨 있었던 일 하나로 시작하기"},
+    "home.story.q": {
+        "en": "Think of one moment in the last six months when this team would have "
+              "gone badly wrong without you.",
+        "ko": "최근 6개월 중, 당신이 없었으면 팀이 크게 잘못됐을 순간을 하나만 "
+              "떠올려 주세요.",
+    },
+    "home.story.ph": {
+        "en": "Just say what happened. No need to tidy it up.",
+        "ko": "있었던 일을 그냥 말하듯이 적어주세요. 정리하지 않으셔도 됩니다.",
+    },
+    "home.story.note": {
+        "en": "We take it from here — the next questions follow what you just said, "
+              "and you never have to pick a method.",
+        "ko": "다음은 저희가 이어갑니다 — 방금 하신 말에서 질문이 이어지고, "
+              "방법을 고르실 일은 없습니다.",
+    },
+    "home.story.cta": {"en": "Start here", "ko": "이걸로 시작"},
+    "home.toolbox.more": {
+        "en": "Or pick a method yourself (12)",
+        "ko": "직접 방법을 고르시려면 (12가지)",
+    },
     "home.toolbox": {
-        "en": "🧰 Toolbox — what will you dig with today?",
-        "ko": "🧰 도구함 — 오늘 무엇으로 파시겠습니까",
+        "en": "🧰 Ways to record — pick one, or use the suggestion above",
+        "ko": "🧰 기록하는 방법 — 하나 고르시거나 위 추천을 쓰세요",
     },
     "home.tool.start": {"en": "Start with this", "ko": "이걸로 시작"},
     "home.tool.mins": {"en": "about {} min", "ko": "약 {}분"},
-    "home.locked": {
-        "en": "{} more instruments unlock once a few judgments pile up. Too many "
-              "choices and nobody picks any.",
-        "ko": "연장 {}개는 판단이 몇 개 쌓이면 열립니다. 선택지가 많으면 아무것도 "
-              "고르지 않게 되니까요.",
+    "home.all_tools": {
+        "en": "{} ways in total. You never have to read the list — the suggestion "
+              "above picks one for you.",
+        "ko": "모두 {}가지입니다. 목록을 다 읽으실 필요는 없습니다 — 위 추천이 "
+              "하나 골라 드립니다.",
     },
 
     # ── 발굴 세션 ─────────────────────────────────────────────────────
+    "sess.reflect": {
+        "en": "So — {label}: {body}\nHave I got that right? If not, say it again "
+              "your way and I will take yours.",
+        "ko": "제가 이렇게 이해했습니다 — {label}: {body}\n맞습니까? 아니면 그대로 "
+              "다시 말씀해 주세요. 하신 말씀이 우선입니다.",
+    },
     "sess.from_gap": {
         "en": "This is where a junior got stuck.", "ko": "후배가 막힌 곳입니다.",
     },
@@ -363,6 +415,25 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.msg.gap": {
         "en": "This is not an area {name} left behind.\nI will not make it up.",
         "ko": "이건 {name}님이 남기지 않은 영역입니다.\n지어내지 않겠습니다.",
+    },
+    #: 언어 경계. "안 남겼다" 가 아니라 "다른 언어로 남겼다" 다 — 카드는 있다.
+    "lang.name.ko": {"en": "Korean", "ko": "한국어"},
+    "lang.name.en": {"en": "English", "ko": "영어"},
+    "alter.msg.cards.one": {"en": "1 judgment card", "ko": "판단 카드 1장"},
+    "alter.msg.cards.many": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
+    "alter.msg.lang_wall": {
+        "en": "{name} left {count} — in {language}.\n"
+              "They are here, but not in a language you asked in, and I will not "
+              "translate them: a judgment in summary is no longer a judgment.\n"
+              "Ask in {language} and this alter answers.",
+        "ko": "{name}님은 {count}을 {language}로 남기셨습니다.\n"
+              "카드는 여기 있지만 물어보신 언어가 아니고, 번역하지 않습니다 — "
+              "요약된 판단은 더 이상 판단이 아니기 때문입니다.\n"
+              "{language}로 물으시면 이 분신이 답합니다.",
+    },
+    "alter.msg.lang_wall.alt": {
+        "en": "▸ Left in your language: {}",
+        "ko": "▸ 같은 언어로 남긴 사람: {}",
     },
     "alter.msg.gap.sent": {
         "en": "▸ Your question was passed on as-is",

@@ -40,6 +40,10 @@ class Persona:
     #: "절대 이러지 마라" 고 가르치는 것 — 안전 원칙
     taboos: list[str] = field(default_factory=list)
     active: bool = True   # 전문가가 자기 분신을 끌 수 있다 (통제권)
+    #: 이 사람이 판 언어. 카드는 파낸 언어로 산다 (docs/design.md §7).
+    lang: str = "ko"
+    #: 남긴 카드 수 — 언어 경계에서 "없다" 와 "못 읽는다" 를 가르는 데 쓴다.
+    card_count: int = 0
 
     def label(self, lang: str = "en") -> str:
         """화면에 뜨는 이름. **사칭 금지 규약의 구현.**
@@ -190,7 +194,24 @@ def gap_message(
     alternatives: list[str],
     lang: str = "en",
 ) -> str:
-    """모른다고 말하는 화면. **이걸 잘 말하는 것이 이 제품의 기능이다.**"""
+    """모른다고 말하는 화면. **이걸 잘 말하는 것이 이 제품의 기능이다.**
+
+    단, **"안 남겼다" 와 "다른 언어로 남겼다" 는 다른 말이다.** 카드가 있는데도
+    언어가 달라서 못 걸린 것을 "남기지 않은 영역" 이라고 하면, 설계 결정이
+    제품 결함으로 읽힌다. 언어 경계에서는 막다른 길이 아니라 이정표를 준다.
+    """
+    if persona.lang and persona.lang != lang and persona.card_count:
+        lines = [
+            t("alter.msg.lang_wall", lang,
+              name=persona.display_name or persona.expert,
+              count=(t("alter.msg.cards.one", lang) if persona.card_count == 1
+                     else t("alter.msg.cards.many", lang, persona.card_count)),
+              language=t(f"lang.name.{persona.lang}", lang)),
+        ]
+        if alternatives:
+            lines += ["", t("alter.msg.lang_wall.alt", lang, ", ".join(alternatives))]
+        return "\n".join(lines)
+
     sent = t("alter.msg.gap.sent", lang)
     if days_left is not None:
         sent += t("alter.msg.gap.dday", lang, days_left)

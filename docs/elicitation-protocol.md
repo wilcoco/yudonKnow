@@ -118,3 +118,77 @@
   → P1: "가장 드물지만 당신만 아는 대응" 을 묻는 별도 세션 유형.
 - **인터뷰어가 전문가의 프레임을 그대로 물려받는다.** 전문가가 중요하다고
   믿는 축으로만 파고든다. 공백 큐가 유일한 교정 장치이며 완전하지 않다.
+
+---
+
+## 3. 문헌 재조사 (2026-08) — 입구는 ACTA, 깊이는 CDM
+
+v0.1 은 CDM 5단 사다리만 썼다. 문헌을 다시 훑고 **입구를 바꿨다.**
+
+### 3.1 왜 바꿨나 — CDM 은 입구로 쓰기엔 좁다
+
+CDM(Klein, Calderwood & MacGregor 1989; Hoffman, Crandall & Shadbolt 1998)은
+**사건 하나를 깊이 파는** 데 최적이다. 4단계 — 사건 선정 → 타임라인 확인 →
+점진적 심화(progressive deepening) → what-if — 가 그 구조다. [문헌 기반]
+
+문제는 **첫 질문**이다. "가장 어려웠던 사건 하나"에 안 걸리는 지식은 통째로
+안 나온다. 요령·이상 징후 감지·계기 불신 같은 것은 "어려웠던 사건"으로
+회상되지 않는다. 조용히 매일 쓰는 지식이기 때문이다.
+
+### 3.2 ACTA 지식 감사 8종을 입구로
+
+Militello & Hutton (1998) 의 ACTA 는 CDM 을 실무자용으로 줄인 것이고, 그 2단계
+**Knowledge Audit** 이 프로브 8종을 제공한다. 각각이 **서로 다른 종류의 이야기**를
+부른다. 원문 그대로 옮기고 우리 현장 말투로만 다듬었다 (`_ENTRY_PROBES`). [문헌 기반]
+
+| 프로브 | 부르는 지식 | 우리 카드에서 |
+|---|---|---|
+| Anomalies | 이상 징후 감지 | `신호` — 가장 값진 칸 |
+| **Equipment difficulties** | 계기가 정상인데 사람은 아니라고 볼 때 | `신호` + `예외` |
+| Noticing | 지각적 변별 | `신호` |
+| Past & future | 상황 진단·예측 | `상황` + `판단` |
+| Job smarts | 요령 | `조치` |
+| Self-monitoring | 메타인지 — 방식을 바꾸는 순간 | `예외` |
+| Big picture | 상황 인식 | `상황` |
+| Improvising | 기회 포착 | `조치` |
+
+> **유돈의 첫 카드가 정확히 Equipment difficulties 다** — "금형 온도계는 정상이라
+> 다들 속는다". 프로브 없이 우연히 나온 것이고, 이제 그 자리를 대놓고 판다.
+
+**입구는 순환한다.** 같은 질문만 반복하면 같은 종류의 지식만 나온다.
+무작위가 아니라 카드 수에 따른 순환이라 재현된다 (`entry_probe`).
+
+### 3.3 깊이는 그대로 CDM
+
+ACTA 의 후속 구조도 CDM 과 같다: 프로브로 사건을 꺼낸 뒤
+**① 결정적 신호와 조치를 캐고 → ② 경험 적은 사람이 저질렀을 오류를 묻는다.** [문헌 기반]
+우리 사다리 2~5단(신호 → 반사실 → 경계 → 실패)이 이미 그 순서다. 유지한다.
+
+### 3.4 이 문헌이 우리 설계를 하나 교정한다 — `근거`를 믿지 마라
+
+Nisbett & Wilson (1977) *"Telling more than we can know"* 는 사람이 **자기
+판단 과정에 내성적으로 접근하지 못한다**는 것을 보였다. Ericsson & Simon (1984)
+은 그래서 **사후 설명(introspection·explanation)** 이 아니라 **수행 중 발화**만
+자료로 쓸 수 있다고 규정했다. [문헌 기반]
+
+우리 카드에 그대로 적용하면:
+
+- **`신호(cues)` 는 관찰 보고다** — "무엇을 보았는가". 비교적 믿을 수 있다.
+- **`근거(rationale)` 는 사후 설명이다** — "왜 그런가". **작화(confabulation)에
+  가장 취약한 칸이다.**
+
+그래서 **`신호` 가 인용의 하드 게이트인 것은 우연이 아니라 문헌과 맞는 설계다**
+(`test_card_without_cues_is_never_citable`). 반대로 `근거` 는 비어도 카드를 막지
+않는다 — 이것도 유지한다. 없는 이유를 지어내게 하는 것이 더 나쁘다.
+
+**미해결로 남긴다:** 이 도구는 회상 기반이라 Ericsson & Simon 기준의 "수행 중
+발화" 가 아니다. `소리내어 하기`(think-aloud) 연장이 그 방향의 유일한 통로이고,
+P1 의 음성 입력이 붙어야 제대로 산다. 회상 편향은 **줄였을 뿐 풀지 않았다.**
+
+### 3.5 출처
+
+- Klein, Calderwood & MacGregor (1989). *Critical decision method for eliciting knowledge.*
+- Hoffman, Crandall & Shadbolt (1998). *Use of the Critical Decision Method to Elicit Expert Knowledge.* Human Factors 40(2).
+- Militello & Hutton (1998). *Applied Cognitive Task Analysis (ACTA).* Ergonomics 41(11).
+- Nisbett & Wilson (1977). *Telling more than we can know.* Psychological Review 84(3).
+- Ericsson & Simon (1984). *Protocol Analysis: Verbal Reports as Data.* MIT Press.

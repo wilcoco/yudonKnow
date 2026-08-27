@@ -41,6 +41,7 @@ def _card(session, expert: str, *, lang: str, tacit: Tacitness, **fields) -> str
     card.visibility = Visibility.PUBLIC
     card.instrument = "moment"
     service.write_card(row, card)
+    row.lang = lang   # 카드는 파낸 언어로 산다 (docs/design.md §7)
     service._log(session, expert, service.legacy.LedgerEvent.CARD_CONFIRMED, card_id=row.id)
     return row.id
 
@@ -59,6 +60,7 @@ def seed(session) -> bool:
         sayings="그거 온도 아니야, 속도부터 봐\n숫자 보기 전에 물건부터 봐",
         taboos="원인 모른 채 설정값 되돌리지 마라\n야간에 혼자 금형 열지 마라",
         leaving_on=today + timedelta(days=84),
+        lang="ko",
     )
     yudon_card = _card(
         session, "yudon", lang="ko", tacit=Tacitness.HANDS,
@@ -101,6 +103,7 @@ def seed(session) -> bool:
         taboos="Never chase a number you cannot smell or see.\n"
                "Never change two settings in the same shift.",
         leaving_on=today + timedelta(days=31),
+        lang="en",
     )
     dale_card = _card(
         session, "dale", lang="en", tacit=Tacitness.HANDS,

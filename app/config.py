@@ -106,9 +106,9 @@ def load_settings() -> Settings:
             or os.environ.get("GEMINI_API_KEY")
             or None
         ),
-        gemini_model=os.environ.get("YDK_GEMINI_MODEL", "gemini-3.5-pro"),
+        gemini_model=os.environ.get("YDK_GEMINI_MODEL", "gemini-3.5-flash"),
         vertex_project=os.environ.get("YDK_VERTEX_PROJECT") or None,
-        vertex_location=os.environ.get("YDK_VERTEX_LOCATION", "us-central1"),
+        vertex_location=os.environ.get("YDK_VERTEX_LOCATION", "global"),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY") or None,
         anthropic_model=os.environ.get("YDK_ANTHROPIC_MODEL", "claude-opus-4-5"),
         max_tokens=_i("YDK_MAX_TOKENS", 8000),

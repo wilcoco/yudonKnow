@@ -60,12 +60,17 @@ def test_the_wheel_closes(session):
     assert card_id in [c["id"] for c in reply["cards"]], "승인한 판단이 인용되지 않았다"
     assert reply["persona"] == "홍길동 수석의 분신"
 
-    # 같은 카드가 영어 화면에서도 그대로 인용된다 — 영어 지원은 규정 6조의
-    # 통과 조건이고, 바퀴는 언어를 타지 않아야 한다.
+    # 화면은 영어로 뜬다 (규정 6조의 통과 조건). 그러나 **바퀴는 언어를 탄다** —
+    # 한국어로 판 카드는 한국어 질문에만 걸린다. 이건 결함이 아니라 결정이다:
+    # 찾아 줘도 못 읽는 카드는 답이 아니고, 번역하면 지식이 아니라 요약이 된다
+    # (docs/design.md §7). 영어 심사자에게는 영어로 판 Dale 이 따로 있다.
     english = service.ask_alter(
         session, "hong", "flow marks on one side only", asker="lee", lang="en"
     )
-    assert english["persona"] == "홍길동 수석's alter"
+    assert english["persona"] == "홍길동 수석's alter", "분신 표시는 화면 언어를 따른다"
+    assert english["is_gap"] is True, (
+        "한국어 카드가 영어 질문에 걸렸다 — 후배가 읽지 못할 답을 낸 것이다"
+    )
 
 
 def test_unknown_question_becomes_a_gap_in_the_experts_queue(session):
@@ -202,3 +207,54 @@ def test_filling_a_gap_is_recorded_as_legacy(session):
 
     home = service.expert_home(session, "hong", lang="ko")
     assert any("뚫어" in e["sentence"] for e in home["legacy"]["recent"])
+
+
+def test_language_wall_is_not_reported_as_an_empty_area(session):
+    """**"안 남겼다" 와 "다른 언어로 남겼다" 는 다른 말이다.**
+
+    카드가 있는데도 언어가 달라 못 걸린 것을 "남기지 않은 영역" 이라고 하면,
+    설계 결정(카드는 파낸 언어로 산다 — docs/design.md §7)이 제품 결함으로
+    읽힌다. 영어 심사자가 한국어로 판 전문가를 눌렀을 때 정확히 이 화면을 본다.
+    """
+    _leave_a_judgment(session)                      # hong 은 한국어로 판다
+    service.ensure_expert(session, "dale", display_name="Dale", lang="en")
+
+    reply = service.ask_alter(
+        session, "hong", "flow marks on one side only", asker="judge", lang="en"
+    )
+
+    assert reply["is_gap"] is True
+    assert "did not" not in reply["text"], "카드가 있는데 '안 남겼다' 고 말했다"
+    assert "Korean" in reply["text"], "어느 언어로 남겼는지 말해주지 않았다"
+    assert "Dale" in reply["text"], "같은 언어로 판 사람을 안내하지 않았다"
+
+
+def test_a_truly_empty_area_still_says_so(session):
+    """언어가 같은데 정말 안 남긴 것은 그대로 "안 남겼다" 여야 한다.
+
+    언어 경계 문안이 진짜 공백까지 삼켜버리면, 모른다고 말하는 기능이 죽는다.
+    """
+    _leave_a_judgment(session)
+
+    reply = service.ask_alter(
+        session, "hong", "연차 정산은 어떻게 하나요", asker="kim", lang="ko"
+    )
+
+    assert reply["is_gap"] is True
+    assert "남기지 않은 영역" in reply["text"]
+    assert "남기셨습니다" not in reply["text"], "진짜 공백을 언어 문제로 덮었다"
+
+
+def test_the_alter_never_points_at_someone_you_cannot_read(session):
+    """대안 전문가는 **묻는 사람의 언어로 판 사람**만 세운다.
+
+    못 읽을 사람을 권하는 것은 막다른 길을 하나 더 놓는 것이다.
+    """
+    _leave_a_judgment(session)
+    service.ensure_expert(session, "kimko", display_name="김책임", lang="ko")
+
+    reply = service.ask_alter(
+        session, "hong", "how do I file annual leave", asker="judge", lang="en"
+    )
+
+    assert "김책임" not in reply["text"], "영어 사용자에게 한국어로 판 사람을 권했다"

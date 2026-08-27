@@ -150,6 +150,8 @@ def upsert_expert(
         sayings="\n".join(body.sayings),
         taboos="\n".join(body.taboos),
         leaving_on=body.leaving_on,
+        # 온보딩 화면의 언어가 이 사람이 파는 언어다. 카드도 분신도 여기서 산다.
+        lang=lang,
     )
     return {"expert": row.id, "alter": service.persona_of(row).label(lang)}
 

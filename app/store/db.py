@@ -35,6 +35,9 @@ class Expert(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     display_name: Mapped[str] = mapped_column(String(128), default="")
+    #: 이 전문가가 파는 언어. 카드는 파낸 언어로 살고, 검색도 그 안에서 돈다
+    #: (docs/design.md §7). 번역하면 지식이 아니라 요약이 된다.
+    lang: Mapped[str] = mapped_column(String(8), default="ko", index=True)
     #: 분신 어투의 재료 (온보딩에서 본인이 채운다)
     sayings: Mapped[str] = mapped_column(Text, default="")     # 줄바꿈 구분
     taboos: Mapped[str] = mapped_column(Text, default="")      # 줄바꿈 구분
@@ -83,6 +86,9 @@ class Turn(Base):
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text, default="")
     rung: Mapped[str] = mapped_column(String(32), default="")
+    #: 이 질문이 겨냥한 카드 칸. 기저가 없을 때 답을 어느 칸에 넣을지는
+    #: 이것으로 정한다 — 내용을 지어내지 않고 **분류만** 한다.
+    targets: Mapped[str] = mapped_column(String(32), default="")
     skipped: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -96,6 +102,9 @@ class CardRow(Base):
     expert: Mapped[str] = mapped_column(String(64), index=True)
     title: Mapped[str] = mapped_column(Text)
     domain: Mapped[str] = mapped_column(String(128), default="", index=True)
+    #: 이 카드가 파여 나온 언어. 검색은 같은 언어 안에서만 돈다 —
+    #: 찾아 줘도 못 읽는 카드는 답이 아니다 (docs/design.md §7).
+    lang: Mapped[str] = mapped_column(String(8), default="ko", index=True)
 
     situation: Mapped[str] = mapped_column(Text, default="")
     cues: Mapped[str] = mapped_column(Text, default="")

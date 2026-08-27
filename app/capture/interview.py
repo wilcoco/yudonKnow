@@ -47,6 +47,50 @@ _RUNGS: dict[str, tuple[tuple[str, str], ...]] = {
     ),
 }
 
+#: **입구 질문 — ACTA 지식 감사(Knowledge Audit) 8종.**
+#:
+#: Militello & Hutton (1998) 의 프로브를 그대로 옮겼다 [문헌 기반]. CDM 의
+#: "가장 어려웠던 사건 하나" 는 깊이 파는 데는 최적이지만 **입구로는 좁다** —
+#: 그 한 질문에 안 걸리는 지식이 통째로 안 나온다. ACTA 는 입구를 8개로 벌린다.
+#:
+#: 각 프로브는 **서로 다른 종류의 이야기**를 부른다. 특히 마지막 둘이 이 도구의
+#: 핵심 자산이다: 이상 징후(anomalies)와 계기 불일치(equipment)는 절차서에
+#: 절대 안 적히는 지식이고, 유돈의 첫 카드가 정확히 후자다 —
+#: "금형 온도계는 정상이라 다들 속는다".
+_ENTRY_PROBES: dict[str, tuple[tuple[str, str], ...]] = {
+    "ko": (
+        ("anomalies", "뭔가 이상하다고 느꼈던 순간이 있나요? 남들은 정상이라고 했는데 당신은 아니었던 때."),
+        ("equipment", "계기나 수치는 괜찮다고 하는데 당신 판단은 아니었던 적이 있나요?"),
+        ("noticing", "당신 눈에만 딱 걸린 게 있었던 적은요? 다들 그냥 지나쳤는데."),
+        ("past_future", "상황 중간에 들어갔는데 어쩌다 이렇게 됐고 앞으로 어떻게 될지 바로 아셨던 때가 있나요?"),
+        ("job_smarts", "이 일을 남들보다 적은 힘으로 해내는 당신만의 요령이 있나요?"),
+        ("self_monitoring", "하던 방식으로는 안 되겠다 싶어 도중에 바꾼 적이 있나요?"),
+        ("big_picture", "이 일에서 늘 머릿속에 같이 얹고 가야 하는 것들은 무엇인가요?"),
+        ("improvising", "정해진 대로가 아니라 임기응변으로 풀었던 때가 있나요?"),
+    ),
+    "en": (
+        ("anomalies", "Was there a time you knew something was amiss when everyone else said it was fine?"),
+        ("equipment", "Have there been times when the instruments said one thing but your judgment said another?"),
+        ("noticing", "Has part of a situation ever just popped out at you, when others walked right past it?"),
+        ("past_future", "Have you walked into the middle of something and known at once how it got there and where it was headed?"),
+        ("job_smarts", "Are there ways of working smart on this — getting more done with less — that you found yourself?"),
+        ("self_monitoring", "Was there a time you realised mid-task that you had to change how you were working?"),
+        ("big_picture", "What do you always have to keep track of at the same time in this work?"),
+        ("improvising", "Can you think of a time you improvised, or saw an opening to do it better?"),
+    ),
+}
+
+
+def entry_probe(card_count: int, lang: str = "en") -> tuple[str, str]:
+    """오늘의 입구 질문 하나. 같은 질문만 반복하면 같은 종류의 지식만 나온다.
+
+    카드가 쌓인 만큼 다른 프로브를 낸다 — 무작위가 아니라 순환이라, 다음에 무엇을
+    물을지 예측 가능하고 재현된다.
+    """
+    probes = _ENTRY_PROBES.get(lang, _ENTRY_PROBES["en"])
+    return probes[card_count % len(probes)]
+
+
 #: 빈 칸을 채우러 가는 질문. 사다리가 끝나도 카드가 비면 여기서 계속 판다.
 _SLOT_QUESTIONS: dict[str, dict[str, str]] = {
     "ko": {
@@ -369,10 +413,38 @@ class CardDraft:
 _SENTENCE = re.compile(r"(?<=[.!?。？！])\s+|\n+")
 
 
+#: 사다리 단(rung)이 겨냥하는 칸. ``Question.targets`` 가 비었을 때만 쓴다.
+#: 이건 추론이 아니라 **질문 대장**이다 — 그 단에서 우리가 무엇을 물었는지는
+#: ``_RUNGS`` 에 이미 적혀 있다.
+_RUNG_SLOT: dict[str, str] = {
+    "opener": "situation",
+    "recall": "situation",
+    "cue": "cues",
+    "counterfactual": "judgment",
+    "boundary": "exceptions",
+    "failure": "failure",
+}
+
+#: 여러 줄로 담기는 칸. 한 답에 여러 개가 들어오면 쪼갠다.
+_LIST_SLOTS = frozenset({"cues", "action", "exceptions", "unspeakable"})
+
+#: 저장 층이 같은 대장을 본다 (app/store/service.py::_slot_history).
+RUNG_SLOT = _RUNG_SLOT
+
+
 def capture(
-    llm: BaseLLM, history: list[tuple[str, str]], *, lang: str = "en"
+    llm: BaseLLM,
+    history: list[tuple[str, str]],
+    *,
+    lang: str = "en",
+    slots: list[tuple[str, str]] | None = None,
 ) -> CardDraft:
-    """대화 → 카드 초안. 실패해도 **원본은 증발하지 않는다.**"""
+    """대화 → 카드 초안. 실패해도 **원본은 증발하지 않는다.**
+
+    ``slots`` 는 (겨냥한 칸, 답) 쌍이다. 기저가 없을 때 이것으로 답을 제자리에
+    넣는다 — 없는 말을 지어내는 게 아니라 **전문가가 한 말을 그 말을 끌어낸
+    질문의 칸에 넣는 것뿐이다.**
+    """
     joiner = (
         (lambda q, a: f"질문: {q}\n전문가: {a}") if lang == "ko"
         else (lambda q, a: f"Question: {q}\nExpert: {a}")
@@ -385,33 +457,69 @@ def capture(
         raw = {}
     if raw:
         return CardDraft(data=raw)
-    return _fallback(history)
+    return _fallback(history, slots)
 
 
-def _fallback(history: list[tuple[str, str]]) -> CardDraft:
+def _fallback(
+    history: list[tuple[str, str]], slots: list[tuple[str, str]] | None = None
+) -> CardDraft:
     """LLM 없이도 카드가 만들어진다 — 구조는 비고, 원본은 살아남는다.
 
-    빈 칸을 지어내 채우지 않는 것이 중요하다. 비어 있어야 다음 질문이 나온다.
+    **지어내지 않는다.** 넣는 것은 전문가가 실제로 한 말뿐이고, 어느 칸에
+    넣을지는 그 말을 끌어낸 질문이 정한다 (``Turn.targets`` · ``_RUNG_SLOT``).
+    겨냥한 칸을 모르는 답은 어디에도 넣지 않는다 — 비어 있어야 다음 질문이
+    나오기 때문이다.
     """
     answers = [a for _, a in history if a.strip()]
     body = "\n".join(answers)
     first = next(iter(_SENTENCE.split(body)), body)[:200] if body else ""
-    return CardDraft(
-        data={
-            "title": first or "제목 없는 판단",
-            "domain": "",
-            "situation": answers[0][:300] if answers else "",
-            "cues": [],
-            "judgment": "",
-            "action": [],
-            "rationale": "",
-            "exceptions": [],
-            "failure": "",
-            "unspeakable": [],
-            "risk": "mid",
-        },
-        fallback=True,
-    )
+    data: dict[str, Any] = {
+        "title": first or "제목 없는 판단",
+        "domain": "",
+        "situation": answers[0][:300] if answers else "",
+        "cues": [],
+        "judgment": "",
+        "action": [],
+        "rationale": "",
+        "exceptions": [],
+        "failure": "",
+        "unspeakable": [],
+        "risk": "mid",
+    }
+    for slot, answer in slots or ():
+        answer = answer.strip()
+        if not slot or not answer or slot not in data:
+            continue
+        if slot in _LIST_SLOTS:
+            parts = [p.strip() for p in _SENTENCE.split(answer) if p.strip()]
+            for part in parts:
+                if part not in data[slot]:
+                    data[slot].append(part)
+        elif not data[slot]:
+            data[slot] = answer[:300]
+    return CardDraft(data=data, fallback=True)
+
+
+def reflect(card: Card, slot: str, lang: str = "en") -> str:
+    """되읽어주기 — **"제가 이렇게 이해했습니다, 맞나요?"** (규약 §2)
+
+    사람 지식공학자가 인터뷰에서 반드시 하는 일이고, 이유는 두 가지다:
+    ① 오해를 그 자리에서 잡는다 — 카드는 해석이고 해석은 틀릴 수 있다.
+    ② 전문가가 자기 말을 밖에서 보면 빠진 것을 스스로 알아챈다.
+
+    **지어내지 않는다.** 카드에 실제로 들어간 값을 그대로 읽어줄 뿐이다 —
+    그래서 잘못 들어간 칸이 이 자리에서 바로 드러난다.
+    """
+    from app.i18n import t
+
+    value = getattr(card, slot, None)
+    if isinstance(value, list):
+        body = " / ".join(str(v) for v in value if str(v).strip())
+    else:
+        body = str(value or "").strip()
+    if not body:
+        return ""
+    return t("sess.reflect", lang, label=slot_label(slot, lang), body=body)
 
 
 def slot_report(card: Card, lang: str = "en") -> dict[str, Any]:

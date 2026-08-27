@@ -187,10 +187,18 @@ _SLOT_TO_INSTRUMENTS: dict[str, tuple[str, ...]] = {
 
 
 def unlocked(card_count: int, *, threshold: int = 3) -> list[Instrument]:
-    """열려 있는 연장. 첫 2주엔 2개만 — 선택지 과부하는 이탈의 원인이다."""
-    if card_count >= threshold:
-        return list(INSTRUMENTS)
-    return [i for i in INSTRUMENTS if i.unlocked]
+    """쓸 수 있는 연장 — **처음부터 전부.**
+
+    v0.1 은 첫 2주에 2개만 열었다. 선택지 과부하가 이탈 원인 1번이라는 근거는
+    지금도 맞지만, 감추는 방식에는 대가가 두 개 있었다: ① 이 도구의 차별점이
+    연장 12개인데 쓰는 사람이 그 사실을 모른다, ② 오늘 필요한 연장이 잠긴
+    2개 밖에 있으면 할 수 있는 게 없다.
+
+    과부하는 이제 **추천**이 막는다 — ``recommend()`` 가 근거와 함께 3개까지만
+    앞에 세우고, 나머지는 보이되 읽지 않아도 된다. 고르는 것은 여전히
+    전문가다 (docs/self-excavation.md §5).
+    """
+    return list(INSTRUMENTS)
 
 
 @dataclass
