@@ -281,3 +281,28 @@ def test_a_targeted_card_answers_only_the_named_junior(session):
         session, "hong", "플로우마크가 한쪽만 나와요", asker="park", lang="ko"
     )
     assert other["is_gap"] is True, "지목 안 된 사람에게 새어 나갔다"
+
+
+def test_usage_statement_counts_only_what_the_ledger_counts(session):
+    """명세서는 원장이 세는 것만 센다 — 인용·도움됨·검증, 그리고 안 맞음.
+
+    조회수·좋아요 같은 대리변수가 어디에도 없어서 이 숫자가 그대로 정산
+    근거가 된다 (roadmap 거버넌스 6항). "안 맞음" 을 숨기지 않는 것도 규약이다
+    — 정직한 청구서가 협상에 더 세다.
+    """
+    card_id, _ = _leave_a_judgment(session)
+    service.ask_alter(session, "hong", "플로우마크가 한쪽만 나와요", asker="kim")
+    service.report_anchor(session, card_id, "helped", reporter="kim")
+    service.report_anchor(session, card_id, "missed", reporter="lee",
+                          detail="재생재 라인이었다")
+
+    stmt = service.usage_statement(session, "hong", lang="ko")
+
+    assert stmt["totals"]["cited"] >= 1
+    assert stmt["totals"]["helped"] == 1
+    assert stmt["totals"]["missed"] == 1, "'안 맞음' 이 청구서에서 사라졌다"
+    row = next(c for c in stmt["cards"] if c["card_id"] == card_id)
+    assert row["title"], "카드 제목 없이 숫자만 있으면 검증할 수 없는 청구서다"
+    assert "rate" not in stmt and "amount" not in stmt, (
+        "단가·금액이 제품에 들어왔다 — 그건 인사 정책이다"
+    )

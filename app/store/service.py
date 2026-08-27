@@ -640,6 +640,61 @@ def card_view(card: Card) -> dict[str, Any]:
     }
 
 
+def usage_statement(
+    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """내 지식 사용 명세서 — **전문가가 회사에 청구하는** 정산 근거.
+
+    방향이 규약이다: 회사가 전문가를 조회하는 화면이 아니라, 전문가 본인이
+    자기 화면에서 뽑아 인사팀에 내미는 문서다. 그래야 "원장은 성과 지표로
+    쓰지 않는다"(roadmap 거버넌스 2항)와 충돌하지 않는다 — 평가는 회사가
+    사람을 보는 것이고, 명세서는 사람이 남긴 것의 값을 받는 것이다.
+
+    세는 것은 원장이 세는 것뿐이다: 인용·도움됨·현장 검증. 조회수·좋아요
+    같은 대리변수가 없어서 이 숫자를 그대로 정산 근거로 쓸 수 있다.
+    **단가와 지급은 여기 없다** — 그건 코드가 아니라 인사 정책이다
+    (roadmap 거버넌스 6항). "안 맞았다" 도 숨기지 않고 함께 적는다:
+    청구서가 정직해야 단가 협상이 산다.
+    """
+    row = get_expert(session, expert, lang=lang)
+    entries = session.scalars(
+        select(db.LedgerRow).where(db.LedgerRow.expert == expert)
+        .order_by(db.LedgerRow.created_at)
+    ).all()
+
+    billable = {"cited", "helped", "anchored"}
+    by_card: dict[str, dict[str, Any]] = {}
+    totals = {"cited": 0, "helped": 0, "anchored": 0, "missed": 0}
+    for e in entries:
+        if e.event not in billable and e.event != "missed":
+            continue
+        totals[e.event] += 1
+        card = by_card.setdefault(e.card_id or "-", {
+            "card_id": e.card_id, "title": "",
+            "cited": 0, "helped": 0, "anchored": 0, "missed": 0, "items": [],
+        })
+        card[e.event] += 1
+        card["items"].append({
+            "event": e.event, "actor": e.actor, "detail": e.detail,
+            "at": e.created_at.date().isoformat() if e.created_at else "",
+        })
+    for cid, card in by_card.items():
+        row_c = session.get(db.CardRow, cid)
+        card["title"] = row_c.title if row_c else cid
+
+    return {
+        "expert": expert,
+        "name": row.display_name or expert,
+        "period_end": date.today().isoformat(),
+        "totals": totals,
+        "cards": sorted(
+            by_card.values(), key=lambda c: c["helped"] + c["cited"], reverse=True
+        ),
+        # 단가·금액 칸은 의도적으로 없다 — 정책 제언과 경계는 거버넌스 6항.
+        "note_key": "statement.note",
+    }
+
+
 def expert_home(
     session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
 ) -> dict[str, Any]:

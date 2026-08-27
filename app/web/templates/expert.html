@@ -64,7 +64,18 @@
       <div class="acts">
         <button id="h_toggle" onclick="toggleAlter()"></button>
         <button onclick="exportCards()">{{ L['home.export'] }}</button>
+        <button onclick="openStatement()">{{ L['home.statement'] }}</button>
         <button onclick="meetAlter()">{{ L['home.meet'] }}</button>
+      </div>
+    </div>
+
+    <div class="card" id="stmt" hidden>
+      <p class="t" id="stmt_title"></p>
+      <div class="c" id="stmt_body"></div>
+      <p class="quiet">{{ L['statement.note'] }}</p>
+      <div class="acts">
+        <button onclick="downloadStatement()">{{ L['statement.download'] }}</button>
+        <button class="ghost" onclick="$('stmt').hidden=true">{{ L['statement.close'] }}</button>
       </div>
     </div>
 
@@ -267,6 +278,34 @@ async function startStory(){
     enterSession(started, turn, text);
   }catch(e){ err(e.message); }
   finally{ if(btn) btn.disabled = false; }
+}
+
+// 💰 내 지식 사용 명세서 — 전문가가 회사에 **청구하는** 방향이다.
+// 관리자 화면에는 이 데이터가 나가지 않는다 (원장은 성과 지표가 아니다).
+let STMT = null;
+async function openStatement(){
+  err('');
+  try{
+    STMT = await api('/api/experts/'+encodeURIComponent(me())+'/statement');
+    const t = STMT.totals;
+    $('stmt_title').textContent = fmt(L['statement.title'], {name: STMT.name, date: STMT.period_end});
+    $('stmt_body').innerHTML =
+      '<p>' + esc(fmt(L['statement.totals'],
+        {cited:t.cited, helped:t.helped, anchored:t.anchored, missed:t.missed})) + '</p>' +
+      STMT.cards.map(c => '<div class="msg"><b>' + esc(c.title) + '</b><br>' +
+        esc(fmt(L['statement.card'],
+          {cited:c.cited, helped:c.helped, anchored:c.anchored, missed:c.missed})) +
+        '</div>').join('');
+    $('stmt').hidden = false;
+    $('stmt').scrollIntoView({behavior:'smooth'});
+  }catch(e){ err(e.message); }
+}
+function downloadStatement(){
+  if(!STMT) return;
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(STMT, null, 2));
+  a.download = me() + '-usage-statement-' + STMT.period_end + '.json';
+  a.click();
 }
 
 // 📄 절차서 빨간펜 — 문서를 심문해서 빠진 판단 지점을 공백 큐로.

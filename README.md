@@ -70,6 +70,11 @@ flowchart LR
 the **gap queue** decides where to dig next (topics are set by real demand, not
 by a consultant), the **field report** is the only thing that earns a ✔ badge,
 and the **legacy ledger** is why the expert comes back for session four.
+Sentiment starts the wheel; it does not sustain it — so the same ledger doubles
+as an **audit-grade settlement basis**: because it refuses vanity metrics
+(citations and explicit field reports only, "did not hold" included), the expert
+can pull a usage statement and bill the company under a knowledge-royalty
+policy. Pride first, fee second, same numbers.
 
 ### Six things that make it different
 

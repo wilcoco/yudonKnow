@@ -80,11 +80,13 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "· Private — only you\n· Sealed — opens on a date you pick\n"
               "· Targeted — one named successor\n· Export everything, any time\n"
               "· If your alter talks nonsense, you switch it off\n"
-              "· War stories are never linked to HR records",
+              "· War stories are never linked to HR records\n"
+              "· Every verified use is counted — a usage statement you can bill with",
         "ko": "· 지금은 나만 보기 (비공개)\n· 내가 정한 날에 열기 (봉인)\n"
               "· 특정 후배에게만 (지목)\n· 언제든 전량 내보내기\n"
               "· 분신이 헛소리하면 당신이 끕니다\n"
-              "· 실패담은 인사 기록과 연결되지 않습니다",
+              "· 실패담은 인사 기록과 연결되지 않습니다\n"
+              "· 쓰인 만큼 셉니다 — 사용 명세서로 회사에 청구할 수 있습니다",
     },
     "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
     "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
@@ -203,6 +205,34 @@ CATALOG: dict[str, dict[str, str]] = {
     # ── 전문가 홈 ─────────────────────────────────────────────────────
     "home.stop_alter": {"en": "Pause my alter", "ko": "내 분신 잠시 멈추기"},
     "home.start_alter": {"en": "Switch my alter back on", "ko": "내 분신 다시 켜기"},
+    "home.statement": {"en": "Usage statement", "ko": "지식 사용 명세서"},
+    "statement.title": {
+        "en": "Usage statement — {name}, as of {date}",
+        "ko": "지식 사용 명세서 — {name} · {date} 기준",
+    },
+    "statement.totals": {
+        "en": "Cited {cited} · Helped {helped} · Field-verified {anchored} · Did not hold {missed}",
+        "ko": "인용 {cited}회 · 도움됨 {helped}건 · 현장 검증 {anchored}건 · 안 맞음 {missed}건",
+    },
+    "statement.card": {
+        "en": "cited {cited} · helped {helped} · verified {anchored} · did not hold {missed}",
+        "ko": "인용 {cited} · 도움됨 {helped} · 검증 {anchored} · 안 맞음 {missed}",
+    },
+    "statement.note": {
+        "en": "This statement is yours to hand to HR — the company does not see it "
+              "unless you show it. It counts only citations and explicit field "
+              "reports (no views, no likes), so it can serve directly as a "
+              "settlement basis for a knowledge-royalty policy. Rates and payment "
+              "are HR policy, not product. \"Did not hold\" is listed too — an "
+              "honest invoice negotiates better.",
+        "ko": "이 명세서는 당신이 인사팀에 내미는 문서입니다 — 당신이 보여주기 "
+              "전에는 회사가 보지 못합니다. 조회수·좋아요 없이 인용과 명시적 "
+              "적용 보고만 세므로, 지식 사용료 정책의 정산 근거로 그대로 쓸 수 "
+              "있습니다. 단가와 지급은 제품이 아니라 인사 정책입니다. "
+              "'안 맞음'도 함께 적습니다 — 정직한 청구서가 협상에 더 셉니다.",
+    },
+    "statement.download": {"en": "Download (JSON)", "ko": "내려받기 (JSON)"},
+    "statement.close": {"en": "Close", "ko": "닫기"},
     "home.export": {"en": "Export my cards", "ko": "내 카드 내보내기"},
     "home.meet": {"en": "Meet my alter", "ko": "내 분신 만나보기"},
     "home.staying": {"en": "still here", "ko": "재직 중"},

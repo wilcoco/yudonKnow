@@ -211,6 +211,16 @@ def toggle_alter(
     return {"expert": expert, "active": row.alter_active}
 
 
+@router.get("/experts/{expert}/statement")
+def statement(
+    expert: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """내 지식 사용 명세서 — 전문가 본인이 뽑아 인사팀에 내미는 정산 근거."""
+    return service.usage_statement(session, expert, lang=lang)
+
+
 @router.get("/experts/{expert}/export")
 def export(expert: str, session: Session = Depends(get_session)) -> dict:
     """내 카드는 내가 가져간다."""
