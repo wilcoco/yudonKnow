@@ -88,6 +88,25 @@ CATALOG: dict[str, dict[str, str]] = {
               "· 실패담은 인사 기록과 연결되지 않습니다\n"
               "· 쓰인 만큼 셉니다 — 사용 명세서로 회사에 청구할 수 있습니다",
     },
+    "landing.judge.t": {"en": "One-click demo entry", "ko": "원클릭 데모 입장"},
+    "landing.judge.c": {
+        "en": "No sign-up, no password — pick a seat. Production identity is SSO.",
+        "ko": "가입도 비밀번호도 없습니다 — 자리만 고르세요. 실배포 신원은 SSO 입니다.",
+    },
+    "landing.judge.watch": {"en": "Watch Dale's expert page", "ko": "Dale 전문가 화면 구경"},
+    "landing.judge.ask": {"en": "Ask Dale's alter as a junior", "ko": "후배로 Dale 분신에 묻기"},
+    "landing.judge.mine": {"en": "Be the expert (3 min)", "ko": "내가 전문가 되기 (3분)"},
+    "landing.judge.note": {
+        "en": "Showcase experts are read-only; everything opens on the expert you create.",
+        "ko": "전시 전문가는 구경 전용입니다. 직접 만든 전문가에서는 전부 열립니다.",
+    },
+    "home.readonly": {
+        "en": "👀 Viewing mode — this is a showcase expert. Browse the shelf, the "
+              "memoir and the statement; digging and controls open on your own "
+              "expert (make one in 3 minutes from the landing page).",
+        "ko": "👀 구경 모드 — 전시용 전문가입니다. 서가·회고록·명세서를 둘러보세요. "
+              "발굴과 제어는 본인 전문가에서 열립니다 (첫 화면에서 3분).",
+    },
     "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
     "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
     "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},

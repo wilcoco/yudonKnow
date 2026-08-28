@@ -67,6 +67,10 @@ async function api(path, opts){
 }
 
 (async function boot(){
+  try{
+    const asId = new URLSearchParams(location.search).get('as');
+    if(asId){ localStorage.setItem('ydk_me', asId); }
+  }catch(e){}
   $('asker').value = localStorage.getItem('ydk_me') || '';
   $('label').textContent = L['alter.of'].replace('{}', EXPERT);
   try{

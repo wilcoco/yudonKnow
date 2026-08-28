@@ -19,6 +19,7 @@
 
 <main class="wide">
   <div class="err" id="err"></div>
+  <p class="quiet" id="ro_note" hidden style="border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px"></p>
 
   <!-- ───────────── onboarding ───────────── -->
   <section id="onboard" hidden>
@@ -90,7 +91,7 @@
     <h2 class="sec">{{ L['home.map'] }}</h2>
     <div class="card">
       <div id="h_map"></div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" id="flag_row" style="margin-top:10px">
         <input type="text" id="flag_domain" placeholder="{{ L['home.flag.ph'] }}">
         <button onclick="addFlag()">{{ L['home.flag.cta'] }}</button>
       </div>
@@ -99,6 +100,7 @@
 
     <!-- 사건 하나에서 시작한다 (docs/elicitation-protocol.md §0).
          도구를 먼저 고르게 하면 전문가에게 도구 지식을 요구하는 셈이다. -->
+    <div id="d_doors">
     {# 세 개의 문 — 전문가의 자세별 입구. 어느 문이든 인터뷰로 통한다. #}
     <h2 class="sec">{{ L['doors.head'] }}</h2>
 
@@ -164,6 +166,7 @@
       <div class="grid g3" id="h_tools" style="margin-top:12px"></div>
       <p class="quiet" id="h_locked"></p>
     </details>
+    </div><!-- /d_doors -->
   </section>
 
   <!-- ───────────── excavation session ───────────── -->
@@ -288,6 +291,11 @@ const LANG = {{ lang | tojson }};
 const LLM_ON = {{ 'true' if llm_enabled else 'false' }};
 const L = {{ L | tojson }};
 const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+// 역할 입장 버튼(?as=) — 랜딩의 원클릭 데모 입장이 신원을 넘긴다.
+try{
+  const asId = new URLSearchParams(location.search).get('as');
+  if(asId){ localStorage.setItem('ydk_me', asId); }
+}catch(e){}
 const $ = id => document.getElementById(id);
 let STATE = {turn:null, card:null, session:null, home:null};
 
@@ -707,6 +715,15 @@ function renderHome(h){
       <div class="p">${esc(t.pitch)}</div>
       <div class="p" style="margin-top:6px">${esc(L['home.tool.mins'].replace('{}', t.minutes))}</div>
     </button>`).join('');
+  // 구경 모드 — 전시 전문가는 본인-행세 버튼을 숨긴다 (서버도 막지만,
+  // 눌러서 거절당하는 것보다 애초에 없는 쪽이 데모답다).
+  const ro = !!h.readonly;
+  $('ro_note').hidden = !ro;
+  if(ro) $('ro_note').textContent = L['home.readonly'];
+  $('d_doors').hidden = ro;
+  $('flag_row').hidden = ro;
+  $('h_toggle').hidden = ro;
+
   if(h.entry_probe?.question) $('h_probe').textContent = h.entry_probe.question;
   $('h_locked').textContent = h.tool_total
     ? L['home.all_tools'].replace('{}', h.tool_total) : '';

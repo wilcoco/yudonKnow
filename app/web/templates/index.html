@@ -26,6 +26,20 @@
     <div class="c">{{ L['landing.yours.body'] }}</div>
   </div>
 
+  {# 심사자 원클릭 입장 — 로그인 벽 대신 역할 버튼. 이름 입력이 "로그인인가?"
+     라는 혼란을 만들었고, 전시 전문가를 본인처럼 여는 사고도 있었다.
+     실배포 신원은 SSO (roadmap 거버넌스). #}
+  <div class="card" style="border-style:dashed">
+    <p class="t">🎫 {{ L['landing.judge.t'] }}</p>
+    <p class="c">{{ L['landing.judge.c'] }}</p>
+    <div class="acts">
+      <button onclick="enterAs('expert','dale')">👀 {{ L['landing.judge.watch'] }}</button>
+      <button class="primary" onclick="enterAs('junior','dale')">💬 {{ L['landing.judge.ask'] }}</button>
+      <button class="amber" onclick="enterAs('mine','')">🧑‍🏭 {{ L['landing.judge.mine'] }}</button>
+    </div>
+    <p class="quiet">{{ L['landing.judge.note'] }}</p>
+  </div>
+
   {# 첫 화면은 역할 선택이 아니라 **남겨진 분신들**이다.
      "나는 전문가인가 소비자인가" 는 추상적인 자기분류 질문이고, 아바타 앞에서는
      내 것을 만들거나 남의 것에 말을 걸거나 둘 중 하나라 역할이 행동에서 나온다.
@@ -64,6 +78,17 @@
   <h2 class="sec">{{ L['landing.wheel'] }}</h2>
   <div class="card"><div class="c">{{ L['landing.wheel.body'] }}</div></div>
 </main>
+<script>
+// 역할 입장 — 계정 없는 데모 세션. guest 신원은 브라우저에서 만든다.
+function enterAs(role, expert){
+  const lang = document.documentElement.lang || 'en';
+  const q = lang === 'en' ? '' : ('&lang=' + lang);
+  const guest = 'judge-' + Math.random().toString(36).slice(2, 6);
+  if(role === 'expert') location.href = '/expert?as=' + expert + q;
+  else if(role === 'junior') location.href = '/alter/' + expert + '?as=' + guest + q;
+  else location.href = '/expert?as=' + guest + q;
+}
+</script>
 
 <footer>
   v{{ version }} · <code>docs/design.md</code> · <code>docs/self-excavation.md</code>

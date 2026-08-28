@@ -1272,6 +1272,8 @@ def expert_home(
                 for d in risk.domains
             ],
         },
+        # 전시 전문가는 구경 모드 — 화면이 본인-행세 버튼을 아예 숨긴다.
+        "readonly": expert in settings.featured,
         # 오늘의 입구 질문 (ACTA 지식 감사). 화면은 이걸 그대로 띄운다.
         "entry_probe": dict(
             zip(("kind", "question"), interview.entry_probe(len(live), lang))
