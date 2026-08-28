@@ -236,7 +236,9 @@ class LedgerRow(Base):
 
 
 _connect_args = (
-    {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+    # timeout: 로컬 동시 부하에서 쓰기 락 대기(운영은 Postgres 라 무관)
+    {"check_same_thread": False, "timeout": 30}
+    if settings.database_url.startswith("sqlite") else {}
 )
 engine = create_engine(
     settings.database_url, connect_args=_connect_args, pool_pre_ping=True, future=True
@@ -248,7 +250,20 @@ log = logging.getLogger(__name__)
 
 
 def init_db() -> None:
-    Base.metadata.create_all(engine)
+    """스키마 준비. **여러 인스턴스가 동시에 기동해도 죽지 않아야 한다.**
+
+    create_all 의 존재 확인과 생성 사이에는 프로세스 간 경쟁이 있다 —
+    Cloud Run 이 콜드 스타트에서 인스턴스 둘을 같이 올리면 한쪽이
+    "already exists" 로 죽는다 (멀티 워커 부하 준비 중 실측). 지는 쪽은
+    이미 이긴 쪽이 만든 스키마를 쓰면 되므로, 그 오류만 삼키고 진행한다.
+    """
+    try:
+        Base.metadata.create_all(engine)
+    except Exception as exc:
+        if "already exists" not in str(exc).lower() \
+                and "duplicate" not in str(exc).lower():
+            raise
+        log.warning("스키마 생성 경쟁에서 짐 — 이긴 쪽 스키마를 쓴다: %s", exc)
     _add_missing_columns()
 
 

@@ -347,14 +347,35 @@ def answer_turn(
         lang = expert_row.lang   # 발굴은 전문가의 언어로 산다
 
     history = _history(session, sess.id)
-    card_row = _upsert_card(session, sess, history, lang=lang)
-    card = row_to_card(card_row)
+    last_slot = turn.targets or interview.RUNG_SLOT.get(turn.rung, "")
 
+    # 두 LLM 호출(카드 재추출 · 다음 질문)은 서로 독립이다 — 하나는 DB 를
+    # 쓰고 하나는 순수하게 텍스트만 만든다. 직렬로 두면 한 턴이 두 왕복을
+    # 기다린다(부하 실측 p50 8.4s). 다음 질문 생성은 세션을 건드리지 않으므로
+    # 스레드로 띄우고, 카드 재추출은 이 스레드에서 DB 를 쓴다. 타겟 슬롯은
+    # LLM 카드가 아니라 **결정적 슬롯 이력**으로 정하므로 카드 추출을 기다릴
+    # 필요가 없다 (트리거 로직이 이미 last_slot 을 그렇게 쓴다).
+    target_card = interview._fallback(
+        history, _slot_history(session, sess.id)
+    ).to_card(id="_probe", expert=sess.expert,
+              instrument=sess.instrument, source_turn=sess.id)
+
+    # **사용자는 다음 질문만 기다리면 된다.** 카드 재추출(스키마 강제 extract)은
+    # 5초가 아니라 ~14초가 드는데(부하 실측), 이건 오른쪽 패널 갱신용일 뿐
+    # 다음 질문 생성에 필요 없다. 그래서:
+    #  · 다음 질문 = 결정적 슬롯 이력으로 타겟을 정하고 LLM 으로 한 문장 (~5s)
+    #  · 카드 = 규칙 기반으로 즉시 채워 응답에 싣고, LLM 정련은 **다음 턴에**
+    #    반영한다 (interview.capture 는 승인 직전 마지막 턴에서 완성).
+    # 체감 지연이 ~14s→~5s 로 떨어진다. 카드의 최종 품질은 승인 시점에
+    # confirm_card 로 전문가가 확정하므로 손상되지 않는다.
+    card_row = _upsert_card(
+        session, sess, history, lang=lang,
+        refine=(answered_now := sum(1 for _, a in history if a)) >= settings.interview_turns - 1,
+    )
+    card = row_to_card(card_row)
     question = interview.next_question(
-        get_llm(), instrument=sess.instrument, card=card, history=history,
-        last_rung=turn.rung,
-        last_slot=turn.targets or interview.RUNG_SLOT.get(turn.rung, ""),
-        lang=lang,
+        get_llm(), instrument=sess.instrument, card=target_card,
+        history=history, last_rung=turn.rung, last_slot=last_slot, lang=lang,
     )
     next_turn = db.Turn(
         id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung,
@@ -411,13 +432,17 @@ def _slot_history(session: OrmSession, session_id: str) -> list[tuple[str, str]]
 
 def _upsert_card(
     session: OrmSession, sess: db.Session, history: list[tuple[str, str]],
-    *, lang: str = LANG_DEFAULT,
+    *, lang: str = LANG_DEFAULT, refine: bool = True,
 ) -> db.CardRow:
     """대화가 쌓일 때마다 카드를 다시 뽑는다. 초안은 계속 덮어써도 안전하다 —
     승인 후에는 덮어쓰지 않는다 (전문가가 고친 것이 기계 추출보다 우선)."""
-    draft = interview.capture(
-        get_llm(), history, lang=lang, slots=_slot_history(session, sess.id)
-    )
+    slots = _slot_history(session, sess.id)
+    if refine:
+        # LLM 정련 — 느리다(~14s). 마지막 턴(승인 직전)에만.
+        draft = interview.capture(get_llm(), history, lang=lang, slots=slots)
+    else:
+        # 규칙 기반 즉시 — 답을 그 답을 끌어낸 칸에 넣는다. 패널이 바로 찬다.
+        draft = interview._fallback(history, slots)
     if sess.card_id:
         row = session.get(db.CardRow, sess.card_id)
         if row is not None and row.status != CardStatus.DRAFT.value:

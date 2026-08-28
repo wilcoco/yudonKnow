@@ -120,8 +120,28 @@ class GeminiLLM:
         self._max_tokens = max_tokens
         self.name = f"{model} ({origin})"
 
+    def _gen(self, **kw):
+        """생성 호출 + 지수 백오프. 429(쿼터)·일시장애는 심사 당일 몰림에서
+        실제로 난다 — 조용히 stub 으로 떨어지느니 잠깐 기다렸다 다시 친다."""
+        import time as _t
+
+        delay = 1.0
+        for attempt in range(4):
+            try:
+                return self._client.models.generate_content(**kw)
+            except Exception as exc:
+                msg = str(exc)
+                transient = ("429" in msg or "RESOURCE_EXHAUSTED" in msg
+                             or "503" in msg or "UNAVAILABLE" in msg
+                             or "500" in msg)
+                if not transient or attempt == 3:
+                    raise
+                _t.sleep(delay)
+                delay *= 2
+        raise RuntimeError("unreachable")
+
     def answer(self, system: str, prompt: str) -> str:
-        response = self._client.models.generate_content(
+        response = self._gen(
             model=self._model,
             contents=prompt,
             config=self._types.GenerateContentConfig(
@@ -144,7 +164,7 @@ class GeminiLLM:
             "Transcribe this audio. Do not summarise, do not clean it up — "
             "write exactly what was said. Output the transcript only."
         )
-        response = self._client.models.generate_content(
+        response = self._gen(
             model=self._model,
             contents=[
                 self._types.Part.from_bytes(data=audio, mime_type=mime),
@@ -156,7 +176,7 @@ class GeminiLLM:
 
     def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         """스키마 강제 구조화 추출 (카드 포획·오답 생성이 쓴다)."""
-        response = self._client.models.generate_content(
+        response = self._gen(
             model=self._model,
             contents=prompt,
             config=self._types.GenerateContentConfig(
