@@ -282,3 +282,44 @@ def test_overlapping_cues_summon_the_contrast_pair(session):
 
     keys = [s.instrument.key for s in recommend([a, b], lang="ko", card_count=9)]
     assert "contrast" in keys, "신호 겹침인데 대조 짝이 서지 않았다"
+
+
+class _CleanRefiner:
+    """정련 LLM 흉내 — 깨끗한 카드를 내며 도제 항목을 빼먹는다."""
+
+    name = "clean"
+
+    def extract(self, prompt, schema):
+        return {"title": "플로우마크 판단", "situation": "초도 양산",
+                "cues": ["압력 피크 느슨"], "judgment": "속도 문제",
+                "action": ["1단 +8%"], "rationale": "", "exceptions": [],
+                "failure": "", "unspeakable": [], "risk": "mid"}
+
+    def answer(self, *a, **k):
+        return ""
+
+    def transcribe(self, *a, **k):
+        return ""
+
+
+def test_refinement_may_polish_but_never_lose(session):
+    """**정련은 다듬을 수 있어도 잃을 수는 없다.**
+
+    얼버무림 규칙이 도제 항목으로 보낸 말("그냥 감으로")은 전문가가 실제로 한
+    말이다. 마지막 턴의 LLM 정련이 그것을 빼먹으면 "말한 것은 지워지지
+    않는다" 가 카드 층에서 깨진다 — 재현으로 확인된 실제 결함이었다.
+    """
+    from app.capture import interview
+
+    hist = [("상황?", "게이트 반대편 물결무늬"),
+            ("신호?", "그냥 감으로 아는 거야"),
+            ("신호?", "압력 피크가 느슨해")]
+    slots = [("situation", hist[0][1]), ("cues", hist[1][1]), ("cues", hist[2][1])]
+
+    refined = interview.capture(_CleanRefiner(), hist, lang="ko", slots=slots)
+
+    assert "그냥 감으로 아는 거야" in refined.data["unspeakable"], (
+        "정련이 도제 항목을 지웠다"
+    )
+    assert any("느슨" in c for c in refined.data["cues"]), "규칙 기반 신호가 사라졌다"
+    assert refined.data["judgment"] == "속도 문제", "정련의 다듬기는 유지되어야 한다"

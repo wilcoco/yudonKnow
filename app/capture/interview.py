@@ -764,9 +764,24 @@ def capture(
     except Exception as exc:
         log.warning("카드 구조화 실패, 규칙 기반 대체: %s", exc)
         raw = {}
-    if raw:
-        return CardDraft(data=raw)
-    return _fallback(history, slots)
+    rule = _fallback(history, slots)
+    if not raw:
+        return rule
+    # 병합 불변식 — 정련은 다듬을 수 있어도 **잃을 수는 없다.**
+    # 규칙 기반이 확보한 것(특히 얼버무림이 보낸 도제 항목)은 전문가가 실제로
+    # 한 말이다. LLM 출력이 그것을 빼먹으면 "말한 것은 지워지지 않는다" 가
+    # 카드 층에서 깨진다 — 재현으로 확인된 실제 결함. 리스트 칸은 합집합,
+    # 텍스트 칸은 정련이 비웠을 때만 규칙 값으로 되메운다.
+    for key in ("cues", "action", "exceptions", "unspeakable"):
+        have = [str(x) for x in (raw.get(key) or [])]
+        for item in rule.data.get(key, []):
+            if item and not any(item in h or h in item for h in have):
+                have.append(item)
+        raw[key] = have
+    for key in ("situation", "judgment", "rationale", "failure", "title"):
+        if not str(raw.get(key) or "").strip() and rule.data.get(key):
+            raw[key] = rule.data[key]
+    return CardDraft(data=raw)
 
 
 def _fallback(

@@ -502,6 +502,18 @@ CATALOG: dict[str, dict[str, str]] = {
     "auto.writing": {"en": "writing it down…", "ko": "받아 적는 중…"},
     "auto.quiet": {"en": "Heard nothing — tap 🎙 to try again or just type.",
                    "ko": "들리는 말이 없었습니다 — 🎙 를 다시 누르시거나 타자로 하셔도 됩니다."},
+    "sess.wrap.note": {
+        "en": "That's a full dig — the card on the right is ready. Set who may "
+              "see it and press \"Save my judgment\", or keep going if there's more.",
+        "ko": "한 판을 다 팠습니다 — 오른쪽 카드가 준비됐습니다. 공개 범위를 "
+              "정하고 [이대로 남기기]를 누르세요. 더 있으면 계속하셔도 됩니다.",
+    },
+    "sess.wrap.speak": {
+        "en": "We have a full card. If that sounds right, press save on the "
+              "right — or keep talking if there is more.",
+        "ko": "카드가 한 장 찼습니다. 이대로 맞으면 오른쪽에서 남기기를 눌러 "
+              "주시고, 더 하실 말씀이 있으면 계속 말씀하세요.",
+    },
     "sess.mic": {"en": "Speak instead", "ko": "말로 답하기"},
     "sess.mic.stop": {"en": "Stop & transcribe", "ko": "그만 말하고 받아적기"},
     "sess.mic.unsupported": {

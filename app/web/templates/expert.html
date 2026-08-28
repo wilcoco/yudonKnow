@@ -958,6 +958,19 @@ async function listenOnce(){
 
 async function askCycle(){
   if(!AUTO || $('session').hidden) return;
+  // ⑥ 되읽기는 음성 흐름에서도 살아야 한다 — 화면을 안 보는 전문가에게
+  // 확인 루프가 침묵하면 오해가 카드에 그대로 굳는다. 짧게 읽고 질문으로.
+  if(STATE.lastEcho){
+    const echo = STATE.lastEcho.split('\n')[0];   // 첫 줄(요지)만 — 낭독은 짧게
+    STATE.lastEcho = '';
+    await speakQ(echo);
+    if(!AUTO || $('session').hidden) return;
+  }
+  if(STATE.wrapUp){
+    STATE.wrapUp = false;
+    await speakQ(L['sess.wrap.speak']);
+    // 마무리 스윕 — 카드 전체를 읽어주고 굳히기로 안내. 더 파고 싶으면 계속.
+  }
   await speakQ(STATE.lastQ);
   if(!AUTO || $('session').hidden) return;
   const text = await listenOnce();
@@ -1049,12 +1062,18 @@ async function sendAnswer(skip){
     say('said', skip ? L['sess.skip'] : answer);
     say('echo', r.reflection);
     say('ask', r.question);
+    STATE.lastEcho = r.reflection || '';
+    STATE.wrapUp = !!r.wrap_up;
     $('s_rung').textContent =
       (r.rung === 'failure' || r.targets === 'failure') ? L['sess.safety']
       : r.rung === 'deepen' ? L['sess.why.deepen']
       : (r.targets && r.report ? L['sess.why'].replace('{}',
           (r.report.slots.find(x => x.key === r.targets)?.label) || r.targets) : '');
     $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
+    if(r.wrap_up && !$('s_warn').textContent){
+      $('s_warn').textContent = L['sess.wrap.note'];
+      say('echo', L['sess.wrap.note']);
+    }
     $('s_answer').value = '';
     $('s_title').textContent = r.card.title || '—';
     $('s_slots').innerHTML = r.report.slots
