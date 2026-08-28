@@ -361,6 +361,15 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     #: 면접자가 왜 이걸 묻는지 숨기지 않는다 — Collaborative Partner 는
     #: "leads the way" 다. 길을 이끌면 어디로 가는지 말해줘야 한다.
+    #: 실패담을 묻는 그 순간에 약속을 다시 보여준다 — 랜딩에서 본 문구를
+    #: 기억하라고 요구하지 않는다. 이 약속이 깨지면 5단은 영원히 안 나온다
+    #: (elicitation-protocol §1-5).
+    "sess.safety": {
+        "en": "War stories are never linked to HR records — that is a standing "
+              "promise of this tool.",
+        "ko": "실패담은 인사 기록과 연결되지 않습니다 — 이 도구의 변하지 않는 "
+              "약속입니다.",
+    },
     "sess.why": {"en": "Filling in: {}", "ko": "지금 채우는 칸 — {}"},
     "sess.why.deepen": {
         "en": "\"It depends\" can't be handed down — so let's go to one actual day.",

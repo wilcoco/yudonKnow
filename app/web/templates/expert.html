@@ -555,7 +555,8 @@ async function sendAnswer(skip){
     say('echo', r.reflection);
     say('ask', r.question);
     $('s_rung').textContent =
-      r.rung === 'deepen' ? L['sess.why.deepen']
+      (r.rung === 'failure' || r.targets === 'failure') ? L['sess.safety']
+      : r.rung === 'deepen' ? L['sess.why.deepen']
       : (r.targets && r.report ? L['sess.why'].replace('{}',
           (r.report.slots.find(x => x.key === r.targets)?.label) || r.targets) : '');
     $('s_progress').textContent = `${r.index} / ${r.target}` + (r.wrap_up ? L['sess.wrap_up'] : '');
