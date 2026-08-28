@@ -63,6 +63,10 @@ class Settings:
     #: 명부(첫 화면)에 세울 전문가 화이트리스트. 비면 카드 있는 전원.
     #: 공개 데모에서 아무나 만든 분신이 심사자 화면에 서는 것을 막는 안전핀.
     featured: tuple[str, ...]
+    #: 새 공백을 알릴 웹훅 (Slack/Teams/게이트웨이). 비면 알림 없음.
+    notify_webhook: str
+    #: 알림에 실을 서비스 주소 (답하러 가는 링크).
+    public_url: str
 
     # -- 발굴 정책 ---------------------------------------------------------
     #: 한 세션의 목표 질문 수 (20분 기준). 넘기면 마무리를 권한다.
@@ -116,6 +120,8 @@ def load_settings() -> Settings:
         anthropic_model=os.environ.get("YDK_ANTHROPIC_MODEL", "claude-opus-4-5"),
         max_tokens=_i("YDK_MAX_TOKENS", 8000),
         database_url=db_url,
+        notify_webhook=os.environ.get("YDK_NOTIFY_WEBHOOK", "").strip(),
+        public_url=os.environ.get("YDK_PUBLIC_URL", "").strip().rstrip("/"),
         featured=tuple(
             x.strip() for x in os.environ.get("YDK_FEATURED", "").split(",")
             if x.strip()

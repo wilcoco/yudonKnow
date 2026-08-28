@@ -358,3 +358,41 @@ def test_a_document_is_organized_by_what_it_does_not_say(session):
 
     detail = service.document_detail(session, doc_id, lang="ko")
     assert detail["questions"][0]["card_title"], "채운 카드로 연결이 없다"
+
+
+def test_a_new_gap_notifies_once_and_repeats_stay_silent(session, monkeypatch):
+    """"질문을 그대로 전달했습니다" 를 거짓말로 두지 않는다.
+
+    새 공백은 웹훅으로 한 건 나간다. 같은 질문의 반복은 쏘지 않는다 —
+    알림 피로는 무시를 학습시키고, 무시당하는 알림은 없느니만 못하다.
+    """
+    from app.store import notify
+
+    sent = []
+    monkeypatch.setattr(notify, "gap_opened",
+                        lambda **kw: sent.append(kw))
+
+    _leave_a_judgment(session)
+    service.ask_alter(session, "hong", "연차 정산은 어떻게 하나요", asker="kim")
+    assert len(sent) == 1, "새 공백이 알림을 내지 않았다"
+    assert sent[0]["asker"] == "kim" and sent[0]["source"] == "junior"
+
+    service.ask_alter(session, "hong", "연차 정산은 어떻게 하나요", asker="park")
+    assert len(sent) == 1, "반복 질문이 또 알림을 냈다 — 알림 피로"
+
+
+def test_notify_failure_never_breaks_the_flow(session, monkeypatch):
+    """알림은 부가 경로다 — 웹훅이 죽어도 공백은 큐에 남고 동선은 돈다."""
+    from app.store import notify
+
+    # settings 는 frozen — 조회 함수를 바꿔 닫힌 포트로 보낸다.
+    # 실제 함수는 예외를 삼킨다 — 여기서는 삼키는지 자체를 본다.
+    import dataclasses
+    broken = dataclasses.replace(notify.settings, notify_webhook="http://127.0.0.1:1/x")
+    monkeypatch.setattr(notify, "settings", broken)
+
+    _leave_a_judgment(session)
+    reply = service.ask_alter(session, "hong", "연차 정산은 어떻게 하나요", asker="kim")
+    assert reply["is_gap"] is True
+    home = service.expert_home(session, "hong")
+    assert home["gaps"], "웹훅 실패가 공백 기록까지 막았다"

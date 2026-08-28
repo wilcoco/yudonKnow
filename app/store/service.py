@@ -29,7 +29,7 @@ from app.core import legacy
 from app.core.card import Card, CardStatus, Tacitness, Visibility
 from app.i18n import DEFAULT as LANG_DEFAULT
 from app.i18n import t
-from app.store import db
+from app.store import db, notify
 
 
 class ServiceError(Exception):
@@ -580,6 +580,15 @@ def _record_gap(
     session.add(
         db.Gap(id=_uid("g"), expert=expert, question=question,
                askers=asker or "", source_doc=source_doc)
+    )
+    # 새 공백만 알린다 — 반복 질문(위 return 경로)은 쏘지 않는다.
+    row = session.get(db.Expert, expert)
+    notify.gap_opened(
+        expert=expert,
+        expert_name=(row.display_name or expert) if row else expert,
+        question=question, asker=asker,
+        days_left=days_left(row) if row else None,
+        source=("doc" if asker == "📄" else "voice" if asker == "🎙" else "junior"),
     )
 
 
