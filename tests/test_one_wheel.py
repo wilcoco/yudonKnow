@@ -396,3 +396,32 @@ def test_notify_failure_never_breaks_the_flow(session, monkeypatch):
     assert reply["is_gap"] is True
     home = service.expert_home(session, "hong")
     assert home["gaps"], "웹훅 실패가 공백 기록까지 막았다"
+
+
+def test_the_memoir_is_an_output_never_an_input(session):
+    """자서전은 입력이 아니라 출력이다.
+
+    "40년을 정리해 주십시오" 라고 하면 도망간다 — 판단을 파다 보면 회고록이
+    조판되어 나온다. 서문은 남기는 말, 본문은 카드, 여백 주석은 후배의 보고,
+    부록은 글로 담지 못한 것(감추지 않는다), 에필로그는 원장 숫자다.
+    stub 에서는 1인칭 서술이 비어야 한다 — 기계는 삶을 지어내지 않는다.
+    """
+    card_id, _ = _leave_a_judgment(session)
+    row = service.get_expert(session, "hong")
+    row.farewell = "김대리에게. 카드대로 해보고 안 맞으면 꼭 눌러라."
+    session.commit()
+    service.ask_alter(session, "hong", "플로우마크가 한쪽만 나와요", asker="kim")
+    service.report_anchor(session, card_id, "helped", reporter="kim",
+                          detail="야간 라인 정지를 막았습니다")
+
+    m = service.memoir(session, "hong", lang="ko")
+
+    assert m["farewell"], "서문(남기는 말)이 빠졌다"
+    entries = [e for ch in m["chapters"] for e in ch["entries"]]
+    assert any(e["card"]["id"] == card_id for e in entries), "본문에 카드가 없다"
+    notes = [n for e in entries for n in e["notes"]]
+    assert any("야간" in n["what"] for n in notes), "여백 주석(후배 보고)이 빠졌다"
+    assert m["totals"]["helped"] >= 1, "에필로그 숫자가 비었다"
+    assert all(not ch["prose"] for ch in m["chapters"]), (
+        "stub 이 1인칭 서술을 지어냈다 — 기계는 삶을 지어내지 않는다"
+    )

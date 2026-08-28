@@ -205,6 +205,35 @@ CATALOG: dict[str, dict[str, str]] = {
     # ── 전문가 홈 ─────────────────────────────────────────────────────
     "home.stop_alter": {"en": "Pause my alter", "ko": "내 분신 잠시 멈추기"},
     "home.start_alter": {"en": "Switch my alter back on", "ko": "내 분신 다시 켜기"},
+    "home.memoir": {"en": "Memoir", "ko": "회고록"},
+    "memoir.series": {"en": "A record of judgment", "ko": "판단의 기록"},
+    "memoir.title": {"en": "What I knew, and how I knew it",
+                     "ko": "내가 알던 것, 그리고 어떻게 알았는가"},
+    "memoir.print": {"en": "Print", "ko": "인쇄"},
+    "memoir.prose_note": {
+        "en": "— woven by machine from the judgment cards below; the cards are "
+              "the record, this passage is the binding.",
+        "ko": "— 아래 판단 카드에서 기계가 엮은 서술입니다. 기록은 카드이고, "
+              "이 문단은 제본입니다.",
+    },
+    "memoir.appendix": {"en": "Appendix", "ko": "부록"},
+    "memoir.hands": {"en": "What never fit into words", "ko": "글로 담지 못한 것"},
+    "memoir.hands.note": {
+        "en": "These were marked by the author as things you must stand next to "
+              "them to learn. They are listed, not faked into prose.",
+        "ko": "저자가 '옆에서 봐야 배운다' 고 표시한 것들입니다. 문장으로 "
+              "지어내는 대신, 목록으로 남깁니다.",
+    },
+    "memoir.epilogue": {
+        "en": "These judgments were cited {cited} times and reported to have "
+              "helped {helped} times — they keep working.",
+        "ko": "이 판단들은 {cited}번 인용되었고, {helped}번 현장에서 도움이 "
+              "되었다고 보고되었습니다 — 지금도 일하고 있습니다.",
+    },
+    "memoir.colophon": {
+        "en": "Compiled by yudonKnow from what its author dug out · {}",
+        "ko": "저자가 파낸 것으로 yudonKnow 가 엮음 · {}",
+    },
     "home.statement": {"en": "Usage statement", "ko": "지식 사용 명세서"},
     "statement.title": {
         "en": "Usage statement — {name}, as of {date}",

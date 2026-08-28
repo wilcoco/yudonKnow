@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as OrmSession
 
-from app.alter.persona import AlterReply, Persona, respond
+from app.alter.persona import AlterReply, Persona, memoir_prose, respond
 from app.capture import interview
 from app.capture.instruments import LADDER, recommend, unlocked
 from app.capture.llm import get_llm
@@ -968,6 +968,76 @@ def alter_preview(
         lang=lang,
     )
     return {"question": question, "reply": reply.as_dict()}
+
+
+def memoir(
+    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """판단 회고록 — **자서전은 입력이 아니라 출력이다.**
+
+    "40년을 정리해 주십시오" 라고 하면 도망간다. 판단을 파다 보면 회고록이
+    조판되어 나온다 — 그리고 보통 자서전과 달리, 각 장에 "내 판단이 내가
+    떠난 뒤에도 쓰였다" 는 증거(후배의 보고)가 여백 주석으로 붙는다.
+
+    재료는 전부 이미 있다: 카드(상황·판단·실패담), 남기는 말(서문),
+    적용 보고 원문(여백 주석), 말로 담지 못한 것(부록 — 감추지 않는다),
+    원장 합계(에필로그). 퇴직식에서 인쇄본을 증정하는 그림까지가 이 함수다.
+    """
+    row = get_expert(session, expert, lang=lang)
+    lang = row.lang or lang        # 회고록은 그 사람의 언어로 산다
+
+    cards = [
+        c for c in cards_of(session, expert)
+        if c.status is not CardStatus.DORMANT and c.status is not CardStatus.DRAFT
+    ]
+    # 영역별 장(章) — 같은 영역의 판단이 한 장으로 묶인다.
+    chapters: dict[str, list[dict[str, Any]]] = {}
+    for c in sorted(cards, key=lambda x: x.domain):
+        notes = [
+            {"who": a.reporter, "what": a.detail, "verdict": a.verdict,
+             "at": a.created_at.date().isoformat() if a.created_at else ""}
+            for a in session.scalars(
+                select(db.Anchor).where(
+                    db.Anchor.card_id == c.id, db.Anchor.detail != ""
+                ).order_by(db.Anchor.created_at)
+            ).all()
+        ]
+        chapters.setdefault(c.domain or "—", []).append(
+            {"card": card_view(c), "notes": notes}
+        )
+
+    hands = [
+        {"title": c.title, "items": c.unspeakable}
+        for c in cards if c.unspeakable
+    ]
+
+    stmt = usage_statement(session, expert, lang=lang)
+    # 장 서두의 1인칭 서술 — 실기저일 때만. stub 은 지어내지 않으므로 비운다.
+    sayings = _lines(row.sayings)
+    prose: dict[str, str] = {}
+    if settings.llm_enabled:
+        for chapter_domain, entries in chapters.items():
+            prose[chapter_domain] = memoir_prose(
+                get_llm(), name=row.display_name or expert, sayings=sayings,
+                domain=chapter_domain,
+                cards=[c for c in cards if (c.domain or "—") == chapter_domain],
+                lang=lang,
+            )
+
+    return {
+        "expert": expert,
+        "name": row.display_name or expert,
+        "lang": lang,
+        "farewell": row.farewell,
+        "leaving_on": row.leaving_on.isoformat() if row.leaving_on else "",
+        "chapters": [
+            {"domain": d, "entries": entries, "prose": prose.get(d, "")}
+            for d, entries in chapters.items()
+        ],
+        "hands": hands,          # 글로 담지 못한 것 — 부록으로, 감추지 않는다
+        "totals": stmt["totals"],
+        "date": date.today().isoformat(),
+    }
 
 
 def card_view(card: Card) -> dict[str, Any]:

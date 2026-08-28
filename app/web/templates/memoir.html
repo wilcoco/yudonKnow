@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="{{ m.lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ m.name }} — {{ L['memoir.title'] }}</title>
+<style>
+  /* 회고록은 화면이 아니라 **책**이다 — 인쇄가 1급 시민. */
+  :root{ --ink:#1d1c1a; --soft:#6b675f; --line:#d9d4ca; --accent:#8a5a18; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#efece5; color:var(--ink);
+        font-family:'Noto Serif KR','Nanum Myeongjo',Georgia,serif; line-height:1.85; }
+  .page{ max-width:720px; margin:0 auto; padding:48px 28px 96px; background:#fbfaf7; }
+  .cover{ text-align:center; padding:110px 0 90px; border-bottom:1px solid var(--line); }
+  .cover .small{ letter-spacing:.35em; font-size:12px; color:var(--soft); text-transform:uppercase; }
+  .cover h1{ font-size:34px; font-weight:900; margin:18px 0 6px; letter-spacing:-.01em; }
+  .cover .sub{ color:var(--soft); font-size:14px; }
+  h2{ font-size:20px; font-weight:900; margin:64px 0 4px; }
+  h2 .no{ color:var(--accent); font-size:13px; letter-spacing:.2em; display:block; margin-bottom:6px; }
+  .prose{ font-size:16.5px; margin:14px 0 8px; }
+  .prose-note{ font-size:11.5px; color:var(--soft); font-family:sans-serif; margin-bottom:22px; }
+  .preface{ font-size:16.5px; white-space:pre-wrap; margin:40px 0; }
+  .entry{ border:1px solid var(--line); border-radius:4px; padding:20px 22px; margin:22px 0; page-break-inside:avoid; background:#fff; }
+  .entry .t{ font-weight:700; font-size:16px; margin:0 0 10px; }
+  .lbl{ font-family:sans-serif; font-size:10.5px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; display:block; margin:12px 0 2px; }
+  .entry p, .entry li{ margin:2px 0; font-size:14.5px; }
+  .entry ul{ margin:2px 0; padding-left:18px; }
+  .fail{ border-left:3px solid #b0492f; padding-left:12px; color:#5e2d1f; }
+  .margin-note{ font-family:sans-serif; font-size:12.5px; color:var(--soft);
+    border-top:1px dashed var(--line); margin-top:14px; padding-top:10px; }
+  .margin-note b{ color:var(--ink); }
+  .hands{ background:#f4efe4; border-radius:4px; padding:18px 22px; }
+  .epilogue{ text-align:center; margin-top:80px; padding-top:40px; border-top:1px solid var(--line); color:var(--soft); font-size:14.5px; }
+  .epilogue .big{ font-size:17px; color:var(--ink); margin-bottom:8px; }
+  .print-btn{ position:fixed; top:14px; right:14px; font-family:sans-serif; padding:8px 14px;
+    border:1px solid var(--line); background:#fff; border-radius:18px; cursor:pointer; }
+  @media print{ .print-btn{ display:none; } body{ background:#fff; } .page{ padding-top:0; } }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨 {{ L['memoir.print'] }}</button>
+<div class="page">
+
+  <div class="cover">
+    <div class="small">{{ L['memoir.series'] }}</div>
+    <h1>{{ m.name }}</h1>
+    <div class="sub">{{ L['memoir.title'] }}{% if m.leaving_on %} · {{ m.leaving_on[:4] }}{% endif %}</div>
+  </div>
+
+  {% if m.farewell %}
+  <div class="preface">{{ m.farewell }}</div>
+  {% endif %}
+
+  {% for ch in m.chapters %}
+  <h2><span class="no">{{ '%02d' % loop.index }}</span>{{ ch.domain }}</h2>
+  {% if ch.prose %}
+  <p class="prose">{{ ch.prose }}</p>
+  <p class="prose-note">{{ L['memoir.prose_note'] }}</p>
+  {% endif %}
+  {% for e in ch.entries %}
+  <div class="entry">
+    <p class="t">{{ e.card.title }}
+      {%- if e.card.status == 'anchored' %} <span style="color:var(--accent)">✔</span>{% endif %}</p>
+    {% if e.card.situation %}<span class="lbl">{{ L['slot.situation'] }}</span><p>{{ e.card.situation }}</p>{% endif %}
+    {% if e.card.cues %}<span class="lbl">{{ L['slot.cues'] }}</span><ul>{% for c in e.card.cues %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+    {% if e.card.judgment %}<span class="lbl">{{ L['slot.judgment'] }}</span><p>{{ e.card.judgment }}</p>{% endif %}
+    {% if e.card.action %}<span class="lbl">{{ L['slot.action'] }}</span><p>{{ e.card.action | join(' → ') }}</p>{% endif %}
+    {% if e.card.exceptions %}<span class="lbl">{{ L['slot.exceptions'] }}</span><ul>{% for x in e.card.exceptions %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    {% if e.card.failure %}<span class="lbl">{{ L['slot.failure'] }}</span><p class="fail">{{ e.card.failure }}</p>{% endif %}
+    {% if e.notes %}
+    <div class="margin-note">
+      {% for n in e.notes %}
+      <div>{{ '✔' if n.verdict == 'helped' else '⚠' }} <b>{{ n.who or '?' }}</b> — {{ n.what }} <span>({{ n.at }})</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
+
+  {% if m.hands %}
+  <h2><span class="no">{{ L['memoir.appendix'] }}</span>{{ L['memoir.hands'] }}</h2>
+  <div class="hands">
+    <p style="font-size:13.5px;color:var(--soft)">{{ L['memoir.hands.note'] }}</p>
+    {% for h in m.hands %}
+    <p><b>{{ h.title }}</b></p>
+    <ul>{% for i in h['items'] %}<li>{{ i }}</li>{% endfor %}</ul>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="epilogue">
+    <p class="big">{{ L['memoir.epilogue'].replace('{cited}', m.totals.cited|string).replace('{helped}', m.totals.helped|string) }}</p>
+    <p>{{ L['memoir.colophon'].replace('{}', m.date) }}</p>
+  </div>
+
+</div>
+</body>
+</html>

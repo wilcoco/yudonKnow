@@ -169,6 +169,22 @@ def alter(request: Request, expert_id: str) -> HTMLResponse:
     return TEMPLATES.TemplateResponse(request, "alter.html", _ctx(request) | extra)
 
 
+@app.get("/memoir/{expert_id}", response_class=HTMLResponse)
+def memoir(request: Request, expert_id: str) -> HTMLResponse:
+    """판단 회고록 — 자서전은 입력이 아니라 출력이다. 인쇄가 1급 시민."""
+    from app.store import service as svc
+
+    session = db.SessionLocal()
+    try:
+        data = svc.memoir(session, expert_id)
+    finally:
+        session.close()
+    ctx = _ctx(request)
+    # 회고록 문안은 그 사람의 언어로.
+    ctx["L"] = bundle(data["lang"])
+    return TEMPLATES.TemplateResponse(request, "memoir.html", ctx | {"m": data})
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request) -> HTMLResponse:
     return TEMPLATES.TemplateResponse(request, "admin.html", _ctx(request))

@@ -223,6 +223,54 @@ def _grounded(text: str, chosen: list[Card]) -> bool:
     return True
 
 
+def memoir_prose(
+    llm: BaseLLM, *, name: str, sayings: list[str], domain: str,
+    cards: list[Card], lang: str = "en",
+) -> str:
+    """회고록 장(章) 서두의 1인칭 서술 — **삶을 지어내지 않는다.**
+
+    자서전 형태를 위해 흐르는 문장을 엮되, 재료는 카드에 적힌 사실뿐이다.
+    태어난 곳·가족·감정사 같은 전기적 사실을 발명하는 순간 이것은 그 사람의
+    책이 아니라 기계의 소설이 된다. 화면에는 "카드에서 엮음" 표시가 붙고,
+    판단 기록 원문이 본문으로 함께 남는다 — 서술은 표지이고 카드가 진실이다.
+    """
+    if not cards:
+        return ""
+    block = _cards_block(cards, lang)
+    voice = " / ".join(sayings[:2]) if sayings else ""
+    if lang == "ko":
+        prompt = (
+            f"{name} 의 회고록에서 '{domain}' 장을 여는 서술을 써라.\n"
+            "규칙:\n"
+            "· 1인칭('나는'). 3~5문장. 담담한 회고체.\n"
+            "· 아래 판단 카드에 적힌 사실만 쓴다. 카드에 없는 사건·장소·인물·"
+            "감정사를 지어내지 마라.\n"
+            "· 실패담이 있으면 피하지 말고 한 문장으로 품어라.\n"
+            f"{'· 이 사람의 말투: ' + voice if voice else ''}\n"
+            f"\n[판단 카드]\n{block}\n\n서술만 출력하라."
+        )
+    else:
+        prompt = (
+            f"Write the opening passage of the '{domain}' chapter of {name}'s "
+            "memoir.\n"
+            "Rules:\n"
+            "- First person. 3-5 sentences. Quiet, reflective tone.\n"
+            "- Use only facts present in the cards below. Invent no events, "
+            "places, people, or feelings that are not there.\n"
+            "- If there is a failure story, hold it in one sentence — do not "
+            "look away from it.\n"
+            f"{'- Their turns of phrase: ' + voice if voice else ''}\n"
+            f"\n[Judgment cards]\n{block}\n\nOutput the passage only."
+        )
+    try:
+        text = llm.answer("", prompt).strip()
+    except Exception:
+        return ""
+    if not text or text.startswith("⚠"):
+        return ""
+    return text
+
+
 def gap_message(
     persona: Persona,
     *,
