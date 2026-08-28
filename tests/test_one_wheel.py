@@ -493,3 +493,26 @@ def test_todays_question_follows_the_wheel_priority(session):
 
     third = service.peek_next_question(session, "hong", skip=2, lang="ko")
     assert third["source"] == "probe"
+
+
+def test_fixing_a_contested_card_notifies_the_reporter(session, monkeypatch):
+    """교정 루프는 보고한 후배에게 돌아가야 닫힌다.
+
+    "안 맞았다" 가 허공에 가면 다음 보고는 없다 — 카드가 실질 수정되는 순간,
+    그 보고자들에게 회신이 나간다.
+    """
+    from app.store import notify
+
+    sent = []
+    monkeypatch.setattr(notify, "card_fixed", lambda **kw: sent.append(kw))
+
+    card_id, _ = _leave_a_judgment(session)
+    service.report_anchor(session, card_id, "missed", reporter="kim",
+                          detail="재생재 라인이었다")
+
+    service.confirm_card(session, card_id, edits={
+        "exceptions": ["재생재 30% 초과 시 안 통한다", "재생재 라인은 재료부터 본다"],
+    }, lang="ko")
+
+    assert len(sent) == 1, "교정 회신이 나가지 않았다"
+    assert sent[0]["reporters"] == ["kim"]

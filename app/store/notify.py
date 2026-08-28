@@ -24,6 +24,35 @@ from app.config import settings
 log = logging.getLogger(__name__)
 
 
+def card_fixed(
+    *, expert: str, expert_name: str, card_title: str, reporters: list[str],
+) -> None:
+    """"안 맞았다" 고 보고한 후배에게 — 그 보고로 카드가 고쳐졌다는 회신.
+
+    교정 루프가 전문가 쪽에서 끝나면 후배는 자기 보고가 허공에 갔다고
+    배운다 — 그러면 다음 보고는 없다. 회신이 후배 루프의 최소 단위다.
+    """
+    url = settings.notify_webhook
+    if not url:
+        return
+    payload = {
+        "event": "card_fixed",
+        "expert": expert,
+        "expert_name": expert_name,
+        "card_title": card_title,
+        "reporters": reporters,
+        "card_url": f"{settings.public_url or ''}/alter/{expert}",
+    }
+    try:
+        req = urllib.request.Request(
+            url, data=json.dumps(payload, ensure_ascii=False).encode(),
+            headers={"content-type": "application/json"}, method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as exc:
+        log.warning("교정 회신 실패 (동선에는 영향 없음): %s", exc)
+
+
 def gap_opened(
     *, expert: str, expert_name: str, question: str, asker: str,
     days_left: int | None, source: str,

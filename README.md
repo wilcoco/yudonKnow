@@ -291,6 +291,15 @@ Full list: [`.env.example`](.env.example)
 
 ---
 
+### Interviewer quality is evaluated, not assumed
+
+`python evals/interviewer_evals.py` replays four uncooperative-expert personas
+(rambling, generality-escape, ranting, curt) against the live base and checks
+**structural interviewing moves** — one incident at a time, pull generality
+down to a day, return from rants, retry without shaming — plus that English
+speech extracts to English cards. Swapping the base model is only a brag if
+you can prove quality survived the swap; this file is that proof.
+
 ## Design decisions the tests hold down
 
 These are not comments. They are executing tests; reverting any of them turns

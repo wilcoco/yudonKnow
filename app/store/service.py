@@ -500,6 +500,25 @@ def confirm_card(
     verification_reset = False
     had_reports = card.helped + card.missed > 0
     if substantive and had_reports:
+        # 교정 회신 — "안 맞았다" 고 보고했던 후배들에게, 그 보고로 카드가
+        # 고쳐졌음을 알린다. 보고가 허공에 가면 다음 보고는 없다.
+        if card.missed:
+            reporters = sorted({
+                a.reporter for a in session.scalars(
+                    select(db.Anchor).where(
+                        db.Anchor.card_id == card.id,
+                        db.Anchor.verdict == "missed",
+                        db.Anchor.stale.is_(False),
+                    )
+                ).all() if a.reporter
+            })
+            expert_row2 = session.get(db.Expert, card.expert)
+            notify.card_fixed(
+                expert=card.expert,
+                expert_name=(expert_row2.display_name or card.expert)
+                            if expert_row2 else card.expert,
+                card_title=card.title, reporters=reporters,
+            )
         session.query(db.Anchor).filter(
             db.Anchor.card_id == card.id, db.Anchor.stale.is_(False)
         ).update({"stale": True})

@@ -413,6 +413,13 @@ CATALOG: dict[str, dict[str, str]] = {
                            "후배만 셉니다."},
     "ag.home": {"en": "Back to my page", "ko": "내 화면으로"},
     "ag.again": {"en": "Dig one more", "ko": "하나 더 파기"},
+    "invite.body": {
+        "en": "This card is for {who} only. Send them this link — \"a judgment "
+              "left just for you\" is the strongest invitation there is.",
+        "ko": "{who}에게만 남긴 카드입니다. 이 링크를 보내주세요 — \"당신에게만 "
+              "남긴 판단\" 만큼 강한 초대장은 없습니다.",
+    },
+    "invite.copy": {"en": "Copy", "ko": "복사"},
     "cv.utter": {"en": "What you actually said (kept verbatim, never deleted)",
                  "ko": "당신이 실제로 한 말 (원문 보존 — 지워지지 않습니다)"},
     "cv.edit": {"en": "Fix this card (what you write wins over the machine)",
