@@ -161,11 +161,11 @@
 
     <div id="h_suggest"></div>
 
-    <details style="margin-top:18px">
-      <summary class="quiet">{{ L['home.toolbox.more'] }}</summary>
-      <div class="grid g3" id="h_tools" style="margin-top:12px"></div>
-      <p class="quiet" id="h_locked"></p>
-    </details>
+    {# 12개 연장 — 접지 않고 전부 깔아둔다. 고르는 것은 여전히 전문가고,
+       추천이 위에서 하나를 세워주므로 목록은 읽지 않아도 된다. #}
+    <h2 class="sec">{{ L['home.toolbox'] }}</h2>
+    <div class="grid g3" id="h_tools" style="margin-top:12px"></div>
+    <p class="quiet" id="h_locked"></p>
     </div><!-- /d_doors -->
   </section>
 
