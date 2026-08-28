@@ -42,6 +42,14 @@
   </div>
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
   <div class="err" id="err" role="alert" aria-live="assertive"></div>
+  <div class="card" id="fu" hidden style="border-style:dashed">
+    <p class="c" id="fu_body"></p>
+    <div class="acts">
+      <button class="primary" id="fu_ok">{{ L['alter.report.ok'] }}</button>
+      <button id="fu_no">{{ L['alter.report.no'] }}</button>
+      <button class="ghost" onclick="$('fu').hidden=true">{{ L['fu.later'] }}</button>
+    </div>
+  </div>
 
   <div class="panes" style="grid-template-columns:1fr" id="out"></div>
 </main>
@@ -190,6 +198,23 @@ async function notAnswer(a, question){
     a.parentElement.innerHTML = '<span class="quiet">' + esc(L['alter.notanswer.done']) + '</span>';
   }catch(e){ $('err').textContent = e.message; }
 }
+
+// 재방문 고리 — "지난번 그 판단, 써보셨어요?" 같은 후배가 다시 온 순간이
+// 적용 보고의 계기다. 보고 안 한 인용 카드 하나만, 부담 없이.
+async function loadFollowup(){
+  const who = $('asker').value.trim();
+  if(!who) return;
+  try{
+    const f = await api('/api/alter/' + EXPERT + '/followup?asker=' + encodeURIComponent(who));
+    if(!f.card) return;
+    $('fu_body').textContent = fmt2(L['fu.body'], f.card.title);
+    $('fu_ok').onclick = () => { $('fu').hidden = true; report(f.card.id, 'helped', $('fu_ok')); };
+    $('fu_no').onclick = () => { $('fu').hidden = true; report(f.card.id, 'missed', $('fu_no')); };
+    $('fu').hidden = false;
+  }catch(e){ /* 재방문 고리 실패가 질문을 막지 않는다 */ }
+}
+function fmt2(t, v){ return String(t).replace('{}', v); }
+document.addEventListener('DOMContentLoaded', loadFollowup);
 
 // 선배에게 한마디 — 원장에서 전문가가 다시 오는 이유가 된다.
 async function sendThanks(btn){

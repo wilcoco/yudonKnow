@@ -320,6 +320,17 @@ def unanswered(
     )
 
 
+@router.get("/alter/{expert}/followup")
+def followup(
+    expert: str,
+    asker: str = "",
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """재방문 고리 — 지난번 인용받고 아직 보고 안 한 카드 하나를 되물어본다."""
+    return service.followup(session, expert, asker, lang=lang)
+
+
 @router.post("/alter/{expert}/ask")
 def ask(
     expert: str,

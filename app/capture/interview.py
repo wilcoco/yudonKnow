@@ -374,7 +374,8 @@ def next_question(
 
     prompt = _build_probe_prompt(history, target, instrument, lang)
     try:
-        text = llm.answer(_system(lang), prompt).strip()
+        # 한 문장 질문에 8000 토큰 예산은 지연만 산다 — 짧게 캡.
+        text = llm.answer(_system(lang), prompt, max_tokens=300).strip()
     except Exception as exc:
         log.warning("질문 생성 실패, 규칙 기반 대체: %s", exc)
         text = ""

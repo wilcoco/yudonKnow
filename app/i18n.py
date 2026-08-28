@@ -659,6 +659,13 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "alter.report.send": {"en": "Send", "ko": "보내기"},
     "alter.report.cancel": {"en": "Cancel", "ko": "취소"},
+    "fu.body": {
+        "en": "Last time you got an answer from the card \"{}\" — did it hold "
+              "up on the floor? Your report is what earns it the ✔.",
+        "ko": "지난번에 「{}」 카드로 답을 받으셨죠 — 현장에서 맞던가요? "
+              "당신의 보고가 그 카드의 ✔ 을 만듭니다.",
+    },
+    "fu.later": {"en": "Not yet", "ko": "아직요"},
     "alter.notanswer": {
         "en": "This didn't answer my question — send it to the senior",
         "ko": "이건 제 질문에 대한 답이 아니었어요 — 선배에게 전달하기",
@@ -725,6 +732,14 @@ CATALOG: dict[str, dict[str, str]] = {
               "the judgment cards verbatim — nothing invented.",
         "ko": "⚠ 생성된 답이 근거 검증을 통과하지 못해, 남기신 판단 카드를 "
               "그대로 보여드립니다 — 지어낸 것 없이.",
+    },
+    "alter.msg.restricted": {
+        "en": "{name} did leave judgment in this area — but it is opened only to "
+              "a named person or on a chosen date. That is their call to make.\n"
+              "If you need it, ask them directly.",
+        "ko": "{name}님은 이 영역에 판단을 남기셨습니다 — 다만 지정한 사람에게만, "
+              "혹은 정한 날짜에 열리도록 잠가 두셨어요. 그건 본인의 권한입니다.\n"
+              "필요하시면 직접 여쭤보세요.",
     },
     "alter.msg.gap": {
         "en": "This is not an area {name} left behind.\nI will not make it up.",

@@ -629,6 +629,26 @@ def ask_alter(
     session.add(ask)
 
     if reply.is_gap:
+        # **접근 공백 ≠ 지식 공백.** 지목·봉인으로 잠긴 카드가 이 질문에
+        # 답할 수 있는데 보는 사람이 자격이 없어 공백이 된 경우 —
+        # ① 전문가에게 "다시 파라" 고 시키면 안 된다 (이미 답을 남겼고,
+        #    일부러 잠갔다), ② 후배에게 "남기지 않은 영역" 이라고 하면
+        #    거짓말이다. 소유자 시점(모든 카드가 보임)으로 한 번 더 검색해
+        #    가려낸다 — 결정적 검색이라 LLM 호출 없음.
+        from app.core.retrieval import retrieve as _retrieve
+
+        owner_view = _retrieve(
+            cards, question, viewer=expert,
+            top_k=settings.retrieval_top_k, explore_quota=0.0,
+            confidence_floor=settings.confidence_floor,
+        ) if persona.active else None   # 정지된 분신의 안내문은 덮지 않는다
+        if owner_view is not None and not owner_view.is_gap:
+            reply.text = t("alter.msg.restricted", lang,
+                           name=persona.display_name or expert)
+            ask.answered = False
+            session.commit()
+            return {"ask_id": ask.id, "persona": persona.label(lang),
+                    **reply.as_dict(), "restricted": True}
         _record_gap(session, expert, question, asker)
     else:
         for card in reply.cards:
@@ -646,6 +666,43 @@ def ask_alter(
         )
     session.commit()
     return {"ask_id": ask.id, "persona": persona.label(lang), **reply.as_dict()}
+
+
+def followup(
+    session: OrmSession, expert: str, asker: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """재방문 고리 — "지난번 그 판단, 써보셨어요?"
+
+    바퀴에서 가장 약한 화살표가 적용 보고다: 답을 받아 현장에 간 후배가
+    돌아와 눌러줄 계기가 없었다. 같은 후배가 다시 온 순간이 그 계기다 —
+    지난번에 인용받았는데 아직 보고하지 않은 카드 하나를 되물어본다.
+    ✔ 배지도, 교정 신호도, 명세서도 전부 이 화살표에서 태어난다.
+    """
+    if not asker:
+        return {"card": None}
+    cited = session.scalars(
+        select(db.LedgerRow).where(
+            db.LedgerRow.expert == expert,
+            db.LedgerRow.event == legacy.LedgerEvent.CITED.value,
+            db.LedgerRow.actor == asker,
+        ).order_by(db.LedgerRow.created_at.desc()).limit(10)
+    ).all()
+    reported = {
+        a.card_id for a in session.scalars(
+            select(db.Anchor).where(db.Anchor.reporter == asker)
+        ).all()
+    }
+    for entry in cited:
+        if entry.card_id and entry.card_id not in reported:
+            row = session.get(db.CardRow, entry.card_id)
+            if row is None or row.status == CardStatus.DORMANT.value:
+                continue
+            return {"card": {
+                "id": row.id, "title": row.title,
+                "asked": entry.detail,      # 그때 무엇을 물었었는지
+                "at": entry.created_at.date().isoformat() if entry.created_at else "",
+            }}
+    return {"card": None}
 
 
 def _other_experts(

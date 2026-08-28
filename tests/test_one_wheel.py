@@ -516,3 +516,46 @@ def test_fixing_a_contested_card_notifies_the_reporter(session, monkeypatch):
 
     assert len(sent) == 1, "교정 회신이 나가지 않았다"
     assert sent[0]["reporters"] == ["kim"]
+
+
+def test_an_access_gap_is_not_a_knowledge_gap(session):
+    """**접근 공백 ≠ 지식 공백.**
+
+    지목 카드가 있는 영역을 자격 없는 후배가 물으면 — ① 전문가의 발굴 큐에
+    들어가면 안 된다(이미 답을 남겼고 일부러 잠갔다), ② "남기지 않은
+    영역" 이라고 하면 거짓말이다. 리허설에서 실측된 설계 결함.
+    """
+    from app.core.card import Visibility
+
+    _leave_a_judgment(
+        session, visibility=Visibility.TARGETED.value, for_whom="kim"
+    )
+
+    reply = service.ask_alter(
+        session, "hong", "플로우마크가 한쪽만 나와요", asker="park", lang="ko"
+    )
+
+    assert reply["is_gap"] is True
+    assert reply.get("restricted") is True
+    assert "남기지 않은" not in reply["text"], "잠근 것을 '안 남겼다' 고 거짓말했다"
+    assert "남기셨습니다" in reply["text"] and "권한" in reply["text"]
+
+    home = service.expert_home(session, "hong", lang="ko")
+    assert not home["gaps"], "잠근 영역이 발굴 큐에 들어갔다 — 다시 파라는 헛지시"
+
+
+def test_a_returning_junior_is_asked_about_last_time(session):
+    """재방문 고리 — 바퀴에서 가장 약한 화살표(적용 보고)의 계기.
+
+    지난번 인용받고 보고 안 한 카드가 있으면 그것 하나를 되물어보고,
+    보고를 마쳤으면 더 묻지 않는다 — 계기이지 채근이 아니다.
+    """
+    card_id, _ = _leave_a_judgment(session)
+    service.ask_alter(session, "hong", "플로우마크가 한쪽만 나와요", asker="kim")
+
+    f = service.followup(session, "hong", "kim")
+    assert f["card"] and f["card"]["id"] == card_id, "재방문 되묻기가 서지 않았다"
+
+    service.report_anchor(session, card_id, "helped", reporter="kim")
+    f2 = service.followup(session, "hong", "kim")
+    assert f2["card"] is None, "보고를 마쳤는데 또 물었다 — 채근이 된다"

@@ -31,7 +31,7 @@ class BaseLLM(Protocol):
 
     name: str
 
-    def answer(self, system: str, prompt: str) -> str: ...
+    def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str: ...
 
     def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -47,7 +47,7 @@ class StubLLM:
 
     name = "stub"
 
-    def answer(self, system: str, prompt: str) -> str:
+    def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str:
         return (
             "⚠ LLM 미연결 (stub 모드). GOOGLE_API_KEY 를 설정하면 실제 응답이 "
             "들어옵니다. 아래는 검색된 근거 카드 원문입니다.\n\n" + prompt
@@ -140,13 +140,13 @@ class GeminiLLM:
                 delay *= 2
         raise RuntimeError("unreachable")
 
-    def answer(self, system: str, prompt: str) -> str:
+    def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str:
         response = self._gen(
             model=self._model,
             contents=prompt,
             config=self._types.GenerateContentConfig(
                 system_instruction=system,
-                max_output_tokens=self._max_tokens,
+                max_output_tokens=max_tokens or self._max_tokens,
             ),
         )
         return (response.text or "").strip()
@@ -210,7 +210,7 @@ class AnthropicLLM:
         self._max_tokens = max_tokens
         self.name = model
 
-    def answer(self, system: str, prompt: str) -> str:
+    def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str:
         response = self._client.messages.create(
             model=self._model,
             max_tokens=self._max_tokens,
