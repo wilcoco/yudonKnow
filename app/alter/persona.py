@@ -18,6 +18,8 @@
 
 from __future__ import annotations
 
+import re
+
 import logging
 from dataclasses import dataclass, field
 
@@ -187,6 +189,36 @@ def _cards_block(cards: list[Card], lang: str = "en") -> str:
     return "\n\n".join(out)
 
 
+#: 인용 토큰 — 카드 블록이 쓰는 형식 그대로 ``[#카드id]``. id 형식을 가정하지
+#: 않는다 — 형식이 바뀌면 검증이 조용히 무력화되는 것보다, 토큰 규약 하나에
+#: 묶이는 편이 안전하다.
+_CITE = re.compile(r"\[#([^\[\]\s]+)\]")
+
+
+def _grounded(text: str, chosen: list[Card]) -> bool:
+    """생성된 답이 근거 위에 서 있는가 — 결정적 검사, LLM 없음.
+
+    ① 인용이 하나도 없으면 탈락 — 근거 없는 문장은 검증할 방법이 없다.
+    ② 선택되지 않은 카드를 인용하면 탈락 — 지어낸 출처다.
+    ③ 문단(빈 줄 구분) 각각에 인용이 있어야 한다 — 인용 하나 달고 그 뒤로
+       자유 발화하는 패턴을 막는다. 짧은 연결 문단(한 줄, 80자 미만)은 봐준다.
+    """
+    cited = set(_CITE.findall(text))
+    if not cited:
+        return False
+    allowed = {c.id for c in chosen}
+    if not cited <= allowed:
+        return False
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    for para in paragraphs:
+        if _CITE.search(para):
+            continue
+        if len(para) < 80 and "\n" not in para:
+            continue   # 인사말·연결 문장 정도는 허용
+        return False
+    return True
+
+
 def gap_message(
     persona: Persona,
     *,
@@ -274,14 +306,20 @@ def respond(
             f"[{who}님이 남긴 판단 카드]\n{_cards_block(chosen, lang)}\n\n"
             f"[후배의 질문]\n{question}\n\n"
             "위 카드 안에서만 답해라. 카드에 없는 부분은 '그건 남기지 않으셨습니다' "
-            "라고 말해라."
+            "라고 말해라.\n"
+            "인용 규약: 모든 문단 끝에 근거가 된 카드의 [#카드아이디] 를 붙여라. "
+            "인용이 없거나 위 목록에 없는 카드를 인용한 답은 기계 검증에서 "
+            "통째로 버려진다."
         )
     else:
         prompt = (
             f"[Judgment cards {who} left behind]\n{_cards_block(chosen, lang)}\n\n"
             f"[The junior's question]\n{question}\n\n"
             "Answer only from within these cards. For anything not on them, say "
-            "\"they did not leave that behind\"."
+            "\"they did not leave that behind\".\n"
+            "Citation contract: end every paragraph with the [#card-id] it rests "
+            "on. An answer with uncited paragraphs, or citing a card not listed "
+            "above, is discarded whole by a mechanical check."
         )
     stubbed = False
     try:
@@ -293,6 +331,15 @@ def respond(
         # stub/실패 시에도 **카드 원문**을 보여준다. 지어내는 것보다 낫다.
         stubbed = True
         text = t("alter.msg.stub", lang) + "\n\n" + _cards_block(chosen, lang)
+    elif not _grounded(text, chosen):
+        # 인용 검증 — "카드 밖으로 나가지 않는다" 를 프롬프트에 부탁하지 않고
+        # 코드가 확인한다. 답의 모든 문단에 실제 선택된 카드의 인용이 붙어
+        # 있어야 하고, 없는 카드를 인용하면 탈락이다. 탈락하면 지어냈을지도
+        # 모르는 문장 대신 **카드 원문**으로 강등한다 — 이 도구에서 생성은
+        # 편의고, 원문은 진실이다.
+        log.warning("분신 답변이 인용 검증 탈락 — 카드 원문으로 강등")
+        stubbed = True
+        text = t("alter.msg.ungrounded", lang) + "\n\n" + _cards_block(chosen, lang)
 
     contested = [c.id for c in chosen if c.status is CardStatus.CONTESTED]
     notice = ""

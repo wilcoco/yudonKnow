@@ -302,6 +302,82 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "직접 방법을 고르시려면 (12가지)",
     },
     #: 문서는 질문이 되지 카드가 되지 않는다 (docs/design.md §7).
+    # ── 서가·세 개의 문·문서함·혼잣말·남긴 직후 ─────────────────────
+    "card.untitled": {"en": "Untitled judgment", "ko": "제목 없는 판단"},
+    "shelf.head": {"en": "🗂 What you have left behind", "ko": "🗂 남긴 것들"},
+    "shelf.helped": {"en": "helped {}", "ko": "도움됨 {}"},
+    "shelf.draft": {"en": "Half-dug — tap to keep going.", "ko": "파다 만 판단 — 눌러서 이어가세요."},
+    "shelf.contested": {"en": "A junior says it did not hold — tap to fix.",
+                        "ko": "후배가 안 맞았다고 합니다 — 눌러서 고쳐주세요."},
+    "shelf.fix": {"en": "Fix this card", "ko": "이 카드 고치기"},
+    "doors.head": {"en": "How would you like to leave something today?",
+                   "ko": "오늘은 어떻게 남기시겠어요?"},
+    "door1.t": {"en": "Just ask me", "ko": "그냥 물어봐 주세요"},
+    "door1.c": {"en": "You answer, we do the rest. A question is already waiting — "
+                      "a junior's, a document's, or today's opener.",
+                "ko": "답만 하시면 됩니다. 후배의 질문이든, 문서에서 나온 것이든, "
+                      "오늘의 첫 질문이든 — 이미 하나 준비돼 있습니다."},
+    "door1.cta": {"en": "Take today's question", "ko": "오늘의 질문 받기"},
+    "door2.t": {"en": "I have something to leave", "ko": "남기고 싶은 게 있어요"},
+    "door3.t": {"en": "Here, take my stuff", "ko": "재료를 드릴게요"},
+    "door3.c": {"en": "Hand over a procedure or just ramble — we find what is "
+                      "missing and turn it into questions. Nothing becomes a card "
+                      "until you answer.",
+                "ko": "절차서를 주시든 두서없이 말씀하시든 — 빠진 곳을 찾아 질문으로 "
+                      "바꿔둡니다. 답하시기 전에는 아무것도 카드가 되지 않습니다."},
+    "mono.t": {"en": "Or just talk", "ko": "그냥 말할게요"},
+    "mono.c": {"en": "Ramble while you work. We mine the judgment said in passing.",
+               "ko": "일하면서 흘리듯 말씀하세요. 지나가듯 말한 판단을 저희가 건집니다."},
+    "mono.ph": {"en": "Paste or record a rambling monologue…",
+                "ko": "두서없는 혼잣말을 붙여넣거나 녹음하세요…"},
+    "mono.cta": {"en": "Mine it", "ko": "건져주세요"},
+    "mono.none": {"en": "No judgment traces found — complaints and small talk are left alone.",
+                  "ko": "판단의 흔적을 찾지 못했습니다 — 불평과 잡담은 건지지 않습니다."},
+    "mono.done": {"en": "{} questions queued from your monologue.",
+                  "ko": "혼잣말에서 질문 {}개를 건져 큐에 넣었습니다."},
+    "docs.progress": {"en": "{q} judgment points · {f} filled", "ko": "판단 지점 {q} · 채움 {f}"},
+    "docs.open": {"en": "Show what it does not say", "ko": "말하지 않는 것 보기"},
+    "docs.answer": {"en": "Answer now", "ko": "지금 답하기"},
+    "ag.title": {"en": "It stays.", "ko": "남았습니다."},
+    "ag.lede": {"en": "This judgment now answers even when you are not there.",
+                "ko": "이제 이 판단은 당신이 없어도 답합니다."},
+    "ag.demo.head": {"en": "Watch your alter use it", "ko": "분신이 이걸로 답하는 모습"},
+    "ag.demo.q": {"en": "If a junior asks — \"{}\"", "ko": "후배가 이렇게 묻는다면 — \"{}\""},
+    "ag.demo.busy": {"en": "Your alter is answering…", "ko": "분신이 답하는 중…"},
+    "ag.demo.note": {"en": "This preview is not recorded anywhere — your ledger "
+                           "counts only real juniors.",
+                     "ko": "이 시연은 어디에도 기록되지 않습니다 — 원장은 진짜 "
+                           "후배만 셉니다."},
+    "ag.home": {"en": "Back to my page", "ko": "내 화면으로"},
+    "ag.again": {"en": "Dig one more", "ko": "하나 더 파기"},
+    "cv.utter": {"en": "What you actually said (kept verbatim, never deleted)",
+                 "ko": "당신이 실제로 한 말 (원문 보존 — 지워지지 않습니다)"},
+    "cv.edit": {"en": "Fix this card (what you write wins over the machine)",
+                "ko": "카드 고치기 (당신이 고친 것이 기계보다 우선합니다)"},
+    "cv.reports": {"en": "What juniors reported", "ko": "후배들의 보고"},
+    "cv.f.title": {"en": "Title", "ko": "제목"},
+    "cv.f.situation": {"en": "Situation", "ko": "상황"},
+    "cv.f.cues": {"en": "Cues — one per line", "ko": "신호 — 한 줄에 하나"},
+    "cv.f.judgment": {"en": "The call", "ko": "판단"},
+    "cv.f.action": {"en": "Actions — one per line", "ko": "조치 — 한 줄에 하나"},
+    "cv.f.rationale": {"en": "Why it works", "ko": "근거"},
+    "cv.f.exceptions": {"en": "When it does not hold — one per line",
+                        "ko": "예외 — 한 줄에 하나"},
+    "cv.f.failure": {"en": "When it went wrong", "ko": "실패담"},
+    "cv.save": {"en": "Save my version", "ko": "내 버전으로 저장"},
+    "cv.resume": {"en": "⛏ Keep digging this one", "ko": "⛏ 이어서 파기"},
+    "cv.warn.anchored": {"en": "This card is field-verified (✔). If you change its "
+                               "substance, verification starts over — reports about "
+                               "the old text cannot vouch for the new one.",
+                         "ko": "이 카드는 현장 검증(✔)을 받았습니다. 내용을 고치면 "
+                               "검증은 처음부터 다시 받습니다 — 옛 내용에 대한 보고가 "
+                               "새 내용을 보증할 수는 없으니까요."},
+    "cv.reset_done": {"en": "Substance changed — verification reset.",
+                      "ko": "내용이 바뀌어 검증이 초기화되었습니다."},
+    "cv.b.anchored": {"en": "field-verified", "ko": "현장 검증"},
+    "cv.b.contested": {"en": "contested", "ko": "교정 요청"},
+    "cv.b.draft": {"en": "⏳ half-dug", "ko": "⏳ 파다 만 판단"},
+    "slot.unspeakable": {"en": "Could not be put into words", "ko": "말로 안 됨"},
     "home.doc": {"en": "📄 Red-pen a procedure", "ko": "📄 절차서 빨간펜"},
     "home.doc.q": {
         "en": "Paste a procedure you wrote or inherited. I will find what it "
@@ -532,6 +608,12 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.msg.stopped": {
         "en": "{label} is paused right now. They switched it off themselves.",
         "ko": "{label}은 지금 멈춰 있습니다. 본인이 직접 정지시켜 두었습니다.",
+    },
+    "alter.msg.ungrounded": {
+        "en": "⚠ The generated answer did not pass the evidence check, so here are "
+              "the judgment cards verbatim — nothing invented.",
+        "ko": "⚠ 생성된 답이 근거 검증을 통과하지 못해, 남기신 판단 카드를 "
+              "그대로 보여드립니다 — 지어낸 것 없이.",
     },
     "alter.msg.gap": {
         "en": "This is not an area {name} left behind.\nI will not make it up.",

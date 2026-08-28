@@ -161,6 +161,24 @@ class Citation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class Document(Base):
+    """문서함 — 보관함이 아니라 **발굴 지도**다.
+
+    문서는 내용으로 정리되지 않는다. 문서가 **말하지 않는 것**(심문으로 나온
+    질문들)과 그중 몇 개가 카드로 채워졌는지로 정리된다. 후배에게는 절대
+    노출되지 않는다 — 후배에게 남는 것은 카드뿐이다.
+    """
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    expert: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    domain: Mapped[str] = mapped_column(String(128), default="")
+    text: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class Gap(Base):
     """분신이 못 답한 것 → 전문가의 큐. **인터뷰 주제를 현장 수요가 정한다.**"""
 
@@ -172,6 +190,8 @@ class Gap(Base):
     asked_count: Mapped[int] = mapped_column(Integer, default=1)
     askers: Mapped[str] = mapped_column(Text, default="")   # 줄바꿈 구분
     filled_card: Mapped[str] = mapped_column(String(64), default="")
+    #: 이 질문을 만든 문서 (📄 심문 산출일 때). 문서함의 진행도가 여기서 나온다.
+    source_doc: Mapped[str] = mapped_column(String(64), default="", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     last_asked: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -188,6 +208,9 @@ class Anchor(Base):
     card_id: Mapped[str] = mapped_column(String(64), ForeignKey("cards.id"), index=True)
     reporter: Mapped[str] = mapped_column(String(64), default="")
     verdict: Mapped[str] = mapped_column(String(16))      # helped | missed | pending
+    #: 판 내용이 바뀌면 이전 판에 대한 보고는 배지 계산에서 빠진다 — 새 내용이
+    #: 옛 증거로 재검증되는 것을 막는다. 원장은 append-only 라 역사는 남는다.
+    stale: Mapped[bool] = mapped_column(Boolean, default=False)
     detail: Mapped[str] = mapped_column(Text, default="")
     metric: Mapped[str] = mapped_column(String(128), default="")
     baseline: Mapped[float] = mapped_column(Float, default=0.0)

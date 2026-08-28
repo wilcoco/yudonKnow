@@ -224,7 +224,7 @@ def next_question(
     card: Card | None = None,
     history: list[tuple[str, str]] | None = None,
     gap_question: str = "",
-    gap_from_doc: bool = False,
+    gap_source: str = "junior",   # junior | doc | voice
     lang: str = "en",
 ) -> Question:
     """다음 질문 하나.
@@ -235,9 +235,9 @@ def next_question(
     history = history or []
 
     if gap_question:
-        # 출처를 속이지 않는다 — 문서 심문에서 나온 질문을 "후배가 물었다" 고
-        # 하면, 전문가가 없는 후배에게 답장하는 셈이 된다.
-        if gap_from_doc:
+        # 출처를 속이지 않는다 — 문서·혼잣말에서 나온 질문을 "후배가 물었다"
+        # 고 하면, 전문가가 없는 후배에게 답장하는 셈이 된다.
+        if gap_source == "doc":
             if lang == "ko":
                 text = ("절차서를 읽다가 문서가 답하지 않는 것을 찾았습니다.\n\n"
                         f"「{gap_question}」\n\n어떻게 하십니까?")
@@ -245,6 +245,13 @@ def next_question(
                 text = ("Reading your procedure, I found something it does not "
                         "answer.\n\n"
                         f"\u201c{gap_question}\u201d\n\nWhat do you do?")
+        elif gap_source == "voice":
+            if lang == "ko":
+                text = ("지난번 혼잣말에서 이걸 건졌습니다.\n\n"
+                        f"「{gap_question}」\n\n조금만 더 파볼까요?")
+            else:
+                text = ("I picked this up from your last recording.\n\n"
+                        f"\u201c{gap_question}\u201d\n\nShall we dig at it?")
         elif lang == "ko":
             text = ("후배가 이걸 물었는데 분신이 답하지 못했습니다.\n\n"
                     f"「{gap_question}」\n\n어떻게 보십니까?")
@@ -426,6 +433,62 @@ def probe_document(
         raw = llm.extract(prompt, _DOC_PROBE_SCHEMA)
     except Exception as exc:
         log.warning("문서 심문 실패: %s", exc)
+        raw = {}
+    out = []
+    for q in (raw.get("questions") or [])[:limit]:
+        question = str(q.get("question", "")).strip()
+        if question:
+            out.append({"question": question, "anchor": str(q.get("anchor", "")).strip()})
+    return out
+
+
+def probe_monologue(
+    llm: BaseLLM, transcript: str, *, domain: str = "", lang: str = "en",
+    limit: int = 5,
+) -> list[dict[str, str]]:
+    """🎙 혼잣말 채굴 — 두서없는 녹음에서 **질문**을 건진다. 카드를 만들지 않는다.
+
+    문서 심문과 같은 불변식이다: 재료(문서·혼잣말)는 질문이 되고, 카드는
+    전문가의 확인된 답에서만 나온다. 혼잣말 전사를 그대로 카드로 만들면
+    맥락 없는 반쪽 판단이 인용 게이트로 흘러든다.
+
+    찾는 것: 지나가듯 말한 판단의 흔적 — 기준을 언급한 곳("이 정도면"),
+    예외를 흘린 곳("원래는 안 그러는데"), 결정을 내린 순간("그래서 그냥
+    세웠어"). 각각을 그 자리를 파는 질문으로 바꾼다.
+    """
+    body = (transcript or "").strip()
+    if not body:
+        return []
+    body = body[:60_000]
+    if lang == "ko":
+        prompt = (
+            f"아래는 '{domain or '현장'}' 전문가가 일하면서 흘린 혼잣말 전사다. "
+            "두서없어도 된다 — 그 안에서 **지나가듯 말한 판단의 흔적**을 찾아라:\n"
+            "· 기준을 언급한 곳 (\"이 정도면\", \"딱 보면\")\n"
+            "· 예외를 흘린 곳 (\"원래는 안 그러는데\")\n"
+            "· 결정을 내린 순간 (\"그래서 그냥 세웠어\")\n\n"
+            f"각각을 본인에게 그 자리를 파묻는 **질문 한 문장**으로 바꿔라. "
+            f"최대 {limit}개. anchor 에는 근거가 된 혼잣말 구절을 그대로 20자 "
+            "내외로 인용하라. 판단이 아닌 것(불평·잡담)은 건지지 마라.\n\n"
+            f"--- 전사 ---\n{body}"
+        )
+    else:
+        prompt = (
+            f"Below is a transcript of a '{domain or 'shop floor'}' expert "
+            "talking to themselves while working. It may ramble — inside it, "
+            "find **traces of judgment said in passing**:\n"
+            "- a threshold mentioned (\"about this much\", \"you can tell\")\n"
+            "- an exception let slip (\"normally I wouldn't, but\")\n"
+            "- a decision being made (\"so I just stopped the line\")\n\n"
+            f"Turn each into **one question** that digs at that spot. At most "
+            f"{limit}. In `anchor`, quote the phrase (about 10 words) that "
+            "raised it. Do not mine complaints or small talk.\n\n"
+            f"--- TRANSCRIPT ---\n{body}"
+        )
+    try:
+        raw = llm.extract(prompt, _DOC_PROBE_SCHEMA)
+    except Exception as exc:
+        log.warning("혼잣말 채굴 실패: %s", exc)
         raw = {}
     out = []
     for q in (raw.get("questions") or [])[:limit]:

@@ -175,19 +175,49 @@ def _log(
 
 def start_session(
     session: OrmSession, expert: str, *, instrument: str = LADDER,
-    lang: str = LANG_DEFAULT,
+    gap_id: str = "", lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
-    """발굴 세션 시작. **연장은 전문가가 고른다** — 기본값은 사다리."""
+    """발굴 세션 시작. **연장은 전문가가 고른다** — 기본값은 사다리.
+
+    ``gap_id`` 를 주면 그 공백부터 판다 — 문서함에서 빈 질문 하나를 짚어
+    "지금 답하기" 를 눌렀을 때의 입구다.
+    """
     get_expert(session, expert, lang=lang)
     row = db.Session(id=_uid("s"), expert=expert, instrument=instrument)
     session.add(row)
 
-    gap = _top_gap(session, expert)
+    gap = None
+    if gap_id:
+        picked = session.get(db.Gap, gap_id)
+        if picked is not None and not picked.filled_card:
+            gap = picked
+    if gap is None:
+        gap = _top_gap(session, expert)
+    if gap is None and instrument == LADDER:
+        # 문 ①("그냥 물어봐 주세요")의 첫 질문은 ACTA 입구 프로브 순환이다 —
+        # 같은 질문(recall)만 반복하면 같은 종류의 지식만 나온다 (§3.2).
+        live = [c for c in cards_of(session, expert)
+                if c.status is not CardStatus.DORMANT]
+        kind, text_q = interview.entry_probe(len(live), lang)
+        turn = db.Turn(id=_uid("t"), session_id=row.id, question=text_q,
+                       rung="opener", targets="situation")
+        session.add(turn)
+        session.commit()
+        return {
+            "session_id": row.id, "instrument": instrument,
+            "turn_id": turn.id, "question": text_q, "rung": "opener",
+            "from_gap": False, "probe": kind,
+            "target": settings.interview_turns, "index": 1,
+        }
     question = interview.next_question(
         get_llm(),
         instrument=instrument,
         gap_question=gap.question if gap else "",
-        gap_from_doc=bool(gap) and _lines(gap.askers) == ["📄"],
+        gap_source=(
+            "doc" if bool(gap) and _lines(gap.askers) == ["📄"]
+            else "voice" if bool(gap) and _lines(gap.askers) == ["🎙"]
+            else "junior"
+        ),
         lang=lang,
     )
     turn = db.Turn(
@@ -344,11 +374,20 @@ def confirm_card(
         raise ServiceError(t("err.no_card", lang))
     card = row_to_card(row)
 
+    #: 판단의 실체가 담긴 칸. 이 칸이 바뀌면 **다른 판단**이 된 것이다.
+    substance = (
+        "title", "situation", "cues", "judgment", "action",
+        "rationale", "exceptions", "failure",
+    )
+    before = {k: getattr(card, k) for k in substance}
+
     for key, value in (edits or {}).items():
         if not hasattr(card, key):
             continue
         current = getattr(card, key)
         setattr(card, key, list(value) if isinstance(current, list) else value)
+
+    substantive = any(getattr(card, k) != before[k] for k in substance)
     if tacitness:
         card.tacitness = Tacitness(tacitness)
     if visibility:
@@ -360,6 +399,23 @@ def confirm_card(
 
     if not card.cues:
         raise ServiceError(t("err.no_cues", lang))
+
+    # 판 내용이 바뀌면 실측은 처음부터 다시 센다. 옛 텍스트에 대한 적용 보고로
+    # 새 텍스트가 ✔ 을 다는 것은 거짓 배지다. 기존 보고는 stale 로 빠지고
+    # (원장은 append-only 라 보람·명세서의 역사는 그대로), 배지는 새 보고가
+    # 다시 쌓여야 돌아온다.
+    verification_reset = False
+    had_reports = card.helped + card.missed > 0
+    if substantive and had_reports:
+        session.query(db.Anchor).filter(
+            db.Anchor.card_id == card.id, db.Anchor.stale.is_(False)
+        ).update({"stale": True})
+        card.helped = 0
+        card.missed = 0
+        row.helped = 0
+        row.missed = 0
+        verification_reset = True
+
     card.status = CardStatus.CONFIRMED
     write_card(row, card)
     _log(session, card.expert, legacy.LedgerEvent.CARD_CONFIRMED, card_id=card.id)
@@ -371,6 +427,7 @@ def confirm_card(
         "card": card_view(card),
         "warning": t("warn.no_exceptions", lang) if not card.exceptions else "",
         "filled_gap": filled,
+        "verification_reset": verification_reset,
     }
 
 
@@ -467,7 +524,10 @@ def _other_experts(
     return [r.display_name or r.id for r in rows][:3]
 
 
-def _record_gap(session: OrmSession, expert: str, question: str, asker: str) -> None:
+def _record_gap(
+    session: OrmSession, expert: str, question: str, asker: str,
+    source_doc: str = "",
+) -> None:
     """같은 질문이 반복되면 카운트를 올린다 — 빈도가 곧 우선순위다."""
     existing = session.scalars(
         select(db.Gap).where(db.Gap.expert == expert, db.Gap.filled_card == "")
@@ -481,21 +541,29 @@ def _record_gap(session: OrmSession, expert: str, question: str, asker: str) -> 
                 gap.askers = _join(_lines(gap.askers) + [asker])
             return
     session.add(
-        db.Gap(id=_uid("g"), expert=expert, question=question, askers=asker or "")
+        db.Gap(id=_uid("g"), expert=expert, question=question,
+               askers=asker or "", source_doc=source_doc)
     )
 
 
 def interrogate_document(
     session: OrmSession, expert: str, text: str, *,
-    domain: str = "", lang: str = LANG_DEFAULT,
+    title: str = "", domain: str = "", lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """📄 절차서 빨간펜 — 문서가 다루지 않는 판단 지점을 **공백 큐**에 넣는다.
 
-    문서 원문은 저장하지 않는다. 이 도구의 저장 단위는 판단 카드이지 문서가
-    아니고, 문서 보관은 위키가 이미 잘한다. 여기서 남는 것은 질문뿐이며,
-    답이 나와야 카드가 된다 — 문서는 질문이 되지, 카드가 되지 않는다.
+    문서는 저장되지만 **보관함이 아니라 발굴 지도**로다: 문서함의 정리 축은
+    내용이 아니라 "이 문서가 말하지 않는 질문 N개 중 M개가 채워졌다" 는
+    진행도다. 후배에게는 절대 노출되지 않는다 — 후배에게 남는 것은 카드뿐이고,
+    답이 나와야 카드가 된다. 문서는 질문이 되지, 카드가 되지 않는다.
     """
     get_expert(session, expert, lang=lang)
+    first_line = next((l.strip() for l in (text or "").splitlines() if l.strip()), "")
+    doc = db.Document(
+        id=_uid("d"), expert=expert, title=(title or first_line)[:200],
+        domain=domain, text=(text or "")[:200_000],
+    )
+    session.add(doc)
     probes = interview.probe_document(
         get_llm(), text, domain=domain, lang=lang
     )
@@ -503,8 +571,85 @@ def interrogate_document(
         question = item["question"]
         if item.get("anchor"):
             # 어느 구절에서 나온 질문인지 붙인다 — 전문가가 맥락을 바로 잡는다.
-            question = f'{question} (문서: "{item["anchor"]}")' if lang == "ko"                 else f'{question} (doc: "{item["anchor"]}")'
-        _record_gap(session, expert, question, asker="📄")
+            if lang == "ko":
+                question = f'{question} (문서: "{item["anchor"]}")'
+            else:
+                question = f'{question} (doc: "{item["anchor"]}")'
+        _record_gap(session, expert, question, asker="📄", source_doc=doc.id)
+    session.commit()
+    return {"expert": expert, "doc_id": doc.id, "title": doc.title,
+            "questions": probes, "queued": len(probes)}
+
+
+def my_documents(
+    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """문서함 — 문서마다 "판단 지점 N · 채움 M" 진행도가 붙는다."""
+    get_expert(session, expert, lang=lang)
+    docs = session.scalars(
+        select(db.Document).where(db.Document.expert == expert)
+        .order_by(db.Document.created_at.desc())
+    ).all()
+    out = []
+    for d in docs:
+        gaps = session.scalars(
+            select(db.Gap).where(db.Gap.source_doc == d.id)
+        ).all()
+        filled = sum(1 for g in gaps if g.filled_card)
+        out.append({
+            "id": d.id, "title": d.title, "domain": d.domain,
+            "questions": len(gaps), "filled": filled,
+            "open": len(gaps) - filled,
+            "added": d.created_at.date().isoformat() if d.created_at else "",
+        })
+    return {"expert": expert, "documents": out}
+
+
+def document_detail(
+    session: OrmSession, doc_id: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """문서 하나의 지도 — 질문들과 각각의 채움 상태. 빈 질문은 인터뷰 입구다."""
+    doc = session.get(db.Document, doc_id)
+    if doc is None:
+        raise ServiceError(t("err.no_card", lang))
+    gaps = session.scalars(
+        select(db.Gap).where(db.Gap.source_doc == doc_id)
+        .order_by(db.Gap.created_at)
+    ).all()
+    items = []
+    for g in gaps:
+        card_title = ""
+        if g.filled_card:
+            card = session.get(db.CardRow, g.filled_card)
+            card_title = card.title if card else ""
+        items.append({
+            "gap_id": g.id, "question": g.question,
+            "filled_card": g.filled_card, "card_title": card_title,
+        })
+    return {
+        "id": doc.id, "title": doc.title, "domain": doc.domain,
+        "text": doc.text, "questions": items,
+        "filled": sum(1 for i in items if i["filled_card"]),
+    }
+
+
+def mine_monologue(
+    session: OrmSession, expert: str, text: str, *,
+    domain: str = "", lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """🎙 혼잣말 채굴 — 전사에서 건진 판단의 흔적을 **공백 큐**에 넣는다.
+
+    문서 심문과 같은 길이다: 재료는 질문이 되고, 카드는 전문가의 확인된
+    답에서만 나온다. 전사 원문은 저장하지 않는다 — 남는 것은 질문뿐이다.
+    """
+    get_expert(session, expert, lang=lang)
+    probes = interview.probe_monologue(get_llm(), text, domain=domain, lang=lang)
+    for item in probes:
+        question = item["question"]
+        if item.get("anchor"):
+            question = (f'{question} (혼잣말: "{item["anchor"]}")' if lang == "ko"
+                        else f'{question} (you said: "{item["anchor"]}")')
+        _record_gap(session, expert, question, asker="🎙")
     session.commit()
     return {"expert": expert, "questions": probes, "queued": len(probes)}
 
@@ -611,6 +756,173 @@ def thank(
 
 
 # ------------------------------------------------------------------ 화면 조립
+
+def my_cards(
+    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """내 카드 목록 — 전문가의 **정리** 화면.
+
+    꺼내는 흐름만 있고 돌아볼 흐름이 없으면 전문가는 쓰기 전용 사용자가 된다.
+    손 가야 할 것(교정 요청·파다 만 초안)이 위로 온다.
+    """
+    get_expert(session, expert, lang=lang)
+    rows = session.scalars(
+        select(db.CardRow).where(db.CardRow.expert == expert)
+        .order_by(db.CardRow.created_at.desc())
+    ).all()
+
+    def _bucket(row: db.CardRow) -> int:
+        if row.status == CardStatus.CONTESTED.value:
+            return 0          # 후배가 "안 맞았다" — 가장 먼저
+        if row.status == CardStatus.DRAFT.value:
+            return 1          # 파다 만 것
+        return 2
+
+    cards = [
+        {
+            "id": r.id, "title": r.title or t("card.untitled", lang),
+            "domain": r.domain, "status": r.status,
+            "tacitness_emoji": Tacitness(r.tacitness).emoji,
+            "visibility": r.visibility,
+            "helped": r.helped, "missed": r.missed,
+            "draft": r.status == CardStatus.DRAFT.value,
+            "contested": r.status == CardStatus.CONTESTED.value,
+            "anchored": r.status == CardStatus.ANCHORED.value,
+        }
+        for r in sorted(rows, key=_bucket)
+    ]
+    return {"expert": expert, "cards": cards,
+            "attention": sum(1 for c in cards if c["draft"] or c["contested"])}
+
+
+def card_detail(
+    session: OrmSession, card_id: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """카드 상세 — 수정 화면의 재료 세 가지를 함께 준다.
+
+    ① 카드 현재 값, ② **후배의 보고 원문** (교정하려면 무엇이 안 맞았는지
+    알아야 한다), ③ **원본 발화** (카드는 해석이고 원본은 보존된다 — 그
+    원칙을 고치는 자리에서 눈으로 보게 한다).
+    """
+    row = session.get(db.CardRow, card_id)
+    if row is None:
+        raise ServiceError(t("err.no_card", lang))
+
+    reports = [
+        {
+            "verdict": a.verdict, "reporter": a.reporter, "detail": a.detail,
+            "stale": a.stale,
+            "at": a.created_at.date().isoformat() if a.created_at else "",
+        }
+        for a in session.scalars(
+            select(db.Anchor).where(db.Anchor.card_id == card_id)
+            .order_by(db.Anchor.created_at.desc())
+        ).all()
+    ]
+
+    utterances = []
+    if row.source_turn:
+        utterances = [
+            {"question": turn.question, "answer": turn.answer}
+            for turn in session.scalars(
+                select(db.Turn).where(db.Turn.session_id == row.source_turn)
+                .order_by(db.Turn.created_at)
+            ).all()
+            if turn.answer and not turn.skipped
+        ]
+
+    return {"card": card_view(row_to_card(row)), "reports": reports,
+            "utterances": utterances}
+
+
+def resume_session(
+    session: OrmSession, card_id: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """파다 만 초안을 **인터뷰로** 이어간다.
+
+    세션 도중 나간 전문가의 15분이 미아가 되지 않게 한다. 마지막으로 답하지
+    않은 질문이 그대로 다시 나온다 — 원본 발화가 보존돼 있어서 가능한 일이다.
+    """
+    row = session.get(db.CardRow, card_id)
+    if row is None or not row.source_turn:
+        raise ServiceError(t("err.no_card", lang))
+    sess = session.get(db.Session, row.source_turn)
+    if sess is None:
+        raise ServiceError(t("err.no_session", lang))
+
+    open_turn = session.scalars(
+        select(db.Turn).where(db.Turn.session_id == sess.id, db.Turn.answer == "")
+        .order_by(db.Turn.created_at.desc())
+    ).first()
+    if open_turn is None:
+        # 열린 질문이 없으면 하나 만든다 — 카드의 빈 칸이 다음 질문을 정한다.
+        card = row_to_card(row)
+        history = _history(session, sess.id)
+        question = interview.next_question(
+            get_llm(), instrument=sess.instrument, card=card,
+            history=history, lang=lang,
+        )
+        open_turn = db.Turn(
+            id=_uid("t"), session_id=sess.id, question=question.text,
+            rung=question.rung, targets=question.targets,
+        )
+        session.add(open_turn)
+        session.commit()
+
+    card = row_to_card(row)
+    history = _history(session, sess.id)
+    answered = sum(1 for _, a in history if a)
+    return {
+        "history": [{"question": q, "answer": a} for q, a in history],
+        "session_id": sess.id,
+        "instrument": sess.instrument,
+        "turn_id": open_turn.id,
+        "question": open_turn.question,
+        "rung": open_turn.rung,
+        "targets": open_turn.targets,
+        "from_gap": False,
+        "card": card_view(card),
+        "report": interview.slot_report(card, lang),
+        "target": settings.interview_turns,
+        "index": answered + 1,
+    }
+
+
+def alter_preview(
+    session: OrmSession, card_id: str, *, lang: str = LANG_DEFAULT
+) -> dict[str, Any]:
+    """방금 남긴 카드로 분신이 답하는 것을 **본인에게** 보여준다.
+
+    "아, 이게 남는 거구나" 가 일어나는 자리다 — 전문가는 뭘 물을지 고민할
+    필요 없이, 시스템이 후배처럼 묻고 분신이 답하는 장면을 본다.
+
+    **원장에 기록하지 않는다.** 본인 확인용 시연이 인용·질문 수에 잡히면
+    보람의 회계도, 사용 명세서도 거짓이 된다 — ask_alter 를 쓰지 않고 응답
+    엔진만 직접 부르는 이유다.
+    """
+    row = session.get(db.CardRow, card_id)
+    if row is None:
+        raise ServiceError(t("err.no_card", lang))
+    expert_row = get_expert(session, row.expert, lang=lang)
+
+    question = (
+        f"{row.title} — 이럴 땐 어떻게 하죠?" if lang == "ko"
+        else f"{row.title} — what do I do?"
+    )
+    reply = respond(
+        get_llm(),
+        persona_of(expert_row, card_count=_confirmed_count(session, row.expert)),
+        cards_of(session, row.expert),
+        question,
+        viewer=row.expert,          # 본인 — 봉인·지목 카드도 본인은 본다
+        top_k=settings.retrieval_top_k,
+        explore_quota=0.0,          # 시연에 탐색 쿼터는 무의미하다
+        confidence_floor=settings.confidence_floor,
+        days_left=days_left(expert_row),
+        lang=lang,
+    )
+    return {"question": question, "reply": reply.as_dict()}
+
 
 def card_view(card: Card) -> dict[str, Any]:
     return {

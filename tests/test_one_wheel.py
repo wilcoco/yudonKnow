@@ -306,3 +306,55 @@ def test_usage_statement_counts_only_what_the_ledger_counts(session):
     assert "rate" not in stmt and "amount" not in stmt, (
         "단가·금액이 제품에 들어왔다 — 그건 인사 정책이다"
     )
+
+
+def test_the_preview_never_touches_the_ledger(session):
+    """장면 2(분신 시연)는 원장에 기록되지 않는다.
+
+    본인 확인용 시연이 인용·질문 수에 잡히면 보람의 회계도 사용 명세서도
+    거짓이 된다 — 명세서를 정산 근거로 쓰겠다는 주장이 여기서 무너진다.
+    """
+    from sqlalchemy import func, select
+
+    card_id, _ = _leave_a_judgment(session)
+    before = session.scalar(select(func.count()).select_from(
+        __import__("app.store.db", fromlist=["db"]).LedgerRow))
+
+    preview = service.alter_preview(session, card_id, lang="ko")
+
+    after = session.scalar(select(func.count()).select_from(
+        __import__("app.store.db", fromlist=["db"]).LedgerRow))
+    assert after == before, "시연이 원장에 기록됐다 — 명세서가 오염된다"
+    assert preview["reply"]["is_gap"] is False, "방금 남긴 카드로 답하지 못했다"
+    assert card_id in [c["id"] for c in preview["reply"]["cards"]]
+
+
+def test_a_document_is_organized_by_what_it_does_not_say(session):
+    """문서함의 정리 축은 내용이 아니라 **채움 진행도**다.
+
+    문서에서 나온 질문이 카드로 채워지면 그 문서의 진행도가 오른다 —
+    문서는 보관되는 게 아니라 발굴 지도로 산다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    result = service.interrogate_document(
+        session, "hong", "사출 성형 초도 양산 절차서\n1. 예열 30분.", lang="ko"
+    )
+    doc_id = result["doc_id"]
+    # stub 은 질문을 못 뽑으므로 문서발 질문을 직접 심는다 — 여기서 보는 것은
+    # 추출 품질이 아니라 **질문→카드 연결이 진행도로 돌아오는가** 다.
+    service._record_gap(session, "hong", "플로우마크가 한쪽만 나오면 어떻게 하나요?",
+                        asker="📄", source_doc=doc_id)
+    session.commit()
+
+    shelf = service.my_documents(session, "hong", lang="ko")
+    row = next(d for d in shelf["documents"] if d["id"] == doc_id)
+    assert row["questions"] == 1 and row["filled"] == 0
+
+    _leave_a_judgment(session)   # 그 질문에 맞는 판단을 남긴다
+
+    shelf = service.my_documents(session, "hong", lang="ko")
+    row = next(d for d in shelf["documents"] if d["id"] == doc_id)
+    assert row["filled"] == 1, "카드가 채워졌는데 문서 진행도가 안 올랐다"
+
+    detail = service.document_detail(session, doc_id, lang="ko")
+    assert detail["questions"][0]["card_title"], "채운 카드로 연결이 없다"

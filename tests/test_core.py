@@ -314,3 +314,60 @@ def test_korean_compound_nouns_still_match_partially():
     """영어 부분 일치를 끈 것이 한국어 복합명사 매칭을 깨뜨리면 안 된다."""
     card = make_card()
     assert retrieve([card], "사출압력 그래프가 이상합니다").is_gap is False
+
+
+class _FabricatingLLM:
+    """카드 밖으로 나가는 기저 — 인용 검증이 잡아야 하는 세 가지 모양."""
+
+    name = "fabricator"
+
+    def __init__(self, mode: str) -> None:
+        self.mode = mode
+
+    def answer(self, system: str, prompt: str) -> str:
+        import re
+        real = re.search(r"\[#([^\]\s]+)\]", prompt)
+        cid = real.group(1) if real else "c_000000"
+        if self.mode == "no_citation":
+            return "속도부터 올려 보세요. 보통 그렇게 하면 잡힙니다."
+        if self.mode == "fake_citation":
+            return "일단 금형을 열어서 확인하세요. [#c_deadbeef00]"
+        if self.mode == "drift":
+            return (f"카드에 따르면 속도 문제입니다. [#{cid}]\n\n"
+                    "그리고 제 경험상 이런 경우 대부분 윤활유를 갈아주면 함께 "
+                    "해결됩니다. 업계에서는 상식으로 통하는 방법이고, 최근에는 "
+                    "많은 공장이 이 방식을 표준으로 채택하고 있습니다.")
+        return f"카드에 따르면 온도가 아니라 속도 문제입니다. [#{cid}]"
+
+    def extract(self, prompt, schema):
+        return {}
+
+    def transcribe(self, audio, mime, *, lang="en"):
+        return ""
+
+
+def test_an_ungrounded_answer_is_demoted_to_verbatim_cards():
+    """**"카드 밖으로 나가지 않는다" 는 프롬프트 부탁이 아니라 코드다.**
+
+    기저가 ① 인용 없이 말하거나 ② 없는 카드를 인용하거나 ③ 인용 하나 달고
+    자유 발화를 이어붙이면, 그 답은 버려지고 카드 원문이 나간다. 이 도구에서
+    생성은 편의고 원문이 진실이다.
+    """
+    from app.alter.persona import Persona, respond
+
+    card = make_card()
+    persona = Persona(expert="hong", display_name="홍길동")
+
+    for mode in ("no_citation", "fake_citation", "drift"):
+        reply = respond(
+            _FabricatingLLM(mode), persona, [card],
+            "플로우마크가 한쪽만 나와요", lang="ko",
+        )
+        assert reply.stubbed, f"{mode}: 검증 안 된 답이 그대로 나갔다"
+        assert card.cues[0] in reply.text, f"{mode}: 강등됐는데 카드 원문이 없다"
+
+    good = respond(
+        _FabricatingLLM("ok"), persona, [card],
+        "플로우마크가 한쪽만 나와요", lang="ko",
+    )
+    assert not good.stubbed, "제대로 인용한 답까지 강등했다"

@@ -54,6 +54,7 @@ class ExpertIn(BaseModel):
 class SessionIn(BaseModel):
     expert: str
     instrument: str = LADDER
+    gap_id: str = ""
 
 
 class AnswerIn(BaseModel):
@@ -102,6 +103,7 @@ class TranscribeIn(BaseModel):
 class DocumentIn(BaseModel):
     expert: str
     text: str
+    title: str = ""
     domain: str = ""
 
 
@@ -234,7 +236,8 @@ def start_session(
     lang: str = Depends(get_lang),
 ) -> dict:
     return service.start_session(
-        session, body.expert, instrument=body.instrument, lang=lang
+        session, body.expert, instrument=body.instrument,
+        gap_id=body.gap_id, lang=lang,
     )
 
 
@@ -314,6 +317,81 @@ def transcribe(body: TranscribeIn, lang: str = Depends(get_lang)) -> dict:
     return {"text": text, "supported": bool(text) or settings.llm_enabled}
 
 
+class MonologueIn(BaseModel):
+    expert: str
+    text: str
+    domain: str = ""
+
+
+@router.post("/monologue")
+def mine_monologue(
+    body: MonologueIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """혼잣말 → 질문 → 공백 큐. 문서와 같은 불변식 — 카드로 변환하지 않는다."""
+    return service.mine_monologue(
+        session, body.expert, body.text, domain=body.domain, lang=lang
+    )
+
+
+@router.get("/experts/{expert}/documents")
+def my_documents(
+    expert: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """문서함 — 발굴 지도. 후배 화면에는 절대 노출되지 않는다."""
+    return service.my_documents(session, expert, lang=lang)
+
+
+@router.get("/documents/{doc_id}")
+def document_detail(
+    doc_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.document_detail(session, doc_id, lang=lang)
+
+
+@router.get("/experts/{expert}/cards")
+def my_cards(
+    expert: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.my_cards(session, expert, lang=lang)
+
+
+@router.get("/cards/{card_id}")
+def card_detail(
+    card_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    return service.card_detail(session, card_id, lang=lang)
+
+
+@router.post("/cards/{card_id}/preview")
+def alter_preview(
+    card_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """방금 남긴 카드로 분신이 답하는 시연 — 원장에 기록되지 않는다."""
+    return service.alter_preview(session, card_id, lang=lang)
+
+
+@router.post("/cards/{card_id}/resume")
+def resume_card(
+    card_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """파다 만 초안을 인터뷰로 이어간다."""
+    return service.resume_session(session, card_id, lang=lang)
+
+
 @router.post("/documents")
 def interrogate_document(
     body: DocumentIn,
@@ -322,7 +400,8 @@ def interrogate_document(
 ) -> dict:
     """문서 → 질문 → 공백 큐. **카드로 변환하지 않는다.**"""
     return service.interrogate_document(
-        session, body.expert, body.text, domain=body.domain, lang=lang
+        session, body.expert, body.text, title=body.title,
+        domain=body.domain, lang=lang,
     )
 
 

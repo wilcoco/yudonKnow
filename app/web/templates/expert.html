@@ -82,6 +82,10 @@
     <div id="h_gaps"></div>
     <div id="h_contested"></div>
 
+    {# 서가 — 남긴 것의 진열. 목록이 없으면 전문가는 쓰기 전용 사용자다. #}
+    <h2 class="sec" id="shelf_head" hidden>{{ L['shelf.head'] }}</h2>
+    <div id="h_shelf"></div>
+
     <h2 class="sec">{{ L['home.map'] }}</h2>
     <div class="card">
       <div id="h_map"></div>
@@ -94,9 +98,20 @@
 
     <!-- 사건 하나에서 시작한다 (docs/elicitation-protocol.md §0).
          도구를 먼저 고르게 하면 전문가에게 도구 지식을 요구하는 셈이다. -->
-    <h2 class="sec">{{ L['home.story'] }}</h2>
+    {# 세 개의 문 — 전문가의 자세별 입구. 어느 문이든 인터뷰로 통한다. #}
+    <h2 class="sec">{{ L['doors.head'] }}</h2>
+
+    <div class="card" style="border-width:2px">
+      <p class="t">🪜 {{ L['door1.t'] }}</p>
+      <p class="c">{{ L['door1.c'] }}</p>
+      <div class="acts">
+        <button class="primary" onclick="startSession('ladder')">{{ L['door1.cta'] }}</button>
+      </div>
+    </div>
+
     <div class="card">
-      <p class="t" id="h_probe">{{ L['home.story.q'] }}</p>
+      <p class="t">🔨 {{ L['door2.t'] }}</p>
+      <p class="c" id="h_probe">{{ L['home.story.q'] }}</p>
       <textarea id="story" placeholder="{{ L['home.story.ph'] }}"></textarea>
       {% if llm_enabled %}
       <div class="row" style="margin-top:6px">
@@ -109,21 +124,36 @@
       </div>
     </div>
 
-    {# 문서는 질문이 되지 카드가 되지 않는다. 절차서를 심문해서 빠진 판단
-       지점을 공백 큐에 쌓는다 — 그래서 결과 화면도 큐 안내다. #}
-    <h2 class="sec">{{ L['home.doc'] }}</h2>
     <div class="card">
-      <p class="t">{{ L['home.doc.q'] }}</p>
-      <textarea id="doc_text" style="min-height:120px" placeholder="{{ L['home.doc.ph'] }}"></textarea>
+      <p class="t">📦 {{ L['door3.t'] }}</p>
+      <p class="c">{{ L['door3.c'] }}</p>
+
+      <p class="t" style="margin-top:14px;font-size:15px">📄 {{ L['home.doc'] }}</p>
+      <textarea id="doc_text" style="min-height:100px" placeholder="{{ L['home.doc.ph'] }}"></textarea>
       <div class="row" style="margin-top:8px;align-items:center">
         <input type="file" id="doc_file" accept=".txt,.md" style="max-width:280px">
         <span class="quiet">{{ L['home.doc.file'] }}</span>
       </div>
-      <p class="quiet">{{ L['home.doc.note'] }}</p>
       <div class="acts">
         <button class="primary" id="doc_btn" onclick="redPen()">{{ L['home.doc.cta'] }}</button>
       </div>
-      <div class="c" id="doc_out" style="margin-top:10px"></div>
+      <div class="c" id="doc_out" style="margin-top:8px"></div>
+
+      <p class="t" style="margin-top:16px;font-size:15px">🎙 {{ L['mono.t'] }}</p>
+      <p class="quiet">{{ L['mono.c'] }}</p>
+      <textarea id="mono_text" style="min-height:80px" placeholder="{{ L['mono.ph'] }}"></textarea>
+      {% if llm_enabled %}
+      <div class="row" style="margin-top:6px">
+        <button class="ghost" id="mic_m" onclick="toggleMic('mono_text', this)">🎙 {{ L['sess.mic'] }}</button>
+      </div>
+      {% endif %}
+      <div class="acts">
+        <button class="primary" id="mono_btn" onclick="mineMono()">{{ L['mono.cta'] }}</button>
+      </div>
+      <div class="c" id="mono_out" style="margin-top:8px"></div>
+
+      <div id="h_docs" style="margin-top:14px"></div>
+      <p class="quiet">{{ L['home.doc.note'] }}</p>
     </div>
 
     <div id="h_suggest"></div>
@@ -192,6 +222,60 @@
       </div>
     </div>
   </section>
+
+  <!-- ───────────── 남긴 직후 — "남았다" 를 보여준다 ───────────── -->
+  <section id="afterglow" hidden>
+    <h1>{{ L['ag.title'] }}</h1>
+    <p class="lead">{{ L['ag.lede'] }}</p>
+    <div id="ag_card"></div>
+
+    <h2 class="sec">{{ L['ag.demo.head'] }}</h2>
+    <div class="card">
+      <p class="quiet" id="ag_q"></p>
+      <div class="c" id="ag_a" style="white-space:pre-wrap">{{ L['ag.demo.busy'] }}</div>
+      <p class="quiet">{{ L['ag.demo.note'] }}</p>
+    </div>
+    <div class="acts" style="margin-top:14px">
+      <button class="primary" onclick="loadHome()">{{ L['ag.home'] }}</button>
+      <button onclick="startSession('ladder')">{{ L['ag.again'] }}</button>
+    </div>
+  </section>
+
+  <!-- ───────────── 카드 열람·수정 ───────────── -->
+  <section id="cardview" hidden>
+    <div class="row" style="align-items:center;margin-bottom:12px">
+      <button onclick="loadHome()">← {{ L['nav.home'] }}</button>
+      <span class="quiet" id="cv_status"></span>
+    </div>
+    <div id="cv_card"></div>
+    <div id="cv_reports"></div>
+
+    <details id="cv_utter_wrap" style="margin-top:14px">
+      <summary class="quiet">{{ L['cv.utter'] }}</summary>
+      <div id="cv_utter" class="thread" style="margin-top:10px"></div>
+    </details>
+
+    <details id="cv_edit_wrap" style="margin-top:14px">
+      <summary>{{ L['cv.edit'] }}</summary>
+      <div class="card" style="margin-top:10px">
+        <p class="quiet" id="cv_warn"></p>
+        <p class="quiet">{{ L['cv.f.title'] }}</p><input type="text" id="cv_title">
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.situation'] }}</p><textarea id="cv_situation" style="min-height:60px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.cues'] }}</p><textarea id="cv_cues" style="min-height:70px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.judgment'] }}</p><textarea id="cv_judgment" style="min-height:60px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.action'] }}</p><textarea id="cv_action" style="min-height:60px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.rationale'] }}</p><textarea id="cv_rationale" style="min-height:60px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.exceptions'] }}</p><textarea id="cv_exceptions" style="min-height:60px"></textarea>
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.failure'] }}</p><textarea id="cv_failure" style="min-height:60px"></textarea>
+        <div class="acts">
+          <button class="primary" onclick="saveCard()">{{ L['cv.save'] }}</button>
+        </div>
+      </div>
+    </details>
+
+    <div class="acts" style="margin-top:14px" id="cv_actions"></div>
+  </section>
+
 </main>
 
 <footer>v{{ version }}</footer>
@@ -204,7 +288,7 @@ const $ = id => document.getElementById(id);
 let STATE = {turn:null, card:null, session:null, home:null};
 
 const me = () => $('me').value.trim();
-function show(id){ for(const s of ['onboard','home','session']) $(s).hidden = (s!==id); }
+function show(id){ for(const s of ['onboard','home','session','afterglow','cardview']) $(s).hidden = (s!==id); }
 function err(msg){ $('err').textContent = msg || ''; }
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -280,6 +364,213 @@ async function startStory(){
   finally{ if(btn) btn.disabled = false; }
 }
 
+// ── 카드 렌더러 — 카드를 카드답게. afterglow 와 cardview 가 같이 쓴다.
+function slotSec(label, val, cls){
+  if(!val || (Array.isArray(val) && !val.length)) return '';
+  const body = Array.isArray(val)
+    ? val.map(v => '<div>· ' + esc(v) + '</div>').join('')
+    : esc(val);
+  return `<p class="quiet" style="margin:10px 0 2px">${esc(label)}</p><div class="${cls||'c'}">${body}</div>`;
+}
+function renderCardFull(c){
+  const L2 = L;
+  const badges = [];
+  if(c.status === 'anchored') badges.push('✔ ' + L2['cv.b.anchored']);
+  if(c.status === 'contested') badges.push('⚠ ' + L2['cv.b.contested']);
+  if(c.status === 'draft') badges.push(L2['cv.b.draft']);
+  badges.push(c.tacitness_emoji);
+  if(c.visibility === 'sealed') badges.push('🔒 ' + L2['vis.sealed']);
+  if(c.visibility === 'targeted') badges.push('→ ' + esc(c.for_whom));
+  return `<div class="card" style="border-width:2px">
+    <p class="quiet">${badges.join(' · ')}</p>
+    <p class="t" style="font-size:18px">${esc(c.title)}</p>
+    ${slotSec(L2['slot.situation'], c.situation)}
+    ${slotSec(L2['slot.cues'], c.cues)}
+    ${slotSec(L2['slot.judgment'], c.judgment)}
+    ${slotSec(L2['slot.action'], c.action)}
+    ${slotSec(L2['slot.rationale'], c.rationale)}
+    ${slotSec(L2['slot.exceptions'], c.exceptions)}
+    ${slotSec(L2['slot.failure'], c.failure)}
+    ${c.unspeakable?.length ? slotSec('🔴 ' + L2['slot.unspeakable'], c.unspeakable) : ''}
+  </div>`;
+}
+
+// ── 장면 1+2 — 남긴 직후: 카드를 보여주고, 분신이 그걸로 답하는 걸 보여준다.
+async function showAfterglow(cardId){
+  try{
+    const d = await api('/api/cards/' + encodeURIComponent(cardId));
+    $('ag_card').innerHTML = renderCardFull(d.card);
+    $('ag_q').textContent = ''; $('ag_a').textContent = L['ag.demo.busy'];
+    show('afterglow');
+    const pv = await api('/api/cards/' + encodeURIComponent(cardId) + '/preview', {method:'POST'});
+    $('ag_q').textContent = L['ag.demo.q'].replace('{}', pv.question);
+    $('ag_a').textContent = pv.reply.text;
+  }catch(e){ err(e.message); loadHome(); }
+}
+
+// ── 서가 — 남긴 것의 진열. 손 가야 할 것(교정·초안)이 위로 온다.
+async function loadShelf(){
+  try{
+    const mine = await api('/api/experts/' + encodeURIComponent(me()) + '/cards');
+    const has = mine.cards.length > 0;
+    $('shelf_head').hidden = !has;
+    $('h_shelf').innerHTML = !has ? '' : mine.cards.map(c => `
+      <div class="card${c.contested ? ' alarm' : ''}" style="cursor:pointer" onclick="openCard('${c.id}')">
+        <div class="row" style="justify-content:space-between">
+          <span class="t" style="font-size:15px">${c.draft ? '⏳ ' : ''}${esc(c.title)}</span>
+          <span class="quiet">${c.tacitness_emoji}${c.anchored ? ' ✔' : ''}${c.contested ? ' ⚠' : ''}${c.visibility==='sealed' ? ' 🔒' : ''}
+            ${c.helped ? ' · ' + L['shelf.helped'].replace('{}', c.helped) : ''}</span>
+        </div>
+        ${c.draft ? `<p class="quiet">${esc(L['shelf.draft'])}</p>` : ''}
+        ${c.contested ? `<p class="quiet">${esc(L['shelf.contested'])}</p>` : ''}
+      </div>`).join('');
+  }catch(e){ /* 서가 실패가 홈을 막지 않는다 */ }
+}
+
+// ── 카드 열람 — 후배가 보는 모습 + 보고 원문 + 원본 발화 + 수정.
+let CV = null;
+async function openCard(id){
+  err('');
+  try{
+    CV = await api('/api/cards/' + encodeURIComponent(id));
+    const c = CV.card;
+    $('cv_status').textContent = '';
+    $('cv_card').innerHTML = renderCardFull(c);
+    $('cv_reports').innerHTML = CV.reports.filter(r => !r.stale).length
+      ? `<h2 class="sec">${esc(L['cv.reports'])}</h2>` +
+        CV.reports.filter(r => !r.stale).map(r => `<div class="card${r.verdict==='missed' ? ' alarm' : ''}">
+          <p class="c">${r.verdict==='missed' ? '⚠' : '✔'} <b>${esc(r.reporter||'?')}</b>
+          ${r.detail ? ' — ' + esc(r.detail) : ''} <span class="quiet">${esc(r.at)}</span></p></div>`).join('')
+      : '';
+    $('cv_utter').innerHTML = CV.utterances.map(u =>
+      `<div class="turn ask">${esc(u.question)}</div><div class="turn said">${esc(u.answer)}</div>`).join('');
+    $('cv_utter_wrap').hidden = !CV.utterances.length;
+    // 수정 폼 채우기
+    $('cv_title').value = c.title || '';
+    $('cv_situation').value = c.situation || '';
+    $('cv_cues').value = (c.cues||[]).join('\n');
+    $('cv_judgment').value = c.judgment || '';
+    $('cv_action').value = (c.action||[]).join('\n');
+    $('cv_rationale').value = c.rationale || '';
+    $('cv_exceptions').value = (c.exceptions||[]).join('\n');
+    $('cv_failure').value = c.failure || '';
+    $('cv_warn').textContent = c.status === 'anchored' ? L['cv.warn.anchored'] : '';
+    $('cv_edit_wrap').open = (c.status === 'contested');
+    $('cv_actions').innerHTML = c.status === 'draft'
+      ? `<button class="primary" onclick="resumeDig('${c.id}')">${esc(L['cv.resume'])}</button>` : '';
+    show('cardview');
+  }catch(e){ err(e.message); }
+}
+
+async function saveCard(){
+  if(!CV) return;
+  err('');
+  const lines = v => v.split('\n').map(x => x.trim()).filter(Boolean);
+  try{
+    const r = await api('/api/cards/' + encodeURIComponent(CV.card.id) + '/confirm',
+      {method:'POST', body: JSON.stringify({edits: {
+        title: $('cv_title').value.trim(),
+        situation: $('cv_situation').value.trim(),
+        cues: lines($('cv_cues').value),
+        judgment: $('cv_judgment').value.trim(),
+        action: lines($('cv_action').value),
+        rationale: $('cv_rationale').value.trim(),
+        exceptions: lines($('cv_exceptions').value),
+        failure: $('cv_failure').value.trim(),
+      }})});
+    let msg = L['sess.saved'];
+    if(r.verification_reset) msg += ' ' + L['cv.reset_done'];
+    $('cv_status').textContent = msg;
+    openCard(CV.card.id);
+  }catch(e){ err(e.message); }
+}
+
+// ── 이어파기 — 파다 만 초안을 인터뷰로. 기록지도 복원한다.
+async function resumeDig(cardId){
+  err('');
+  try{
+    const r = await api('/api/cards/' + encodeURIComponent(cardId) + '/resume', {method:'POST'});
+    STATE.session = {instrument: r.instrument}; STATE.turn = r.turn_id; STATE.card = r.card;
+    $('s_tool').textContent = toolName(r.instrument);
+    $('s_thread').innerHTML = '';
+    (r.history||[]).forEach(h => { say('ask', h.question); say('said', h.answer); });
+    say('ask', r.question);
+    $('s_rung').textContent = '';
+    $('s_progress').textContent = `${r.index} / ${r.target}`;
+    $('s_answer').value = ''; $('s_wrong').innerHTML = ''; $('s_warn').textContent = '';
+    $('s_title').textContent = r.card.title || '—';
+    $('s_slots').innerHTML = r.report.slots
+      .map(x => `<span class="slot ${x.filled?'on':''}">${esc(x.label)}</span>`).join('');
+    show('session');
+  }catch(e){ err(e.message); }
+}
+
+// ── 문서함 — 발굴 지도. 문서는 "말하지 않는 것"으로 정리된다.
+async function loadDocs(){
+  try{
+    const d = await api('/api/experts/' + encodeURIComponent(me()) + '/documents');
+    $('h_docs').innerHTML = d.documents.map(doc => `
+      <div class="card" style="margin-top:8px">
+        <div class="row" style="justify-content:space-between">
+          <span class="t" style="font-size:14px">📄 ${esc(doc.title || doc.id)}</span>
+          <span class="quiet">${esc(L['docs.progress']
+            .replace('{q}', doc.questions).replace('{f}', doc.filled))}</span>
+        </div>
+        ${doc.open ? `<div class="acts"><button class="ghost" onclick="openDoc('${doc.id}', this)">${esc(L['docs.open'])}</button></div>` : ''}
+        <div id="doc_${doc.id}"></div>
+      </div>`).join('');
+  }catch(e){ /* 문서함 실패가 홈을 막지 않는다 */ }
+}
+async function openDoc(id, btn){
+  if(btn) btn.disabled = true;
+  try{
+    const d = await api('/api/documents/' + encodeURIComponent(id));
+    $('doc_' + id).innerHTML = d.questions.map(q => q.filled_card
+      ? `<p class="c">✔ ${esc(q.question)} <span class="quiet">→ ${esc(q.card_title)}</span></p>`
+      : `<div class="row" style="justify-content:space-between;margin-top:6px">
+           <span class="c" style="max-width:70%">「${esc(q.question)}」</span>
+           <button class="amber" onclick="startGap('${q.gap_id}')">${esc(L['docs.answer'])}</button>
+         </div>`).join('');
+  }catch(e){ err(e.message); }
+  finally{ if(btn) btn.disabled = false; }
+}
+async function startGap(gapId){
+  err('');
+  try{
+    const s2 = await api('/api/sessions', {method:'POST',
+      body: JSON.stringify({expert: me(), instrument: 'ladder', gap_id: gapId})});
+    STATE.session = s2; STATE.turn = s2.turn_id; STATE.card = null;
+    $('s_tool').textContent = toolName('ladder');
+    $('s_thread').innerHTML = ''; say('ask', s2.question);
+    $('s_rung').textContent = s2.from_gap ? L['sess.from_gap'] : '';
+    $('s_progress').textContent = `${s2.index} / ${s2.target}`;
+    $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
+    show('session');
+  }catch(e){ err(e.message); }
+}
+
+// ── 🎙 혼잣말 채굴 — 두서없는 말에서 질문을 건진다. 카드가 되지 않는다.
+async function mineMono(){
+  err('');
+  const text = $('mono_text').value.trim();
+  if(!text){ $('mono_text').focus(); return; }
+  const btn = $('mono_btn'); btn.disabled = true;
+  $('mono_out').textContent = L['home.doc.busy'];
+  try{
+    const r = await api('/api/monologue', {method:'POST', body: JSON.stringify({
+      expert: me(), text, domain: (STATE.home?.map?.domains?.[0]?.domain) || '',
+    })});
+    if(!r.queued){ $('mono_out').textContent = L['mono.none']; return; }
+    $('mono_out').innerHTML =
+      '<p class="quiet">' + esc(L['mono.done'].replace('{}', r.queued)) + '</p>' +
+      r.questions.map(q => '<div class="msg">' + esc(q.question) + '</div>').join('');
+    $('mono_text').value = '';
+    loadHome();
+  }catch(e){ $('mono_out').textContent = ''; err(e.message); }
+  finally{ btn.disabled = false; }
+}
+
 // 💰 내 지식 사용 명세서 — 전문가가 회사에 **청구하는** 방향이다.
 // 관리자 화면에는 이 데이터가 나가지 않는다 (원장은 성과 지표가 아니다).
 let STMT = null;
@@ -350,6 +641,8 @@ async function loadHome(){
   STATE.home = home;
   renderHome(home);
   show('home');
+  loadShelf();
+  loadDocs();
 }
 
 function meetAlter(){ location.href = '/alter/' + encodeURIComponent(me()) + qs; }
@@ -381,6 +674,7 @@ function renderHome(h){
       h.contested.map(c => `<div class="card alarm">
         <p class="t">${esc(c.title)}</p>
         <p class="c">${esc(fmt(L['home.contested.body'], {helped:c.helped, missed:c.missed}))}</p>
+        <div class="acts"><button class="amber" onclick="openCard('${c.id}')">${esc(L['shelf.fix'])}</button></div>
       </div>`).join('')
     : '';
 
@@ -592,7 +886,7 @@ async function confirmCard(){
     if(r.filled_gap) msg += L['sess.filled_gap'].replace('{}', r.filled_gap);
     if(r.warning) msg += ' ' + r.warning;
     $('s_warn').textContent = msg;
-    setTimeout(loadHome, 1400);
+    showAfterglow(STATE.card.id);   // 남긴 것을 보여준다 — 홈으로 튕기지 않는다
   }catch(e){ err(e.message); }
 }
 
