@@ -213,6 +213,20 @@ stake.
 the alter fabricates, a junior who cannot evaluate the answer loses all reason
 to trust it, and the product is dead.
 
+**The "digital me" market clones people who already produced content.** The
+dominant pattern (Delphi, Coachvox, Personal AI) ingests a person's existing
+output — blog posts, podcasts, videos — into an embedding corpus and runs RAG
+with a persona prompt. That works for thought leaders. It cannot even start
+for a plant-floor expert: Yudon has twenty years of judgment and zero hours of
+content. The interview-recording family (StoryFile, HereAfter) does capture by
+asking, but stores raw clips — no judgment structure, no per-unit
+verification, no gap that routes back to the expert. And Delphi's "strictness"
+setting does tell the clone to stay on-topic — as a prompt-level instruction.
+Ours refuses in code: below the retrieval-confidence floor the LLM is never
+called, every generated paragraph must survive a mechanical citation check,
+and each card carries its own field-verification lifecycle. They ingest what
+was left behind. We interview into existence what was never written down.
+
 **Most "tribal knowledge AI" products mine documents, which is the opposite
 problem.** The tools I looked at ingest work orders, technician notes and
 failure histories to generate SOPs. That extracts from what was already
