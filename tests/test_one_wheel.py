@@ -425,3 +425,49 @@ def test_the_memoir_is_an_output_never_an_input(session):
     assert all(not ch["prose"] for ch in m["chapters"]), (
         "stub 이 1인칭 서술을 지어냈다 — 기계는 삶을 지어내지 않는다"
     )
+
+
+def test_showcase_experts_are_read_only_but_juniors_still_act(session, monkeypatch):
+    """전시 전문가는 읽기 전용 — 데모에는 로그인이 없어 이름이 곧 신원이라,
+    막지 않으면 심사자가 "나" 칸에 yudon 을 치고 분신을 꺼 버린다.
+    단 후배 행동(질문·보고)은 계속 되어야 한다 — 그게 트랙 A 다.
+    """
+    import dataclasses
+    card_id, _ = _leave_a_judgment(session)
+    protected = dataclasses.replace(service.settings, featured=("hong",))
+    monkeypatch.setattr(service, "settings", protected)
+
+    # 본인 행세 — 전부 막힌다
+    with pytest.raises(service.ServiceError):
+        service.start_session(session, "hong", lang="ko")
+    with pytest.raises(service.ServiceError):
+        service.confirm_card(session, card_id, lang="ko")
+    with pytest.raises(service.ServiceError):
+        service.interrogate_document(session, "hong", "1. 절차.", lang="ko")
+
+    # 후배 행동 — 그대로 된다
+    reply = service.ask_alter(session, "hong", "플로우마크가 한쪽만 나와요",
+                              asker="kim", lang="ko")
+    assert reply["is_gap"] is False
+    out = service.report_anchor(session, card_id, "helped", reporter="kim")
+    assert out["helped"] >= 1
+
+
+def test_the_junior_can_overrule_a_hollow_answer(session):
+    """확신도 문턱을 약한 겹침으로 넘은 비답변 — 판정은 받은 사람이 한다.
+
+    분신이 말로는 "남기지 않으셨습니다" 라면서 시스템상 답변·인용으로 집계될
+    때, 후배의 "이건 답이 아니었어요" 가 질문을 공백 큐로 되돌린다. 모델의
+    말투를 파싱해서 자동 판정하는 것은 판정을 모델에 위임하는 것이라 하지
+    않는다.
+    """
+    _leave_a_judgment(session)
+
+    service.mark_unanswered(
+        session, "hong", "캘리브레이션 벤치는 어떻게 세팅하나요", asker="emma", lang="ko"
+    )
+
+    home = service.expert_home(session, "hong", lang="ko")
+    assert any("캘리브레이션" in g["question"] for g in home["gaps"]), (
+        "후배의 판정이 공백 큐에 닿지 않았다"
+    )

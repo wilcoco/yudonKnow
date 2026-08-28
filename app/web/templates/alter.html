@@ -134,6 +134,8 @@ function render(q, r){
       </div>`;
     }
     if(r.stubbed) html += `<p class="quiet">${esc(L['alter.stubbed'])}</p>`;
+    if(!r.is_gap) html += `<p class="quiet" style="margin-top:8px">
+      <a href="#" onclick="notAnswer(this, ${JSON.stringify(q)});return false">${esc(L['alter.notanswer'])}</a></p>`;
     html += `<div class="row" style="margin-top:10px">
       <input type="text" class="thanksbox" style="flex:1" placeholder="${esc(L['alter.thanks.ph'])}">
       <button class="ghost" onclick="sendThanks(this)">${esc(L['alter.thanks.cta'])}</button>
@@ -170,6 +172,18 @@ async function sendReport(cardId, verdict, detail, btn, box){
     btn.parentElement.innerHTML = '<span class="quiet">'
       + esc(verdict === 'helped' ? L['alter.report.ok.done'] : L['alter.report.no.done'])
       + '</span>';
+  }catch(e){ $('err').textContent = e.message; }
+}
+
+// "이건 답이 아니었어요" — 후배의 판정으로 질문을 선배 큐에 되돌린다.
+// 확신도 문턱은 약한 겹침으로도 넘을 수 있고, 그때 분신은 말로는 모른다며
+// 시스템상으로는 답한 것이 된다 — 그 판정은 모델이 아니라 받은 사람이 한다.
+async function notAnswer(a, question){
+  a.textContent = '…';
+  try{
+    await api('/api/alter/' + EXPERT + '/unanswered', {method:'POST',
+      body: JSON.stringify({question, asker: $('asker').value.trim()})});
+    a.parentElement.innerHTML = '<span class="quiet">' + esc(L['alter.notanswer.done']) + '</span>';
   }catch(e){ $('err').textContent = e.message; }
 }
 

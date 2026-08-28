@@ -590,6 +590,25 @@ _CARD_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
+#: 언어별로 있어야 한다 — 한국어 지시문을 영어 대화에 내보내면 추출이
+#: 한국어로 드리프트한다 (영어 전문가의 카드가 한국어로 저장되는 실측 버그).
+_CAPTURE_PROMPT_EN = """Below is an elicitation conversation with a veteran
+expert. Extract exactly one **judgment card** from it.
+
+Hard rules:
+- **Invent nothing the expert did not say.** Leave empty fields empty —
+  an empty field drives the next question; pretending it is filled is worst.
+- Keep the expert's shop-floor wording. Do not normalise it.
+- 'cues' (what tells you) is the heart of the card. Only signals the expert
+  actually named.
+- What cannot be written — feel, sound, smell — goes in 'unspeakable'.
+  The fact that it does not fit is itself the record.
+- Write every field in the language the expert spoke.
+
+[Conversation]
+{transcript}
+"""
+
 _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기서 **판단 카드** 하나를 뽑아라.
 
 절대 규칙:
@@ -678,7 +697,8 @@ def capture(
     )
     transcript = "\n".join(joiner(q, a) for q, a in history)
     try:
-        raw = llm.extract(_CAPTURE_PROMPT.format(transcript=transcript), _CARD_SCHEMA)
+        template = _CAPTURE_PROMPT if lang == "ko" else _CAPTURE_PROMPT_EN
+        raw = llm.extract(template.format(transcript=transcript), _CARD_SCHEMA)
     except Exception as exc:
         log.warning("카드 구조화 실패, 규칙 기반 대체: %s", exc)
         raw = {}

@@ -104,6 +104,19 @@ def cards_of(session: OrmSession, expert: str) -> list[Card]:
     return [row_to_card(r) for r in rows]
 
 
+def _guard_demo(expert_id: str, lang: str = LANG_DEFAULT) -> None:
+    """전시 전문가(featured)는 **읽기 전용**이다.
+
+    데모에는 로그인이 없어 이름이 곧 신원이다 — 그대로 두면 심사자가 "나" 칸에
+    yudon 을 치고 분신을 꺼 버릴 수 있다(전 심사자의 데모가 부서진다).
+    전시 전문가로는 구경(서가·회고록·명세서)과 후배 행동(질문·보고·감사)만
+    되고, 본인 행세(발굴·수정·정지·문서 투입)는 여기서 막는다.
+    본인 몫 체험은 트랙 B — 자기 전문가를 만들면 전부 열린다.
+    """
+    if expert_id in settings.featured:
+        raise ServiceError(t("err.demo_readonly", lang))
+
+
 def get_expert(
     session: OrmSession, expert_id: str, *, lang: str = LANG_DEFAULT
 ) -> db.Expert:
@@ -182,6 +195,7 @@ def start_session(
     ``gap_id`` 를 주면 그 공백부터 판다 — 문서함에서 빈 질문 하나를 짚어
     "지금 답하기" 를 눌렀을 때의 입구다.
     """
+    _guard_demo(expert, lang)
     expert_row = get_expert(session, expert, lang=lang)
     # 발굴은 **전문가의 언어**로 산다. 화면 문구는 보는 사람 언어를 따르지만,
     # 질문과 카드가 요청 언어를 따르면 — 한국 전문가가 영어 브라우저로 팠을 때
@@ -409,6 +423,7 @@ def confirm_card(
     row = session.get(db.CardRow, card_id)
     if row is None:
         raise ServiceError(t("err.no_card", lang))
+    _guard_demo(row.expert, lang)
     card = row_to_card(row)
 
     #: 판단의 실체가 담긴 칸. 이 칸이 바뀌면 **다른 판단**이 된 것이다.
@@ -561,6 +576,25 @@ def _other_experts(
     return [r.display_name or r.id for r in rows][:3]
 
 
+def mark_unanswered(
+    session: OrmSession, expert: str, question: str, *,
+    asker: str = "", lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """후배가 "이건 답이 아니었어요" 를 눌렀다 — 공백으로 되돌린다.
+
+    확신도 문턱은 약한 칸 겹침(근거·상황의 토큰)으로도 넘을 수 있고, 그때
+    분신은 말로는 "남기지 않으셨습니다" 라면서 시스템상으로는 답변·인용으로
+    집계된다 — 질문은 전문가에게 영영 닿지 않는다. 모델의 말투를 파싱해서
+    고치는 것은 판정을 모델에 위임하는 것이라 하지 않는다. **판정은 사람이
+    한다**: 답을 받은 후배가 가장 정확한 판정자다.
+    (검색 정밀도 자체는 P1 하이브리드 — docs/roadmap.md)
+    """
+    get_expert(session, expert, lang=lang)
+    _record_gap(session, expert, question, asker=asker)
+    session.commit()
+    return {"queued": True}
+
+
 def _record_gap(
     session: OrmSession, expert: str, question: str, asker: str,
     source_doc: str = "",
@@ -603,6 +637,7 @@ def interrogate_document(
     진행도다. 후배에게는 절대 노출되지 않는다 — 후배에게 남는 것은 카드뿐이고,
     답이 나와야 카드가 된다. 문서는 질문이 되지, 카드가 되지 않는다.
     """
+    _guard_demo(expert, lang)
     get_expert(session, expert, lang=lang)
     first_line = next((l.strip() for l in (text or "").splitlines() if l.strip()), "")
     doc = db.Document(
@@ -688,6 +723,7 @@ def mine_monologue(
     문서 심문과 같은 길이다: 재료는 질문이 되고, 카드는 전문가의 확인된
     답에서만 나온다. 전사 원문은 저장하지 않는다 — 남는 것은 질문뿐이다.
     """
+    _guard_demo(expert, lang)
     get_expert(session, expert, lang=lang)
     probes = interview.probe_monologue(get_llm(), text, domain=domain, lang=lang)
     for item in probes:
@@ -892,6 +928,7 @@ def resume_session(
     row = session.get(db.CardRow, card_id)
     if row is None or not row.source_turn:
         raise ServiceError(t("err.no_card", lang))
+    _guard_demo(row.expert, lang)
     sess = session.get(db.Session, row.source_turn)
     if sess is None:
         raise ServiceError(t("err.no_session", lang))

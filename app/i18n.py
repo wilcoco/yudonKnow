@@ -608,6 +608,14 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "alter.report.send": {"en": "Send", "ko": "보내기"},
     "alter.report.cancel": {"en": "Cancel", "ko": "취소"},
+    "alter.notanswer": {
+        "en": "This didn't answer my question — send it to the senior",
+        "ko": "이건 제 질문에 대한 답이 아니었어요 — 선배에게 전달하기",
+    },
+    "alter.notanswer.done": {
+        "en": "Sent — it joins the senior's queue and they get a ping.",
+        "ko": "전달됐습니다 — 선배의 큐에 오르고 알림이 갑니다.",
+    },
     "alter.thanks.ph": {
         "en": "One line to the senior — it reaches them by name",
         "ko": "선배에게 한마디 — 이름과 함께 전해집니다",
@@ -775,6 +783,14 @@ CATALOG: dict[str, dict[str, str]] = {
     },
 
     # ── 오류 (규칙 위반은 사용자에게 그대로 보여준다) ─────────────────
+    "err.demo_readonly": {
+        "en": "This is a showcase expert — read-only during judging. Watch their "
+              "shelf and memoir, ask their alter, send reports and thanks. To feel "
+              "the expert side, create your own in three minutes.",
+        "ko": "전시용 전문가입니다 — 심사 기간에는 읽기 전용이에요. 서가와 "
+              "회고록을 구경하고, 분신에게 묻고, 보고와 감사는 보낼 수 있습니다. "
+              "전문가 쪽을 느껴보시려면 3분이면 본인 것을 만들 수 있어요.",
+    },
     "err.no_expert": {
         "en": "Could not find '{}'.", "ko": "'{}' 를 찾을 수 없습니다.",
     },

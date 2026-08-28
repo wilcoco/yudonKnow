@@ -157,6 +157,7 @@ def upsert_expert(
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
+    service._guard_demo(body.id, lang)   # 전시 전문가 프로필은 덮어쓰기 금지
     row = service.ensure_expert(
         session,
         body.id,
@@ -207,6 +208,7 @@ def toggle_alter(
     expert: str, body: AlterToggleIn, session: Session = Depends(get_session)
 ) -> dict:
     """통제권 — 본인이 자기 분신을 끈다. 남의 결재가 필요 없다."""
+    service._guard_demo(expert)          # 단, 전시 전문가는 심사 기간 보호
     row = service.get_expert(session, expert)
     row.alter_active = body.active
     session.commit()
@@ -286,6 +288,24 @@ def report(
     return service.report_anchor(
         session, card_id, body.verdict, reporter=body.reporter, detail=body.detail,
         metric=body.metric, baseline=body.baseline, observed=body.observed, lang=lang,
+    )
+
+
+class UnansweredIn(BaseModel):
+    question: str
+    asker: str = ""
+
+
+@router.post("/alter/{expert}/unanswered")
+def unanswered(
+    expert: str,
+    body: UnansweredIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """"이건 답이 아니었어요" — 후배의 판정으로 질문을 공백 큐에 되돌린다."""
+    return service.mark_unanswered(
+        session, expert, body.question, asker=body.asker, lang=lang
     )
 
 
@@ -411,6 +431,7 @@ def flag(
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
+    service._guard_demo(body.expert, lang)
     return service.flag_domain(
         session, body.expert, body.domain, body.note, lang=lang
     )
