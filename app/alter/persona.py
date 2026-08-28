@@ -65,6 +65,9 @@ class AlterReply:
     is_gap: bool
     #: 인용 카드 중 논쟁 중인 것이 있으면 경고를 함께 낸다
     contested: list[str] = field(default_factory=list)
+    #: 탐색 쿼터로 밀어올려진 카드 — "새 판단이라 아직 검증이 얇다" 를 후배가
+    #: 알아야 한다. 표시 없이 밀어올리면 검증 안 된 카드가 검증된 것처럼 읽힌다.
+    explored: list[str] = field(default_factory=list)
     #: 🔴 손끝 지식이 걸리면 "읽어서 안 됩니다" 를 함께 말한다
     apprentice_notice: str = ""
     stubbed: bool = False
@@ -75,6 +78,7 @@ class AlterReply:
             "confidence": round(self.confidence, 3),
             "is_gap": self.is_gap,
             "contested": self.contested,
+            "explored": self.explored,
             "apprentice_notice": self.apprentice_notice,
             "stubbed": self.stubbed,
             "cards": [
@@ -342,6 +346,7 @@ def respond(
         text = t("alter.msg.ungrounded", lang) + "\n\n" + _cards_block(chosen, lang)
 
     contested = [c.id for c in chosen if c.status is CardStatus.CONTESTED]
+    explored = [h.card.id for h in result.hits if h.explored]
     notice = ""
     if any(c.tacitness is Tacitness.HANDS for c in chosen):
         notice = t("alter.msg.apprentice", lang)
@@ -351,6 +356,7 @@ def respond(
         confidence=result.confidence,
         is_gap=False,
         contested=contested,
+        explored=explored,
         apprentice_notice=notice,
         stubbed=stubbed,
     )

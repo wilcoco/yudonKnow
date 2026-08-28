@@ -91,6 +91,18 @@ def entry_probe(card_count: int, lang: str = "en") -> tuple[str, str]:
     return probes[card_count % len(probes)]
 
 
+def flag_probe(domain: str, card_count: int, lang: str = "en") -> str:
+    """이관 업무(깃발) 하나를 겨냥한 입구 질문 — 결정적 조립, LLM 없음.
+
+    깃발은 전문가 본인이 그린 발굴 지도다. "이걸 남겨야 한다" 고 적어놓고
+    시스템이 그 영역을 파러 가지 않으면 지도는 장식이 된다.
+    """
+    kind, probe = entry_probe(card_count, lang)
+    if lang == "ko":
+        return f"'{domain}' 을 남겨야 한다고 적으셨죠. 그 영역에서 — {probe}"
+    return f"You wrote that '{domain}' has to be handed over. In that area — {probe}"
+
+
 #: 빈 칸을 채우러 가는 질문. 사다리가 끝나도 카드가 비면 여기서 계속 판다.
 _SLOT_QUESTIONS: dict[str, dict[str, str]] = {
     "ko": {

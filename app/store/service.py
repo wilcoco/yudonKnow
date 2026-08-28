@@ -182,7 +182,11 @@ def start_session(
     ``gap_id`` 를 주면 그 공백부터 판다 — 문서함에서 빈 질문 하나를 짚어
     "지금 답하기" 를 눌렀을 때의 입구다.
     """
-    get_expert(session, expert, lang=lang)
+    expert_row = get_expert(session, expert, lang=lang)
+    # 발굴은 **전문가의 언어**로 산다. 화면 문구는 보는 사람 언어를 따르지만,
+    # 질문과 카드가 요청 언어를 따르면 — 한국 전문가가 영어 브라우저로 팠을 때
+    # 카드가 en 으로 저장돼 한국 후배 검색에서 영영 빠진다.
+    lang = expert_row.lang or lang
     row = db.Session(id=_uid("s"), expert=expert, instrument=instrument)
     session.add(row)
 
@@ -193,6 +197,34 @@ def start_session(
             gap = picked
     if gap is None:
         gap = _top_gap(session, expert)
+
+    if gap is None and instrument == LADDER:
+        # ② 카드 없는 이관 업무 — 전문가가 "남겨야 한다" 고 적은 영역인데
+        # 아직 한 장도 없는 곳부터. 깃발은 본인이 그린 발굴 지도다.
+        live = [c for c in cards_of(session, expert)
+                if c.status is not CardStatus.DORMANT]
+        covered = {c.domain for c in live if c.domain}
+        flags = [
+            f.domain for f in session.scalars(
+                select(db.Flag).where(db.Flag.expert == expert)
+                .order_by(db.Flag.created_at)
+            ).all()
+        ]
+        bare = next((d for d in flags if d not in covered), "")
+        if bare:
+            text_q = interview.flag_probe(bare, len(live), lang)
+            row.domain = bare
+            turn = db.Turn(id=_uid("t"), session_id=row.id, question=text_q,
+                           rung="opener", targets="situation")
+            session.add(turn)
+            session.commit()
+            return {
+                "session_id": row.id, "instrument": instrument,
+                "turn_id": turn.id, "question": text_q, "rung": "opener",
+                "from_gap": False, "domain": bare,
+                "target": settings.interview_turns, "index": 1,
+            }
+
     if gap is None and instrument == LADDER:
         # 문 ①("그냥 물어봐 주세요")의 첫 질문은 ACTA 입구 프로브 순환이다 —
         # 같은 질문(recall)만 반복하면 같은 종류의 지식만 나온다 (§3.2).
@@ -258,6 +290,9 @@ def answer_turn(
     sess = session.get(db.Session, turn.session_id)
     if sess is None:
         raise ServiceError(t("err.no_session", lang))
+    expert_row = session.get(db.Expert, sess.expert)
+    if expert_row is not None and expert_row.lang:
+        lang = expert_row.lang   # 발굴은 전문가의 언어로 산다
 
     history = _history(session, sess.id)
     card_row = _upsert_card(session, sess, history, lang=lang)
@@ -345,6 +380,8 @@ def _upsert_card(
         row = db.CardRow(id=card.id, expert=sess.expert, title=card.title)
         session.add(row)
         sess.card_id = card.id
+    if not card.domain and sess.domain:
+        card.domain = sess.domain   # 깃발에서 시작한 세션 — 영역을 물려받는다
     write_card(row, card)
     row.instrument = sess.instrument
     row.source_turn = sess.id

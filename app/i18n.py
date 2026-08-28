@@ -219,14 +219,16 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "인용 {cited} · 도움됨 {helped} · 검증 {anchored} · 안 맞음 {missed}",
     },
     "statement.note": {
-        "en": "This statement is yours to hand to HR — the company does not see it "
-              "unless you show it. It counts only citations and explicit field "
+        "en": "This statement is yours to hand to HR — a bill you present, not a "
+              "screen they watch (the demo has no sign-in; production puts this "
+              "behind SSO, owner-only). It counts only citations and explicit field "
               "reports (no views, no likes), so it can serve directly as a "
               "settlement basis for a knowledge-royalty policy. Rates and payment "
               "are HR policy, not product. \"Did not hold\" is listed too — an "
               "honest invoice negotiates better.",
-        "ko": "이 명세서는 당신이 인사팀에 내미는 문서입니다 — 당신이 보여주기 "
-              "전에는 회사가 보지 못합니다. 조회수·좋아요 없이 인용과 명시적 "
+        "ko": "이 명세서는 당신이 인사팀에 내미는 문서입니다 — 조회하는 화면이 "
+              "아니라 청구하는 문서입니다 (데모에는 로그인이 없고, 실배포는 "
+              "SSO 로 본인만 열게 됩니다). 조회수·좋아요 없이 인용과 명시적 "
               "적용 보고만 세므로, 지식 사용료 정책의 정산 근거로 그대로 쓸 수 "
               "있습니다. 단가와 지급은 제품이 아니라 인사 정책입니다. "
               "'안 맞음'도 함께 적습니다 — 정직한 청구서가 협상에 더 셉니다.",
@@ -563,6 +565,19 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.farewell.close": {"en": "Thanks — let's talk", "ko": "잘 읽었습니다 — 물어볼게요"},
     "alter.farewell.link": {
         "en": "Read what {} left for you again", "ko": "{}님이 남기는 말 다시 읽기",
+    },
+    "alter.explored": {
+        "en": "newly left — still being proven", "ko": "새로 남긴 판단 — 검증 쌓는 중",
+    },
+    "alter.report.send": {"en": "Send", "ko": "보내기"},
+    "alter.report.cancel": {"en": "Cancel", "ko": "취소"},
+    "alter.thanks.ph": {
+        "en": "One line to the senior — it reaches them by name",
+        "ko": "선배에게 한마디 — 이름과 함께 전해집니다",
+    },
+    "alter.thanks.cta": {"en": "Send thanks", "ko": "전하기"},
+    "alter.thanks.done": {
+        "en": "Delivered — it will be on their ledger.", "ko": "전해졌습니다 — 선배의 원장에 오릅니다.",
     },
     "alter.viewer.hint": {
         "en": "Change who you are and ask again — a card left for one named person "

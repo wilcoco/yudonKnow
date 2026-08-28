@@ -77,6 +77,9 @@ class Session(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     expert: Mapped[str] = mapped_column(String(64), index=True)
     instrument: Mapped[str] = mapped_column(String(32), default="ladder")
+    #: 이 세션이 겨냥한 영역 — 이관 업무(깃발)에서 시작했으면 그 깃발.
+    #: 카드의 domain 이 비면 이것을 물려받아 커버리지가 제 영역으로 오른다.
+    domain: Mapped[str] = mapped_column(String(128), default="")
     card_id: Mapped[str] = mapped_column(String(64), default="")
     closed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

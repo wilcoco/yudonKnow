@@ -117,6 +117,7 @@ function render(q, r){
         <div class="badges">
           ${c.verified ? `<span class="b ok">${esc(L['alter.verified'])}</span>`
                        : `<span class="b">${esc(L['alter.unverified'])}</span>`}
+          ${(r.explored||[]).includes(c.id) ? `<span class="b am">${esc(L['alter.explored'])}</span>` : ''}
           <span class="b">${esc(c.domain||'—')}</span>
           <span class="b">${esc(tacit)}</span>
         </div>
@@ -133,13 +134,36 @@ function render(q, r){
       </div>`;
     }
     if(r.stubbed) html += `<p class="quiet">${esc(L['alter.stubbed'])}</p>`;
+    html += `<div class="row" style="margin-top:10px">
+      <input type="text" class="thanksbox" style="flex:1" placeholder="${esc(L['alter.thanks.ph'])}">
+      <button class="ghost" onclick="sendThanks(this)">${esc(L['alter.thanks.cta'])}</button>
+    </div>`;
   }
   wrap.innerHTML = html;
   $('out').prepend(wrap);
 }
 
-async function report(cardId, verdict, btn){
-  const detail = prompt(verdict === 'helped' ? L['alter.report.ok.q'] : L['alter.report.no.q']) || '';
+function report(cardId, verdict, btn){
+  // prompt() 는 브라우저를 통째로 막는다(자동화 차단·구식 UX) — 인라인으로.
+  const acts = btn.parentElement;
+  if(acts.querySelector('.rbox')) return;
+  const box = document.createElement('div');
+  box.className = 'rbox'; box.style.cssText = 'margin-top:8px;width:100%';
+  box.innerHTML = `<input type="text" style="width:100%" placeholder="${esc(
+      verdict === 'helped' ? L['alter.report.ok.q'] : L['alter.report.no.q'])}">
+    <div class="acts" style="margin-top:6px">
+      <button class="primary">${esc(L['alter.report.send'])}</button>
+      <button class="ghost">${esc(L['alter.report.cancel'])}</button>
+    </div>`;
+  acts.appendChild(box);
+  const [send, cancel] = box.querySelectorAll('button');
+  cancel.onclick = () => box.remove();
+  send.onclick = () => sendReport(cardId, verdict, box.querySelector('input').value.trim(), btn, box);
+  box.querySelector('input').focus();
+}
+
+async function sendReport(cardId, verdict, detail, btn, box){
+  box.remove();
   try{
     await api('/api/cards/'+cardId+'/report', {method:'POST', body: JSON.stringify({
       verdict, reporter: $('asker').value.trim(), detail })});
@@ -147,6 +171,19 @@ async function report(cardId, verdict, btn){
       + esc(verdict === 'helped' ? L['alter.report.ok.done'] : L['alter.report.no.done'])
       + '</span>';
   }catch(e){ $('err').textContent = e.message; }
+}
+
+// 선배에게 한마디 — 원장에서 전문가가 다시 오는 이유가 된다.
+async function sendThanks(btn){
+  const input = btn.parentElement.querySelector('.thanksbox');
+  const message = input.value.trim();
+  if(!message){ input.focus(); return; }
+  btn.disabled = true;
+  try{
+    await api('/api/thanks', {method:'POST', body: JSON.stringify({
+      expert: EXPERT, message, actor: $('asker').value.trim() })});
+    btn.parentElement.innerHTML = '<span class="quiet">' + esc(L['alter.thanks.done']) + '</span>';
+  }catch(e){ $('err').textContent = e.message; btn.disabled = false; }
 }
 </script>
 <script>
