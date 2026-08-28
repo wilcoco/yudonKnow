@@ -176,6 +176,29 @@ fails the build if anyone changes that.
 
 ---
 
+## Two ways to try it (for judges)
+
+**Track A — zero effort, as the junior (2 min).** Open the live app and ask
+**Dale's alter** about brown foam, weir stringing, or a rising pH. Watch it
+answer in his voice with the source card beside it — then ask about UV bank
+calibration and watch it *refuse* ("this is not an area Dale left behind").
+Then open Dale's expert page: a shelf of judgment cards in every state
+(✔ field-verified, ⚠ contested with the junior's actual report, ⏳ half-dug),
+and a document shelf where his SOP is organized **by what it does not say** —
+"5 judgment points · 2 filled".
+
+**Track B — three minutes, as yourself.** You have tacit knowledge too — about
+code review, hiring, debugging, anything. Create your own expert, type one
+thing that happened, and answer the questions the agent asks. Three minutes
+later you will see your own judgment as a card, and your own alter answering
+with it in your own turns of phrase. That moment — *"it stays"* — is the
+product.
+
+The interview works on any domain because the probes come from the
+cognitive-task-analysis literature, not from a domain template.
+
+---
+
 ## Quick start (local)
 
 ```bash

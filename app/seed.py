@@ -225,6 +225,127 @@ def seed(session) -> bool:
         risk="mid",
     )
 
+    # ── Dale 을 깊게 육성한다 — 심사자가 자기 지식을 넣지 않고도 서가·
+    # 문서함·교정·이어파기를 전부 구경할 수 있어야 한다. 심사자는 온보딩을
+    # 하지 않는다; 4분 안에 만져지는 것이 전부다.
+    _card(
+        session, "dale", lang="en", tacit=Tacitness.PARTIAL,
+        title="A rising pH at the headworks on a dry morning means an industrial dump",
+        domain="wastewater treatment",
+        situation="Headworks, dry weather, early shift",
+        cues=["Influent pH climbing past 8.5 with no rain in 48 hours",
+              "Flow is normal — that is what rules out infiltration",
+              "A faint solvent smell at the grit channel before the probe confirms"],
+        judgment="Someone upstream is dumping. This is not a sensor drift.",
+        action=["Grab a sample bottle now — evidence disappears in an hour",
+                "Call the pretreatment coordinator before you adjust anything",
+                "Do not neutralise blind; find out what it is first"],
+        rationale="Sensor drift moves slowly and both probes never drift together. "
+                  "A step change on one parameter with normal flow is a discharge.",
+        exceptions=["First Monday of the month the brewery does a permitted "
+                    "caustic clean — check the schedule before you call anyone"],
+        failure="In 2019 I neutralised first and sampled after. We never identified "
+                "the discharger and ate the fine ourselves.",
+        risk="high",
+    )
+    contested_card = _card(
+        session, "dale", lang="en", tacit=Tacitness.SPEAKABLE,
+        title="If the digester gas flare is pulsing, check the condensate trap first",
+        domain="wastewater treatment",
+        situation="Anaerobic digester, flare visibly pulsing",
+        cues=["Flare flame pulsing in a slow rhythm rather than steady"],
+        judgment="Condensate is slugging the gas line — drain the trap before "
+                 "touching the pressure settings",
+        action=["Drain the condensate trap", "Watch the flare for ten minutes"],
+        rationale="Water in the line makes the pressure oscillate at exactly that rhythm.",
+        exceptions=[],
+        failure="",
+        risk="mid",
+    )
+    # 초안 하나 — "파다 만 판단" 이 서가에서 ⏳ 로 보이고 이어파기가 열린다.
+    draft_row = session.scalar(
+        select(db.CardRow).where(db.CardRow.expert == "dale",
+                                 db.CardRow.title == "Winter foaming is a different animal")
+    )
+    if draft_row is None:
+        draft_sess = db.Session(id=service._uid("s"), expert="dale", instrument="ladder")
+        session.add(draft_sess)
+        session.flush()
+        service.answer_turn  # (참고) 실제 동선과 같은 테이블을 쓴다
+        turn1 = db.Turn(id=service._uid("t"), session_id=draft_sess.id,
+                        question="Think of one moment in the last six months when this "
+                                 "team would have gone badly wrong without you.",
+                        rung="recall", targets="situation",
+                        answer="Cold snap in January. Foam on the basin but it was not "
+                               "the brown kind — different animal in winter.")
+        turn2 = db.Turn(id=service._uid("t"), session_id=draft_sess.id,
+                        question="What did you see that told you? A screen? A sound? "
+                                 "A smell?", rung="cue", targets="cues", answer="")
+        session.add_all([turn1, turn2])
+        draft_row = db.CardRow(
+            id=service._uid("c"), expert="dale",
+            title="Winter foaming is a different animal",
+        )
+        session.add(draft_row)
+        session.flush()
+        draft_card = service.row_to_card(draft_row)
+        draft_card.situation = ("Cold snap in January. Foam on the basin but not the "
+                                "brown kind.")
+        draft_card.domain = "wastewater treatment"
+        service.write_card(draft_row, draft_card)
+        draft_row.status = CardStatus.DRAFT.value
+        draft_row.lang = "en"
+        draft_row.source_turn = draft_sess.id
+        draft_sess.card_id = draft_row.id
+
+    # 문서 하나 — 문서함이 "발굴 지도" 로 보이려면 진행도가 중간이어야 한다.
+    doc_row = session.scalar(
+        select(db.Document).where(db.Document.expert == "dale")
+    )
+    if doc_row is None:
+        doc_row = db.Document(
+            id=service._uid("d"), expert="dale",
+            title="SOP-12 Aeration Basin Daily Operation",
+            domain="wastewater treatment",
+            text="SOP-12 Aeration Basin Daily Operation (rev 4)\n"
+                 "1. Record dissolved oxygen at 08:00 and 14:00.\n"
+                 "2. Maintain DO between 1.5 and 3.0 mg/L.\n"
+                 "3. If foam is present, apply defoamer as needed.\n"
+                 "4. Report abnormal conditions to the shift supervisor.\n"
+                 "5. Waste sludge per the posted schedule.\n",
+        )
+        session.add(doc_row)
+        session.flush()
+        # 문서가 말하지 않는 것 4개 — 2개는 이미 카드로 채워진 상태로 심는다.
+        service._record_gap(
+            session, "dale",
+            'The SOP says "apply defoamer as needed" — how do you decide when foam '
+            'is a chemistry problem defoamer will not fix? (doc: "apply defoamer as needed")',
+            asker="📄", source_doc=doc_row.id)
+        service._record_gap(
+            session, "dale",
+            'What do you check first when DO drifts out of the 1.5–3.0 band while '
+            'blowers sound normal? (doc: "Maintain DO between 1.5 and 3.0")',
+            asker="📄", source_doc=doc_row.id)
+        service._record_gap(
+            session, "dale",
+            'Which "abnormal conditions" have you learned to report immediately '
+            'versus watch for a shift? (doc: "Report abnormal conditions")',
+            asker="📄", source_doc=doc_row.id)
+        service._record_gap(
+            session, "dale",
+            'When do you deviate from the posted wasting schedule, and on what '
+            'sign? (doc: "Waste sludge per the posted schedule")',
+            asker="📄", source_doc=doc_row.id)
+        session.flush()
+        # 앞의 두 질문은 기존 카드가 답이다 — 진행도 2/4.
+        gaps = session.scalars(
+            select(db.Gap).where(db.Gap.source_doc == doc_row.id)
+            .order_by(db.Gap.created_at)
+        ).all()
+        gaps[0].filled_card = dale_card
+        gaps[1].filled_card = dale_card
+
     session.commit()
 
     # 활동은 한 번만 심는다 — 매 기동마다 쌓이면 원장 숫자가 거짓이 된다.
@@ -259,6 +380,18 @@ def seed(session) -> bool:
                       asker="tom", lang="en")
     service.ask_alter(session, "yudon", "협력사 도장 불량은 어떻게 잡나요",
                       asker="kim", lang="ko")
+
+    # 교정 흐름이 보이게 — Dale 의 플레어 카드에 "안 맞았다" 보고 하나.
+    flare = session.scalar(
+        select(db.CardRow).where(
+            db.CardRow.expert == "dale",
+            db.CardRow.title.like("If the digester gas flare%"))
+    )
+    if flare is not None:
+        service.report_anchor(
+            session, flare.id, "missed", reporter="rosa",
+            detail="Drained the trap twice — still pulsing. Turned out to be the "
+                   "flame arrestor icing up.", lang="en")
 
     session.commit()
     return True

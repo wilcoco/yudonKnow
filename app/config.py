@@ -60,6 +60,9 @@ class Settings:
 
     # -- 저장소 ------------------------------------------------------------
     database_url: str
+    #: 명부(첫 화면)에 세울 전문가 화이트리스트. 비면 카드 있는 전원.
+    #: 공개 데모에서 아무나 만든 분신이 심사자 화면에 서는 것을 막는 안전핀.
+    featured: tuple[str, ...]
 
     # -- 발굴 정책 ---------------------------------------------------------
     #: 한 세션의 목표 질문 수 (20분 기준). 넘기면 마무리를 권한다.
@@ -113,6 +116,10 @@ def load_settings() -> Settings:
         anthropic_model=os.environ.get("YDK_ANTHROPIC_MODEL", "claude-opus-4-5"),
         max_tokens=_i("YDK_MAX_TOKENS", 8000),
         database_url=db_url,
+        featured=tuple(
+            x.strip() for x in os.environ.get("YDK_FEATURED", "").split(",")
+            if x.strip()
+        ),
         interview_turns=_i("YDK_INTERVIEW_TURNS", 7),
         citable_completeness=_f("YDK_CITABLE_COMPLETENESS", 0.6),
         retrieval_top_k=_i("YDK_RETRIEVAL_TOP_K", 6),

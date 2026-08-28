@@ -103,9 +103,12 @@ def _experts_for(lang: str) -> list[dict]:
 
         rows = session.scalars(select(db.Expert)).all()
         items = []
+        featured = settings.featured
         for r in rows:
             if not r.alter_active:
                 continue
+            if featured and r.id not in featured:
+                continue   # 공개 데모 안전핀 — 명부는 지정 전문가만
             cards = [
                 c for c in service.cards_of(session, r.id)
                 if c.status not in (CardStatus.DRAFT, CardStatus.DORMANT)
