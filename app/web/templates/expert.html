@@ -18,7 +18,7 @@
 </header>
 
 <main class="wide">
-  <div class="err" id="err"></div>
+  <div class="err" id="err" role="alert" aria-live="assertive"></div>
   <p class="quiet" id="ro_note" hidden style="border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px"></p>
 
   <!-- ───────────── onboarding ───────────── -->
@@ -207,14 +207,14 @@
     <div class="row" style="align-items:center;margin-bottom:12px">
       <button onclick="loadHome()">← {{ L['nav.home'] }}</button>
       <span class="b am" id="s_tool"></span>
-      <span class="quiet" id="s_progress"></span>
+      <span class="b am" id="s_progress"></span>
       <button class="ghost" id="auto_btn" onclick="toggleAuto()" hidden></button>
-      <span class="quiet" id="auto_state"></span>
+      <span id="auto_state" aria-live="polite"></span>
     </div>
 
     <div class="panes2">
       <div>
-        <div id="s_thread" class="thread"></div>
+        <div id="s_thread" class="thread" aria-live="polite"></div>
         <p class="quiet" id="s_rung"></p>
         <div id="s_wrong"></div>
         <div class="card" style="margin-top:12px">
@@ -901,7 +901,7 @@ function speakQ(text){
     u.rate = 1.05;
     u.onend = () => done();
     u.onerror = () => done();
-    $('auto_state').textContent = '🔊 ' + L['auto.speaking'];
+    const _as1=$('auto_state'); _as1.className='speak'; _as1.textContent='🔊 '+L['auto.speaking'];
     speechSynthesis.speak(u);
   });
 }
@@ -922,7 +922,7 @@ async function listenOnce(){
   const chunks = [];
   rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
   rec.start(250);
-  $('auto_state').textContent = '🎙 ' + L['auto.listening'];
+  const _as2=$('auto_state'); _as2.className='listen'; _as2.textContent='🎙 '+L['auto.listening'];
   let spoke = false, silent = 0; const t0 = Date.now();
   await new Promise(res => {
     const iv = setInterval(() => {
@@ -941,7 +941,7 @@ async function listenOnce(){
   AUTO_REC = null;
   stream.getTracks().forEach(t => t.stop()); ctx.close();
   if(!spoke || !AUTO) return null;
-  $('auto_state').textContent = '✍ ' + L['auto.writing'];
+  const _as3=$('auto_state'); _as3.className='write'; _as3.textContent='✍ '+L['auto.writing'];
   try{
     const blob = new Blob(chunks, {type: mime});
     const b64 = await new Promise((ok, no) => {
@@ -953,7 +953,7 @@ async function listenOnce(){
       body: JSON.stringify({audio_b64: b64, mime})});
     return out.text || null;
   }catch(e){ err(e.message); return null; }
-  finally{ $('auto_state').textContent = ''; }
+  finally{ const _a=$('auto_state'); _a.className=''; _a.textContent=''; }
 }
 
 async function askCycle(){

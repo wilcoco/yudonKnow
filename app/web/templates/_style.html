@@ -3,17 +3,21 @@
     --bg:#F6F5F2; --panel:#FFFFFF; --line:#DCD8CF; --ink:#22201C; --muted:#6B665C;
     --amber:#A96C22; --amber-soft:#F7ECDC; --verify:#17715F; --verify-soft:#DEEDE8;
     --danger:#A33036; --danger-soft:#F7E2E2; --sea:#33618F; --chip:#EDEAE3;
+    --bubble-ask:#FFFFFF; --bubble-said:#E8EFE9; --bubble-said-line:#CFDCD2;
+    --bubble-echo:#F6F1E6; --bubble-echo-line:#D8C9A8;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#16171A; --panel:#1E2024; --line:#34373D; --ink:#E4E2DC; --muted:#9A968D;
       --amber:#D79A4B; --amber-soft:#332818; --verify:#45A98F; --verify-soft:#16332B;
       --danger:#D96A67; --danger-soft:#331E1E; --sea:#7BA3CE; --chip:#24272C;
+      --bubble-ask:#23262B; --bubble-said:#1E2B24; --bubble-said-line:#2E4237;
+      --bubble-echo:#2B2619; --bubble-echo-line:#4A3F26;
     }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
   a{color:var(--sea)}
   header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
     padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -25,8 +29,8 @@
   main{max-width:900px;margin:0 auto;padding:26px 20px 90px}
   .wide{max-width:1180px}
   h1{font-size:26px;letter-spacing:-.02em;margin:0 0 6px}
-  h2.sec{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);
-    margin:30px 0 10px;font-weight:700}
+  h2.sec{font-size:13px;letter-spacing:.3px;color:var(--muted);
+    margin:30px 0 10px;font-weight:700} /* 한국어 제목 — 대문자 변환·과자간 금지 */
   p.lead{color:var(--muted);margin:0 0 22px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:16px 18px;margin-bottom:12px}
@@ -34,14 +38,14 @@
   .card.alarm{border-color:var(--danger)}
   .card.ok{border-color:var(--verify)}
   .t{font-weight:700;margin:0 0 4px;word-break:break-word}
-  .c{font-size:13.5px;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+  .c{font-size:14.5px;color:var(--ink);opacity:.88;white-space:pre-wrap;word-break:break-word}
   .badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;font-size:11.5px}
   .b{padding:1px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
   .b.ok{background:var(--verify-soft);border-color:var(--verify);color:var(--verify);font-weight:700}
   .b.warn{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);font-weight:700}
   .b.am{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);font-weight:700}
   button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:99px;
-    padding:7px 15px;font:inherit;font-size:13.5px;cursor:pointer}
+    padding:11px 18px;font:inherit;font-size:15px;cursor:pointer;min-height:44px}
   button:hover{border-color:var(--ink)}
   button:disabled{opacity:.45;cursor:default}
   button.primary{background:var(--verify);border-color:var(--verify);color:#fff;font-weight:700}
@@ -49,10 +53,12 @@
   button.ghost{border-style:dashed;color:var(--muted)}
   button.block{width:100%;padding:13px;border-radius:12px;font-size:15px}
   .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-  input[type=text],textarea,select{width:100%;padding:11px 14px;border-radius:10px;
-    border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+  input[type=text],textarea,select{width:100%;padding:12px 14px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;
+    font-size:16px /* iOS: 16px 미만이면 포커스 시 강제 줌 */}
   textarea{min-height:120px;resize:vertical}
   input:focus,textarea:focus,select:focus{outline:2px solid var(--verify);outline-offset:1px}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--verify);outline-offset:2px;border-radius:6px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
   /* 인터뷰 기록지 — 서식이 아니라 대화로 보이게 한다. */
   .panes2{display:grid;grid-template-columns:1fr;gap:16px}
@@ -60,11 +66,11 @@
   .thread{display:flex;flex-direction:column;gap:10px}
   .turn{max-width:88%;padding:12px 14px;border-radius:14px;line-height:1.65;
     white-space:pre-wrap;word-break:break-word}
-  .turn.ask{align-self:flex-start;background:#fff;border:1px solid var(--line);
+  .turn.ask{align-self:flex-start;background:var(--bubble-ask);border:1px solid var(--line);
     border-bottom-left-radius:4px}
-  .turn.said{align-self:flex-end;background:#e8efe9;border:1px solid #cfdcd2;
+  .turn.said{align-self:flex-end;background:var(--bubble-said);border:1px solid var(--bubble-said-line);
     border-bottom-right-radius:4px}
-  .turn.echo{align-self:flex-start;background:#f6f1e6;border:1px dashed #d8c9a8;
+  .turn.echo{align-self:flex-start;background:var(--bubble-echo);border:1px dashed var(--bubble-echo-line);
     border-bottom-left-radius:4px;font-size:14px}
   .grid{display:grid;gap:12px}
   .g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
@@ -90,5 +96,19 @@
   .err{color:var(--danger);font-size:13px;min-height:20px}
   .msg{border-left:3px solid var(--amber);padding-left:12px;margin:8px 0;font-size:13.5px}
   footer{max-width:900px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12px}
+  /* 음성 상태 — 핸즈프리의 생명선. 1m 거리에서 상태가 읽혀야 한다. */
+  #auto_state{display:inline-flex;align-items:center;gap:8px;font-size:15px;
+    font-weight:700;padding:8px 16px;border-radius:99px;min-height:40px}
+  #auto_state:empty{display:none}
+  #auto_state.listen{background:var(--verify-soft);color:var(--verify)}
+  #auto_state.speak{background:var(--amber-soft);color:var(--amber)}
+  #auto_state.write{background:var(--chip);color:var(--muted)}
+  #auto_state.listen::before{content:"";width:10px;height:10px;border-radius:50%;
+    background:var(--verify);animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.25;transform:scale(1.35)}}
+  @media (prefers-reduced-motion: reduce){
+    #auto_state.listen::before{animation:none}
+    *{scroll-behavior:auto !important}
+  }
   code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:12.5px}
 </style>

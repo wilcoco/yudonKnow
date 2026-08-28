@@ -41,7 +41,7 @@
     <button class="primary" onclick="ask()">{{ L['alter.ask.cta'] }}</button>
   </div>
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
-  <div class="err" id="err"></div>
+  <div class="err" id="err" role="alert" aria-live="assertive"></div>
 
   <div class="panes" style="grid-template-columns:1fr" id="out"></div>
 </main>
