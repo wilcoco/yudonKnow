@@ -42,6 +42,15 @@ motivation problem, it is a tooling problem.** Yudon — a friend of the author,
 a few years from retirement — already wants to leave his knowledge behind. Open
 a blank document for him and he stops at "what do I even write."
 
+The author also runs a manufacturing company and was mid-way through hands-on
+automation projects when Yudon asked — which is exactly where the limit of
+automation becomes visible: **automation takes the procedures; the judgment
+walks out the door.** The injection, painting, and assembly lines this tool is
+being built for are run by people with forty-plus years in their hands. The aim
+is double: a knowledge system while they are here, and a memoir — compiled from
+their own dug-out judgment, never written on demand — when they leave
+(`/memoir/{expert}`).
+
 ---
 
 ## What it does

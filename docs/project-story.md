@@ -33,6 +33,24 @@ write." Twenty years of judgment does not come out on request. Ask him how he
 knows a molding defect is a speed problem and not a temperature problem, and
 he says: *"you just see it."*
 
+## I run the factory this problem lives in
+
+I also run a manufacturing company, and when Yudon asked, I was in the middle
+of hands-on automation projects on my own lines. That is exactly where the
+realisation landed: **automation takes the procedures — the judgment walks out
+the door.** A robot can repeat every documented step of injection molding.
+It cannot tell you why a flow mark on the far side of the gate means speed,
+not temperature, while the thermometer reads normal.
+
+My injection, painting, and assembly lines are run by people with forty-plus
+years in their hands, all within sight of retirement. This tool is being built
+for them, in the most literal sense of the hackathon's Bring-Your-Own-Friction
+mandate: a knowledge system while they are still here, a memoir compiled from
+their own judgment when they leave — and a ledger clean enough to keep paying
+them for every verified use after they are gone. I do not want a wiki that
+survives them. I want them remembered as the people whose calls still run the
+plant.
+
 He is not withholding anything. **He does not know what he knows until someone
 asks him the right question.** That is not a motivation problem and not a
 writing problem — it is an *interviewing* problem, and interviewing is a skill
@@ -278,6 +296,17 @@ their pride can, under an HR policy, give them their fee. The boundary that
 matters: settle on **field-verified use**, never on card count — pay per card
 and you get thin cards. That policy lives in HR, not in code; what the product
 contributes is a ledger clean enough to settle on.
+
+## Video closing (30 seconds, spoken or subtitled)
+
+> Yudon is my friend — a molding expert a few years from retirement. He asked
+> me for this. I run a manufacturing company myself, and I was deep in
+> automation projects when it hit me: automation takes the procedures, but the
+> judgment walks out the door. My injection, painting, and assembly lines are
+> run by people with forty years in their hands. This is for them — a
+> knowledge system while they are here, a memoir written out of their own
+> judgment when they leave, and a ledger that keeps paying them for every
+> verified use after. Their knowledge keeps working. So does their name.
 
 ## Challenges
 
