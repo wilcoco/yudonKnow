@@ -171,6 +171,8 @@
       <button onclick="loadHome()">← {{ L['nav.home'] }}</button>
       <span class="b am" id="s_tool"></span>
       <span class="quiet" id="s_progress"></span>
+      <button class="ghost" id="auto_btn" onclick="toggleAuto()" hidden></button>
+      <span class="quiet" id="auto_state"></span>
     </div>
 
     <div class="panes2">
@@ -282,6 +284,7 @@
 
 <script>
 const LANG = {{ lang | tojson }};
+const LLM_ON = {{ 'true' if llm_enabled else 'false' }};
 const L = {{ L | tojson }};
 const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
 const $ = id => document.getElementById(id);
@@ -502,6 +505,7 @@ async function resumeDig(cardId){
     $('s_slots').innerHTML = r.report.slots
       .map(x => `<span class="slot ${x.filled?'on':''}">${esc(x.label)}</span>`).join('');
     show('session');
+    autoUi(); if(AUTO) askCycle();
   }catch(e){ err(e.message); }
 }
 
@@ -547,6 +551,7 @@ async function startGap(gapId){
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
     $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
     show('session');
+    autoUi(); if(AUTO) askCycle();
   }catch(e){ err(e.message); }
 }
 
@@ -771,6 +776,111 @@ async function toggleMic(target, btn){
   btn.textContent = '⏹ ' + L['sess.mic.stop'];
 }
 
+// ── 🎙 오토 모드 — 묻는 것도 음성, 듣는 것도 음성 ─────────────────
+//
+// 이 제품의 대상은 IT 인력이 아니라 현장 전문가다. 키보드 앞에서 "뭘 써야
+// 하지" 에 멈추는 사람에게 인터뷰가 타자를 요구하면 문턱이 그대로 남는다.
+// 질문을 읽어주고(브라우저 TTS — 낭독은 지식이 아니라 UX 라 로컬이 맞다),
+// 무음 1.8초를 답의 끝으로 보고 전사해 제출하고, 다음 질문을 읽는다.
+// 전사 오류는 되읽어주기(화면)와 다음 발화의 말 교정으로 잡고, 원본 발화는
+// 어차피 보존된다.
+const AUTO_OK = LLM_ON && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+  && 'speechSynthesis' in window && 'MediaRecorder' in window;
+let AUTO = false, AUTO_REC = null;
+try{ AUTO = AUTO_OK && localStorage.getItem('ydk_auto') !== '0'; }catch(e){ AUTO = AUTO_OK; }
+
+function autoUi(){
+  const btn = $('auto_btn');
+  if(!btn) return;
+  if(!AUTO_OK){ btn.hidden = true; return; }
+  btn.hidden = false;
+  btn.textContent = AUTO ? '⏹ ' + L['auto.on'] : '🎙 ' + L['auto.off'];
+}
+function toggleAuto(){
+  AUTO = !AUTO;
+  try{ localStorage.setItem('ydk_auto', AUTO ? '1' : '0'); }catch(e){}
+  if(!AUTO){ speechSynthesis.cancel(); if(AUTO_REC && AUTO_REC.state === 'recording') AUTO_REC.stop(); $('auto_state').textContent = ''; }
+  autoUi();
+  if(AUTO) askCycle();
+}
+
+function speakQ(text){
+  return new Promise(done => {
+    if(!AUTO || !text){ done(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = LANG === 'ko' ? 'ko-KR' : 'en-US';
+    u.rate = 1.05;
+    u.onend = () => done();
+    u.onerror = () => done();
+    $('auto_state').textContent = '🔊 ' + L['auto.speaking'];
+    speechSynthesis.speak(u);
+  });
+}
+
+async function listenOnce(){
+  // 무음 1.8초 = 답의 끝. 최대 90초. RMS 문턱은 조용한 사무실 기준 —
+  // 현장 소음에서의 한계와 푸시투토크 대안은 로드맵 P1.
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ err(L['sess.mic.denied']); AUTO = false; autoUi(); return null; }
+  const ctx = new AudioContext();
+  const an = ctx.createAnalyser(); an.fftSize = 2048;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const buf = new Uint8Array(an.fftSize);
+  const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+  const rec = new MediaRecorder(stream, {mimeType: mime});
+  AUTO_REC = rec;
+  const chunks = [];
+  rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  rec.start(250);
+  $('auto_state').textContent = '🎙 ' + L['auto.listening'];
+  let spoke = false, silent = 0; const t0 = Date.now();
+  await new Promise(res => {
+    const iv = setInterval(() => {
+      an.getByteTimeDomainData(buf);
+      let sum = 0;
+      for(let i = 0; i < buf.length; i++){ const v = (buf[i]-128)/128; sum += v*v; }
+      const rms = Math.sqrt(sum / buf.length);
+      if(rms > 0.02){ spoke = true; silent = 0; } else if(spoke){ silent += 200; }
+      if((spoke && silent >= 1800) || Date.now() - t0 > 90000
+         || !AUTO || rec.state !== 'recording'){ clearInterval(iv); res(); }
+    }, 200);
+  });
+  if(rec.state === 'recording'){
+    const done = new Promise(r => rec.onstop = r); rec.stop(); await done;
+  }
+  AUTO_REC = null;
+  stream.getTracks().forEach(t => t.stop()); ctx.close();
+  if(!spoke || !AUTO) return null;
+  $('auto_state').textContent = '✍ ' + L['auto.writing'];
+  try{
+    const blob = new Blob(chunks, {type: mime});
+    const b64 = await new Promise((ok, no) => {
+      const r = new FileReader();
+      r.onload = () => ok(r.result.split(',')[1]); r.onerror = no;
+      r.readAsDataURL(blob);
+    });
+    const out = await api('/api/transcribe', {method:'POST',
+      body: JSON.stringify({audio_b64: b64, mime})});
+    return out.text || null;
+  }catch(e){ err(e.message); return null; }
+  finally{ $('auto_state').textContent = ''; }
+}
+
+async function askCycle(){
+  if(!AUTO || $('session').hidden) return;
+  await speakQ(STATE.lastQ);
+  if(!AUTO || $('session').hidden) return;
+  const text = await listenOnce();
+  if(text && AUTO && !$('session').hidden){
+    $('s_answer').value = text;
+    await sendAnswer(false);          // sendAnswer 끝에서 다시 askCycle 로 돈다
+  } else if(AUTO && !$('session').hidden){
+    $('auto_state').textContent = L['auto.quiet'];
+  }
+}
+
 // ── session ─────────────────────────────────────────────
 async function startSession(instrument){
   err('');
@@ -788,6 +898,7 @@ async function startSession(instrument){
     $('s_wrong').innerHTML = '';
     if(instrument === 'wrong') loadWrongAnswer();
     show('session');
+    autoUi(); if(AUTO) askCycle();
   }catch(e){ err(e.message); }
 }
 
@@ -808,11 +919,13 @@ function enterSession(s, r, firstAnswer){
     .map(x => `<span class="slot ${x.filled?'on':''}">${esc(x.label)}</span>`).join('');
   $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
   show('session');
+  autoUi(); if(AUTO) askCycle();
 }
 
 // 인터뷰 기록지에 한 마디 붙인다. kind: ask(면접자) · said(전문가) · echo(되읽기)
 function say(kind, text){
   if(!text) return;
+  if(kind === 'ask') STATE.lastQ = text;
   const el = document.createElement('div');
   el.className = 'turn ' + kind;
   el.textContent = text;
@@ -860,6 +973,7 @@ async function sendAnswer(skip){
       .map(s => `<span class="slot ${s.filled?'on':''}">${esc(s.label)}</span>`).join('');
     $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
     $('s_wrong').innerHTML = '';
+    if(AUTO) askCycle();
   }catch(e){ err(e.message); }
 }
 

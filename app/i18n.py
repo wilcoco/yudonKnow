@@ -426,6 +426,14 @@ CATALOG: dict[str, dict[str, str]] = {
     #: 🎙 말로 답하기 — "전문가가 말하는 편이 훨씬 잘 나온다" (roadmap P1-1).
     #: 소리내어 하기(think-aloud)가 Ericsson & Simon 의 수행 중 발화 기준을
     #: 만족하는 유일한 연장인데, 키보드로는 성립하지 않는다.
+    "auto.on": {"en": "Voice mode on — tap to stop", "ko": "음성 대화 중 — 누르면 멈춤"},
+    "auto.off": {"en": "Talk instead of typing", "ko": "타자 대신 말로 하기"},
+    "auto.speaking": {"en": "asking…", "ko": "질문 읽는 중…"},
+    "auto.listening": {"en": "listening — just talk, pause when done",
+                        "ko": "듣고 있습니다 — 말씀하시고, 끝나면 잠깐 쉬세요"},
+    "auto.writing": {"en": "writing it down…", "ko": "받아 적는 중…"},
+    "auto.quiet": {"en": "Heard nothing — tap 🎙 to try again or just type.",
+                   "ko": "들리는 말이 없었습니다 — 🎙 를 다시 누르시거나 타자로 하셔도 됩니다."},
     "sess.mic": {"en": "Speak instead", "ko": "말로 답하기"},
     "sess.mic.stop": {"en": "Stop & transcribe", "ko": "그만 말하고 받아적기"},
     "sess.mic.unsupported": {
