@@ -242,6 +242,12 @@ def recommend(
         push("aloud", _because_flag(name, lang))
         break
 
+    # ②.5 같은 영역에서 신호가 겹치는 두 카드 — 무엇이 갈랐는지가 판별
+    # 지식이다. 겹침 판정은 토큰(결정적)으로 한다.
+    pair = _overlapping_pair(cards)
+    if pair:
+        push("contrast", _because_pair(pair[0].title, pair[1].title, lang))
+
     # ③ 카드의 빈 칸 — 신호(cues)와 예외(exceptions)가 비면 가장 위험하다.
     for slot in ("cues", "exceptions", "failure", "rationale"):
         target = next(
@@ -268,6 +274,29 @@ def slot_label(slot: str, lang: str = "en") -> str:
 
 
 # ── 추천 사유 문장 (근거 없는 추천은 하지 않는다) ──────────────────────
+
+def _overlapping_pair(cards: list[Card]) -> tuple[Card, Card] | None:
+    """같은 영역에서 신호 토큰이 겹치는 살아있는 카드 한 쌍."""
+    from app.core.retrieval import tokenize
+
+    live = [c for c in cards if c.status.value not in ("dormant", "draft") and c.cues]
+    by_domain: dict[str, list[Card]] = {}
+    for c in live:
+        by_domain.setdefault(c.domain or "-", []).append(c)
+    for group in by_domain.values():
+        for i, a in enumerate(group):
+            ta = set(tokenize(" ".join(a.cues)))
+            for b in group[i + 1:]:
+                if ta & set(tokenize(" ".join(b.cues))):
+                    return (a, b)
+    return None
+
+
+def _because_pair(a: str, b: str, lang: str) -> str:
+    if lang == "ko":
+        return f"「{a[:18]}」와 「{b[:18]}」의 신호가 겹칩니다 — 무엇이 갈랐는지가 판별 지식입니다."
+    return f"'{a[:22]}' and '{b[:22]}' share cues — what told them apart is the knowledge."
+
 
 def _because_gap(count: int, lang: str) -> str:
     if lang == "ko":

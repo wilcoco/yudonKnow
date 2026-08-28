@@ -81,8 +81,33 @@
       </div>
     </div>
 
-    <div id="h_gaps"></div>
+    {# ★ 오늘의 질문 — 홈의 유일한 주인공. MVP 척추: 묻는 대로 답하면,
+       당신 없이도 일하는 판단이 남는다. #}
+    <div class="card" id="today" style="border-width:2px">
+      <p class="quiet" id="tq_src"></p>
+      <p class="t" id="tq_q" style="font-size:17px;line-height:1.6">…</p>
+      <div class="acts">
+        <button class="primary" onclick="answerToday()">🎙 {{ L['today.answer'] }}</button>
+        <button class="ghost" onclick="skipToday()">{{ L['today.skip'] }}</button>
+      </div>
+    </div>
+
+    <div id="h_gaps" hidden></div>
     <div id="h_contested"></div>
+
+    <p class="quiet" style="margin-top:18px">
+      <a href="#" onclick="show('library');return false">📚 {{ L['nav.library'] }}</a> ·
+      <a href="#" onclick="show('methods');return false">🧰 {{ L['nav.methods'] }}</a> ·
+      <a href="#" onclick="meetAlter();return false">{{ L['home.meet'] }}</a>
+    </p>
+  </section>
+
+  <!-- ───────────── 내 서재 — 쌓인 것 ───────────── -->
+  <section id="library" hidden>
+    <div class="row" style="align-items:center;margin-bottom:12px">
+      <button onclick="show('home')">← {{ L['nav.home'] }}</button>
+      <span class="t">📚 {{ L['nav.library'] }}</span>
+    </div>
 
     {# 서가 — 남긴 것의 진열. 목록이 없으면 전문가는 쓰기 전용 사용자다. #}
     <h2 class="sec" id="shelf_head" hidden>{{ L['shelf.head'] }}</h2>
@@ -101,6 +126,14 @@
     <!-- 사건 하나에서 시작한다 (docs/elicitation-protocol.md §0).
          도구를 먼저 고르게 하면 전문가에게 도구 지식을 요구하는 셈이다. -->
     <div id="d_doors">
+  </section>
+
+  <!-- ───────────── 다른 방법 — 어쩌다 쓰는 것 ───────────── -->
+  <section id="methods" hidden>
+    <div class="row" style="align-items:center;margin-bottom:12px">
+      <button onclick="show('home')">← {{ L['nav.home'] }}</button>
+      <span class="t">🧰 {{ L['nav.methods'] }}</span>
+    </div>
     {# 세 개의 문 — 전문가의 자세별 입구. 어느 문이든 인터뷰로 통한다. #}
     <h2 class="sec">{{ L['doors.head'] }}</h2>
 
@@ -167,7 +200,7 @@
     <div class="grid g3" id="h_tools" style="margin-top:12px"></div>
     <p class="quiet" id="h_locked"></p>
     </div><!-- /d_doors -->
-  </section>
+  </section><!-- /methods -->
 
   <!-- ───────────── excavation session ───────────── -->
   <section id="session" hidden>
@@ -300,7 +333,7 @@ const $ = id => document.getElementById(id);
 let STATE = {turn:null, card:null, session:null, home:null};
 
 const me = () => $('me').value.trim();
-function show(id){ for(const s of ['onboard','home','session','afterglow','cardview']) $(s).hidden = (s!==id); }
+function show(id){ for(const s of ['onboard','home','session','afterglow','cardview','library','methods']) $(s).hidden = (s!==id); }
 function err(msg){ $('err').textContent = msg || ''; }
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -375,6 +408,27 @@ async function startStory(){
   }catch(e){ err(e.message); }
   finally{ if(btn) btn.disabled = false; }
 }
+
+// ── ★ 오늘의 질문 — 홈의 주인공 ─────────────────────────────
+let TODAY_SKIP = 0, TODAY = null;
+async function loadToday(){
+  try{
+    TODAY = await api('/api/experts/' + encodeURIComponent(me())
+                      + '/next?skip=' + TODAY_SKIP);
+    $('tq_q').textContent = TODAY.question;
+    $('tq_src').textContent =
+      TODAY.source === 'junior' ? L['today.src.junior']
+      : TODAY.source === 'doc' ? L['today.src.doc']
+      : TODAY.source === 'voice' ? L['today.src.voice']
+      : TODAY.source === 'flag' ? L['today.src.flag'] : L['today.src.probe'];
+    $('today').hidden = !!TODAY.readonly;
+  }catch(e){ $('today').hidden = true; }
+}
+function answerToday(){
+  if(TODAY && TODAY.gap_id) startGap(TODAY.gap_id);
+  else startSession('ladder');
+}
+function skipToday(){ TODAY_SKIP += 1; loadToday(); }
 
 // ── 카드 렌더러 — 카드를 카드답게. afterglow 와 cardview 가 같이 쓴다.
 function slotSec(label, val, cls){
@@ -657,6 +711,7 @@ async function loadHome(){
   show('home');
   loadShelf();
   loadDocs();
+  loadToday();
 }
 
 function meetAlter(){ location.href = '/alter/' + encodeURIComponent(me()) + qs; }
@@ -720,9 +775,9 @@ function renderHome(h){
   const ro = !!h.readonly;
   $('ro_note').hidden = !ro;
   if(ro) $('ro_note').textContent = L['home.readonly'];
-  $('d_doors').hidden = ro;
   $('flag_row').hidden = ro;
   $('h_toggle').hidden = ro;
+  if(ro) show('library');   // 전시 전문가의 본체는 구경거리(서가·회고록)다
 
   if(h.entry_probe?.question) $('h_probe').textContent = h.entry_probe.question;
   $('h_locked').textContent = h.tool_total

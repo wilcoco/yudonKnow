@@ -194,6 +194,17 @@ def list_experts(
     }
 
 
+@router.get("/experts/{expert}/next")
+def peek_next(
+    expert: str,
+    skip: int = 0,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """오늘의 질문 미리보기 — 홈의 주인공. 세션은 만들지 않는다."""
+    return service.peek_next_question(session, expert, skip=skip, lang=lang)
+
+
 @router.get("/experts/{expert}/home")
 def home(
     expert: str,

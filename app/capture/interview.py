@@ -140,6 +140,49 @@ _HEDGES = (
 )
 
 
+#: 모호 수치어 — "적당히 높으면" 은 후배가 쓸 수 없다. 숫자가 없는 채로
+#: 이 말이 나오면 경계 슬라이더의 정신으로 즉시 되짚는다 (도구 발동 보장 ①).
+_VAGUE = (
+    "적당히", "적절히", "이 정도면", "어느 정도", "충분히", "좀 높", "좀 낮",
+    "약간", "높으면", "낮으면", "많이", "조금",
+    "a bit", "about right", "roughly", "as needed", "enough", "slightly",
+    "fairly", "too high", "too low", "a little",
+)
+
+#: 감각어 — 신호를 파는 중에 감각이 언급되면 감각 사다리의 정신으로
+#: 채널을 분해한다 (도구 발동 보장 ②).
+_SENSORY = (
+    "냄새", "소리", "느낌", "촉감", "울림", "광이", "광택", "결이", "손끝",
+    "smell", "sound", "feel", "ring", "sheen", "by ear", "by hand", "by eye",
+    "texture",
+)
+
+_PIN_Q = {
+    "ko": "방금 '{word}' 라고 하셨는데 — 몇부터입니까? 숫자나 기준 하나로 짚어주세요. 후배는 그 숫자가 없으면 못 씁니다.",
+    "en": "You said '{word}' — from what number? Pin it to a figure or a threshold. A junior cannot use it without one.",
+}
+_SENSE_Q = {
+    "ko": "그 감각을 채널로 나눠보죠 — 눈·귀·손·냄새 중 어디입니까? 그리고 정상일 때와 무엇이 다릅니까? 비유로 말씀하셔도 됩니다.",
+    "en": "Let's split that sense into channels — eye, ear, hand, or smell? And how does it differ from normal? An analogy is fine.",
+}
+
+
+def vague_word(answer: str) -> str:
+    """숫자 없는 모호 수치어를 찾는다. 숫자가 이미 있으면 짚을 필요 없다."""
+    text = (answer or "").lower()
+    if any(ch.isdigit() for ch in text):
+        return ""
+    for w in _VAGUE:
+        if w in text:
+            return w
+    return ""
+
+
+def has_sense(answer: str) -> bool:
+    text = (answer or "").lower()
+    return any(w in text for w in _SENSORY)
+
+
 def is_hedge(answer: str) -> bool:
     text = " ".join((answer or "").lower().split())
     return any(h in text for h in _HEDGES) and len(text) < 120
@@ -237,6 +280,8 @@ def next_question(
     history: list[tuple[str, str]] | None = None,
     gap_question: str = "",
     gap_source: str = "junior",   # junior | doc | voice
+    last_rung: str = "",
+    last_slot: str = "",
     lang: str = "en",
 ) -> Question:
     """다음 질문 하나.
@@ -309,6 +354,23 @@ def next_question(
         if card is not None and len(card.missing) > 1:
             target = card.missing[1]
             fallback_text = slot_question(target, lang)
+
+    # 도구 발동 보장 — 얼버무림 다음 순위의 결정적 트리거 둘. 같은 수를 두 번
+    # 연속 두지 않는다 (last_rung 확인) — 짚었는데 또 짚으면 취조가 된다.
+    # 기준은 "직전 답이 어느 칸을 향했는가"(last_slot) — 답이 이미 칸을 채워
+    # 다음 target 이 넘어간 뒤에도, 모호함·감각은 그 칸에서 즉시 짚어야 한다.
+    if last and not is_hedge(last) and last_rung not in ("pin", "sense", "deepen"):
+        word = vague_word(last)
+        if word and last_slot:
+            return Question(
+                text=_PIN_Q.get(lang, _PIN_Q["en"]).format(word=word),
+                rung="pin", instrument=instrument, targets=last_slot,
+            )
+        if last_slot == "cues" and has_sense(last):
+            return Question(
+                text=_SENSE_Q.get(lang, _SENSE_Q["en"]),
+                rung="sense", instrument=instrument, targets="cues",
+            )
 
     prompt = _build_probe_prompt(history, target, instrument, lang)
     try:

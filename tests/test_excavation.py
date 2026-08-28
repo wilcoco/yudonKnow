@@ -239,3 +239,46 @@ def test_excavation_lives_in_the_experts_language_not_the_browsers(session):
                             "게이트 반대편에만 물결무늬가 떴다", lang="en")
     row = session.get(db.CardRow, r["card"]["id"])
     assert row.lang == "ko", f"카드가 {row.lang} 로 저장됐다 — 한국 후배 검색에서 빠진다"
+
+
+def test_a_vague_quantity_is_pinned_to_a_number_once(session):
+    """"적당히 높으면" 은 후배가 쓸 수 없다 — 경계 슬라이더가 그 자리에서 선다.
+
+    숫자 없는 모호 수치어가 나오면 다음 질문이 "몇부터입니까" 로 짚는다.
+    한 번만 — 짚었는데 또 짚으면 취조가 된다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    started = service.start_session(session, "hong", instrument="moment", lang="ko")
+    r = service.answer_turn(session, started["turn_id"], _DIG[0], lang="ko")
+    r = service.answer_turn(session, r["turn_id"],
+                            "압력이 적당히 높으면 그때 세워", lang="ko")
+    assert r["rung"] == "pin", "모호 수치어를 짚지 않았다"
+    assert "몇부터" in r["question"]
+
+    r = service.answer_turn(session, r["turn_id"], "그냥 적당히 보는 거지", lang="ko")
+    assert r["rung"] != "pin", "같은 수를 두 번 뒀다 — 취조가 된다"
+
+
+def test_a_sensory_answer_gets_the_channel_probe(session):
+    """신호를 파는 중 감각이 언급되면 감각 사다리가 그 자리에서 선다."""
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    started = service.start_session(session, "hong", instrument="moment", lang="ko")
+    r = service.answer_turn(session, started["turn_id"], _DIG[0], lang="ko")
+    r = service.answer_turn(session, r["turn_id"],
+                            "그건 소리가 달라. 울림으로 아는 거야", lang="ko")
+    assert r["rung"] == "sense", "감각어인데 채널 분해가 서지 않았다"
+    assert "채널" in r["question"] or "눈·귀" in r["question"]
+
+
+def test_overlapping_cues_summon_the_contrast_pair(session):
+    """같은 영역, 겹치는 신호의 두 카드 — 대조 짝이 추천 최상단 근처에 선다."""
+    from app.capture.instruments import recommend
+    from app.core.card import Card, CardStatus
+
+    a = Card(id="ca", expert="h", title="게이트 반대편 플로우마크", domain="사출",
+             cues=["게이트 반대편 물결무늬"], judgment="속도", status=CardStatus.CONFIRMED)
+    b = Card(id="cb", expert="h", title="게이트 주변 플로우마크", domain="사출",
+             cues=["게이트 주변 물결무늬"], judgment="온도", status=CardStatus.CONFIRMED)
+
+    keys = [s.instrument.key for s in recommend([a, b], lang="ko", card_count=9)]
+    assert "contrast" in keys, "신호 겹침인데 대조 짝이 서지 않았다"

@@ -471,3 +471,25 @@ def test_the_junior_can_overrule_a_hollow_answer(session):
     assert any("캘리브레이션" in g["question"] for g in home["gaps"]), (
         "후배의 판정이 공백 큐에 닿지 않았다"
     )
+
+
+def test_todays_question_follows_the_wheel_priority(session):
+    """홈의 주인공 "오늘의 질문" — 선택 순서가 곧 가치관이다.
+
+    후배/문서 공백 > 카드 없는 이관 업무 > 입구 프로브. 넘기면 사라지지 않고
+    뒤로 밀릴 뿐이다.
+    """
+    _leave_a_judgment(session)
+    session.add(__import__("app.store.db", fromlist=["db"]).Flag(
+        expert="hong", domain="야간 대응"))
+    session.commit()
+    service.ask_alter(session, "hong", "연차 정산은 어떻게 하나요", asker="kim")
+
+    first = service.peek_next_question(session, "hong", lang="ko")
+    assert first["source"] == "junior" and "연차" in first["question"]
+
+    second = service.peek_next_question(session, "hong", skip=1, lang="ko")
+    assert second["source"] == "flag" and "야간 대응" in second["question"]
+
+    third = service.peek_next_question(session, "hong", skip=2, lang="ko")
+    assert third["source"] == "probe"

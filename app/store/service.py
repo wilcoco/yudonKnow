@@ -186,6 +186,44 @@ def _log(
 
 # --------------------------------------------------------------------- 발굴
 
+def peek_next_question(
+    session: OrmSession, expert: str, *, skip: int = 0, lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """오늘의 질문 미리보기 — **세션을 만들지 않는다.**
+
+    홈의 주인공은 "오늘의 질문" 하나다 (MVP 척추: 묻는 대로 답하면, 당신
+    없이도 일하는 판단이 남는다). 선택 순서는 start_session 과 같은 가치관:
+    후배/문서/혼잣말 공백 → 카드 없는 이관 업무 → 입구 프로브 순환.
+    ``skip`` 으로 넘길 수 있다 — 넘긴다고 사라지지 않고 뒤로 밀릴 뿐이다.
+    """
+    row = get_expert(session, expert, lang=lang)
+    lang = row.lang or lang
+    queue: list[dict[str, str]] = []
+
+    for gap in open_gaps(session, expert):
+        src = ("doc" if _lines(gap.askers) == ["📄"]
+               else "voice" if _lines(gap.askers) == ["🎙"] else "junior")
+        queue.append({"question": gap.question, "source": src, "gap_id": gap.id})
+
+    live = [c for c in cards_of(session, expert) if c.status is not CardStatus.DORMANT]
+    covered = {c.domain for c in live if c.domain}
+    for f in session.scalars(
+        select(db.Flag).where(db.Flag.expert == expert).order_by(db.Flag.created_at)
+    ).all():
+        if f.domain not in covered:
+            queue.append({
+                "question": interview.flag_probe(f.domain, len(live), lang),
+                "source": "flag", "gap_id": "",
+            })
+
+    probes = [interview.entry_probe(len(live) + i, lang) for i in range(4)]
+    for kind, q in probes:
+        queue.append({"question": q, "source": "probe", "gap_id": ""})
+
+    picked = queue[skip % len(queue)]
+    return picked | {"queued": len(queue), "readonly": expert in settings.featured}
+
+
 def start_session(
     session: OrmSession, expert: str, *, instrument: str = LADDER,
     gap_id: str = "", lang: str = LANG_DEFAULT,
@@ -313,7 +351,10 @@ def answer_turn(
     card = row_to_card(card_row)
 
     question = interview.next_question(
-        get_llm(), instrument=sess.instrument, card=card, history=history, lang=lang
+        get_llm(), instrument=sess.instrument, card=card, history=history,
+        last_rung=turn.rung,
+        last_slot=turn.targets or interview.RUNG_SLOT.get(turn.rung, ""),
+        lang=lang,
     )
     next_turn = db.Turn(
         id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung,
