@@ -1280,7 +1280,9 @@ def alter_preview(
     # 카드에선 정련 전 원문 문장이라 검색이 빗나간다 — 스팟 워크 실측.)
     card0 = row_to_card(row)
     seed = card0.cues[0] if card0.cues else row.title
-    question = (
+    # 검색에는 신호 원문만 — 붙임말("이럴 땐 어떻게 하죠")의 토큰이 분모를
+    # 키워 겹침 점수를 죽인다. 화면 표시용 문장은 따로 꾸민다.
+    shown = (
         f"{seed} — 이럴 땐 어떻게 하죠?" if lang == "ko"
         else f"{seed} — what do I do?"
     )
@@ -1288,7 +1290,7 @@ def alter_preview(
         get_llm(),
         persona_of(expert_row, card_count=_confirmed_count(session, row.expert)),
         cards_of(session, row.expert),
-        question,
+        seed,
         viewer=row.expert,          # 본인 — 봉인·지목 카드도 본인은 본다
         top_k=settings.retrieval_top_k,
         explore_quota=0.0,          # 시연에 탐색 쿼터는 무의미하다
@@ -1296,7 +1298,7 @@ def alter_preview(
         days_left=days_left(expert_row),
         lang=lang,
     )
-    return {"question": question, "reply": reply.as_dict()}
+    return {"question": shown, "reply": reply.as_dict()}
 
 
 def memoir(
