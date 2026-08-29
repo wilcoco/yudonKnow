@@ -27,7 +27,7 @@
 <script>
 const LANG = {{ lang | tojson }};
 const L = {{ L | tojson }};
-const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+const qs = '?lang=' + LANG;   // 항상 명시 — 생략하면 Accept-Language(ko)가 이긴다
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }

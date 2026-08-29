@@ -223,6 +223,47 @@ def _grounded(text: str, chosen: list[Card]) -> bool:
     return True
 
 
+#: 자책·실패 어휘 — 서술 문장에 이 말이 나오면, 그 **어간이 카드 원문에
+#: 실제로 있는지** 를 기계가 확인한다. 회고체를 자연스럽게 만들려고 LLM 이
+#: "그 신호를 놓친 것은 나의 실패였다" 를 지어낸 실측이 이 검열의 이유다 —
+#: 판단 답변의 환각보다 회고록의 허위 자책이 명예에 더 깊이 닿는다.
+_BLAME = {
+    "실패": ("실패",), "후회": ("후회",), "놓쳤": ("놓치", "놓쳤", "놓친"),
+    "놓친": ("놓치", "놓쳤", "놓친"), "잘못": ("잘못",), "부끄": ("부끄",),
+    "뼈아": ("뼈아",), "아쉬": ("아쉬",), "자책": ("자책",), "탓": ("탓",),
+    "fail": ("fail",), "regret": ("regret",), "mistake": ("mistake",),
+    "missed": ("miss",), "ashamed": ("ashamed", "shame"), "blame": ("blame",),
+}
+
+
+def _honest_prose(text: str, cards: list[Card]) -> str:
+    """카드에 없는 실패·자책 문장을 **통째로 떨군다** — 문장 단위, 결정적.
+
+    회고록 서술은 표지고 카드가 진실이다. 표지가 진실에 없는 자책을 더하면
+    그 문장만 빠진다 — 나머지 서술은 산다. 전부 떨어지면 빈 문자열
+    (화면은 카드 원문만 남는다 — 지어낸 회고보다 낫다).
+    """
+    corpus = " ".join(
+        " ".join([c.title, c.situation, c.judgment, c.rationale, c.failure,
+                  " ".join(c.cues), " ".join(c.action), " ".join(c.exceptions)])
+        for c in cards
+    ).lower()
+    kept: list[str] = []
+    for sent in re.split(r"(?<=[.!?다])\s+", text.strip()):
+        if not sent.strip():
+            continue
+        low = sent.lower()
+        fabricated = False
+        for word, stems in _BLAME.items():
+            if word in low and not any(st in corpus for st in stems):
+                log.warning("회고록 서술에서 카드에 없는 자책 문장 제거: %s", sent[:60])
+                fabricated = True
+                break
+        if not fabricated:
+            kept.append(sent.strip())
+    return " ".join(kept)
+
+
 def memoir_prose(
     llm: BaseLLM, *, name: str, sayings: list[str], domain: str,
     cards: list[Card], lang: str = "en",
@@ -245,7 +286,9 @@ def memoir_prose(
             "· 1인칭('나는'). 3~5문장. 담담한 회고체.\n"
             "· 아래 판단 카드에 적힌 사실만 쓴다. 카드에 없는 사건·장소·인물·"
             "감정사를 지어내지 마라.\n"
-            "· 실패담이 있으면 피하지 말고 한 문장으로 품어라.\n"
+            "· 실패담은 카드의 '실패' 칸에 **적혀 있을 때만** 한 문장으로 "
+            "품어라. 카드에 없는 실패·후회·자책을 만들어 넣지 마라 — "
+            "이것은 그 사람의 공식 기록이다.\n"
             f"{'· 이 사람의 말투: ' + voice if voice else ''}\n"
             f"\n[판단 카드]\n{block}\n\n서술만 출력하라."
         )
@@ -257,8 +300,9 @@ def memoir_prose(
             "- First person. 3-5 sentences. Quiet, reflective tone.\n"
             "- Use only facts present in the cards below. Invent no events, "
             "places, people, or feelings that are not there.\n"
-            "- If there is a failure story, hold it in one sentence — do not "
-            "look away from it.\n"
+            "- Include a failure only if the cards' failure field actually "
+            "records one. Never invent failure, regret or self-blame that is "
+            "not on the cards — this is the person's official record.\n"
             f"{'- Their turns of phrase: ' + voice if voice else ''}\n"
             f"\n[Judgment cards]\n{block}\n\nOutput the passage only."
         )
@@ -268,7 +312,9 @@ def memoir_prose(
         return ""
     if not text or text.startswith("⚠"):
         return ""
-    return text
+    # 프롬프트는 부탁이고 검열은 집행이다 — 카드에 없는 자책 문장은 여기서
+    # 기계적으로 떨어진다.
+    return _honest_prose(text, cards)
 
 
 def gap_message(

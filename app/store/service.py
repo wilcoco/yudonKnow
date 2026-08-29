@@ -896,6 +896,11 @@ def route_question(
         if got.is_gap:
             continue
         persona = persona_of(r)
+        # 사람 추천과 카드 나열은 기준이 다르다 — 사람은 최고 히트가 정하고,
+        # 곁다리 카드(1등 점수의 절반 미만)는 목록에서 뺀다. "관련 카드" 에
+        # 약한 카드가 섞이면 추천 전체가 못 미더워진다 (QA 실측).
+        top = max(h.score for h in got.hits)
+        strong = [h for h in got.hits if h.score >= top * 0.5]
         found.append({
             "expert": r.id,
             "alter": persona.label(lang),
@@ -904,7 +909,7 @@ def route_question(
             # 제목만 보인다 — retrieve 가 이미 보는 사람의 자격(visible_to,
             # citable)으로 거른 카드들이라 잠긴 판단이 새지 않는다.
             "hits": [{"id": h.card.id, "title": h.card.title,
-                      "domain": h.card.domain} for h in got.hits],
+                      "domain": h.card.domain} for h in strong],
         })
     found.sort(key=lambda e: -e["confidence"])
     return {"experts": found}
@@ -1403,17 +1408,16 @@ def memoir(
     ]
 
     stmt = usage_statement(session, expert, lang=lang)
-    # 장 서두의 1인칭 서술 — 실기저일 때만. stub 은 지어내지 않으므로 비운다.
-    sayings = _lines(row.sayings)
-    prose: dict[str, str] = {}
-    if settings.llm_enabled:
-        for chapter_domain, entries in chapters.items():
-            prose[chapter_domain] = memoir_prose(
-                get_llm(), name=row.display_name or expert, sayings=sayings,
-                domain=chapter_domain,
-                cards=[c for c in cards if (c.domain or "—") == chapter_domain],
-                lang=lang,
-            )
+    # 장 서두의 1인칭 서술 — **여기서 생성하지 않는다.** 두 가지 이유:
+    # ① 장마다 LLM 을 돌리면 첫 화면이 20초 백지가 된다 (QA 실측) —
+    #    껍데기는 즉시 뜨고 서술은 화면이 비동기로 청한다.
+    # ② 본인이 승인한 서술만 확정이다 — 승인분은 DB 에서 그대로 나오고,
+    #    초안은 화면에서 '승인 전' 배지를 달고 온다.
+    saved = {
+        m.domain: m for m in session.scalars(
+            select(db.MemoirChapter).where(db.MemoirChapter.expert == expert)
+        ).all()
+    }
 
     return {
         "expert": expert,
@@ -1422,13 +1426,81 @@ def memoir(
         "farewell": row.farewell,
         "leaving_on": row.leaving_on.isoformat() if row.leaving_on else "",
         "chapters": [
-            {"domain": d, "entries": entries, "prose": prose.get(d, "")}
+            {
+                "domain": d, "entries": entries,
+                "prose": saved[d].prose if d in saved else "",
+                "approved": bool(d in saved and saved[d].approved_at),
+            }
             for d, entries in chapters.items()
         ],
+        "llm": settings.llm_enabled,
         "hands": hands,          # 글로 담지 못한 것 — 부록으로, 감추지 않는다
         "totals": stmt["totals"],
         "date": date.today().isoformat(),
     }
+
+
+def memoir_draft(
+    session: OrmSession, expert: str, domain: str, *, lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """장 서두 서술의 초안 — 생성하고 **승인 없이** 저장한다(캐시).
+
+    자책 검열(persona._honest_prose)을 통과한 문장만 온다. 이미 저장된
+    초안·승인분이 있으면 재생성하지 않는다 — "다시 엮기" 는 refresh 로.
+    """
+    row = get_expert(session, expert, lang=lang)
+    lang = row.lang or lang
+    existing = session.scalar(
+        select(db.MemoirChapter).where(
+            db.MemoirChapter.expert == expert, db.MemoirChapter.domain == domain
+        )
+    )
+    if existing and existing.prose:
+        return {"prose": existing.prose,
+                "approved": bool(existing.approved_at)}
+    if not settings.llm_enabled:
+        return {"prose": "", "approved": False}   # stub 은 지어내지 않는다
+    cards = [
+        c for c in cards_of(session, expert)
+        if (c.domain or "—") == domain
+        and c.status not in (CardStatus.DORMANT, CardStatus.DRAFT)
+    ]
+    text = memoir_prose(
+        get_llm(), name=row.display_name or expert, sayings=_lines(row.sayings),
+        domain=domain, cards=cards, lang=lang,
+    )
+    if text:
+        if existing is None:
+            existing = db.MemoirChapter(expert=expert, domain=domain)
+            session.add(existing)
+        existing.prose = text
+        session.commit()
+    return {"prose": text, "approved": False}
+
+
+def memoir_approve(
+    session: OrmSession, expert: str, domain: str, prose: str, *,
+    lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """본인이 고친 서술을 확정한다 — **이 승인이 있어야 기록이다.**
+
+    저장되는 것은 기계의 초안이 아니라 본인이 다듬은 문장이다. 빈 문장으로
+    승인하면 그 장은 서술 없이 카드만 남는다 — 그것도 본인의 선택이다.
+    """
+    get_expert(session, expert, lang=lang)
+    _guard_demo(expert, lang)
+    row = session.scalar(
+        select(db.MemoirChapter).where(
+            db.MemoirChapter.expert == expert, db.MemoirChapter.domain == domain
+        )
+    )
+    if row is None:
+        row = db.MemoirChapter(expert=expert, domain=domain)
+        session.add(row)
+    row.prose = prose.strip()
+    row.approved_at = datetime.now(timezone.utc)
+    session.commit()
+    return {"approved": True, "domain": domain}
 
 
 def card_view(card: Card) -> dict[str, Any]:

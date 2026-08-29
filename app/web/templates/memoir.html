@@ -34,7 +34,7 @@
   .epilogue .big{ font-size:17px; color:var(--ink); margin-bottom:8px; }
   .print-btn{ position:fixed; top:14px; right:14px; font-family:sans-serif; padding:8px 14px;
     border:1px solid var(--line); background:#fff; border-radius:18px; cursor:pointer; }
-  @media print{ .print-btn{ display:none; } body{ background:#fff; } .page{ padding-top:0; } }
+  @media print{ .print-btn, .draft-edit{ display:none; } body{ background:#fff; } .page{ padding-top:0; } }
 </style>
 </head>
 <body>
@@ -53,9 +53,15 @@
 
   {% for ch in m.chapters %}
   <h2><span class="no">{{ '%02d' % loop.index }}</span>{{ ch.domain }}</h2>
-  {% if ch.prose %}
+  {# 서술: 승인분은 그대로, 나머지는 비동기 초안 — 첫 화면은 즉시 뜬다. #}
+  {% if ch.approved and ch.prose %}
   <p class="prose">{{ ch.prose }}</p>
-  <p class="prose-note">{{ L['memoir.prose_note'] }}</p>
+  <p class="prose-note">✒ {{ L['memoir.approved_note'] }}</p>
+  {% elif m.llm %}
+  <div class="prose-slot" data-domain="{{ ch.domain }}"
+       {% if ch.prose %}data-cached="{{ ch.prose }}"{% endif %}>
+    <p class="prose-note">{{ L['memoir.weaving'] }}</p>
+  </div>
   {% endif %}
   {% for e in ch.entries %}
   <div class="entry">
@@ -95,5 +101,57 @@
   </div>
 
 </div>
+
+<script>
+// 서술은 비동기로 — 장마다 LLM 을 도는 동안 화면이 백지면 고장으로 읽힌다.
+// 초안은 '승인 전' 배지를 달고, 본인(소유자 화면)에게만 고침·승인 UI 가 붙는다.
+const EXPERT = {{ m.expert | tojson }};
+const LANG = {{ m.lang | tojson }};
+const L = {{ L | tojson }};
+const OWNER = (localStorage.getItem('ydk_me') === EXPERT) ||
+              new URLSearchParams(location.search).get('as') === EXPERT;
+function esc(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function paint(slot, prose, approved){
+  if(!prose){ slot.innerHTML = '<p class="prose-note">' + esc(L['memoir.retry']) + '</p>'; return; }
+  if(approved){
+    slot.innerHTML = '<p class="prose">' + esc(prose) + '</p>' +
+      '<p class="prose-note">✒ ' + esc(L['memoir.approved_note']) + '</p>';
+    return;
+  }
+  let html = '<p class="prose" style="border-left:3px solid var(--accent);padding-left:12px">' +
+    esc(prose) + '</p>' +
+    '<p class="prose-note">⚠ ' + esc(L['memoir.draft_badge']) + ' · ' + esc(L['memoir.draft_note']) + '</p>';
+  if(OWNER){
+    html += '<div class="draft-edit" style="font-family:sans-serif">' +
+      '<textarea style="width:100%;min-height:90px;font-family:inherit;font-size:14px">' +
+      esc(prose) + '</textarea>' +
+      '<button class="print-btn" style="position:static;margin-top:6px" ' +
+      'onclick="approve(this)">' + esc(L['memoir.approve']) + '</button></div>';
+  }
+  slot.innerHTML = html;
+}
+
+async function approve(btn){
+  const slot = btn.closest('.prose-slot');
+  const prose = slot.querySelector('textarea').value.trim();
+  const r = await fetch('/api/experts/' + encodeURIComponent(EXPERT) +
+    '/memoir/approve?lang=' + LANG, {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({domain: slot.dataset.domain, prose})});
+  if(r.ok){ paint(slot, prose, true); }
+  else { btn.textContent = '⚠'; }
+}
+
+document.querySelectorAll('.prose-slot').forEach(async slot => {
+  if(slot.dataset.cached){ paint(slot, slot.dataset.cached, false); return; }
+  try{
+    const r = await fetch('/api/experts/' + encodeURIComponent(EXPERT) +
+      '/memoir/draft?lang=' + LANG + '&domain=' + encodeURIComponent(slot.dataset.domain));
+    const d = await r.json();
+    paint(slot, d.prose, d.approved);
+  }catch(e){ paint(slot, '', false); }
+});
+</script>
 </body>
 </html>

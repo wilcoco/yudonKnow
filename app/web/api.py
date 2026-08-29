@@ -227,6 +227,33 @@ def toggle_alter(
     return {"expert": expert, "active": row.alter_active}
 
 
+@router.get("/experts/{expert}/memoir/draft")
+def memoir_draft(
+    expert: str,
+    domain: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """장 서술 초안 — 회고록 화면이 비동기로 청한다 (첫 화면 백지 방지)."""
+    return service.memoir_draft(session, expert, domain, lang=lang)
+
+
+class MemoirApproveIn(BaseModel):
+    domain: str
+    prose: str = ""
+
+
+@router.post("/experts/{expert}/memoir/approve")
+def memoir_approve(
+    expert: str,
+    body: MemoirApproveIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """본인이 다듬은 장 서술을 확정한다 — 승인 전 서술은 언제나 초안이다."""
+    return service.memoir_approve(session, expert, body.domain, body.prose, lang=lang)
+
+
 @router.get("/experts/{expert}/statement")
 def statement(
     expert: str,

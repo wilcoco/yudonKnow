@@ -415,3 +415,45 @@ def test_alias_generation_failure_is_harmless():
         ExplodingLLM(), title="t", situation="s", cues=["c"], lang="ko",
     )
     assert got == []
+
+
+def test_memoir_never_invents_failure_the_cards_do_not_record():
+    """회고록 검열 — 카드에 없는 자책 문장은 기계가 떨군다.
+
+    프로덕션 실측: 카드에 실패 기록이 없는데 서술에 "추가 신호를 놓친 것은
+    나의 실패였다" 가 생성됐다. 판단 답변의 환각보다 회고록의 허위 자책이
+    그 사람의 명예에 더 깊이 닿는다 — 프롬프트는 부탁이고 이것이 집행이다.
+    """
+    from app.alter.persona import _honest_prose
+
+    clean = make_card(failure="")
+    woven = ("나는 게이트 반대편의 물결무늬를 먼저 봤다. "
+             "추가 신호를 놓친 것은 나의 실패였다. "
+             "속도를 먼저 올리고 30샷을 지켜봤다.")
+    kept = _honest_prose(woven, [clean])
+    assert "실패" not in kept, "카드에 없는 실패가 기록으로 남았다"
+    assert "물결무늬" in kept and "30샷" in kept, "무고한 문장까지 떨어졌다"
+
+    # 카드가 실제로 기록한 실패는 산다 — 단, 그 어휘 그대로일 때만.
+    # ("놓쳤다" 는 카드에 없으면 카드에 다른 실패가 있어도 떨어진다:
+    # 검열 단위는 '실패의 존재' 가 아니라 '그 주장' 이다.)
+    honest = make_card(failure="초기에 온도만 만지다 이틀을 실패로 날렸다")
+    woven2 = "이틀을 실패로 날린 기억이 아직 쓰리다. 그 뒤로는 속도부터 봤다."
+    kept2 = _honest_prose(woven2, [honest])
+    assert "실패" in kept2, "카드에 실제로 있는 실패담까지 검열했다"
+
+
+def test_memoir_prose_is_draft_until_the_author_approves(session):
+    """승인 전 서술은 기록이 아니다 — 승인분만 approved 로 나온다."""
+    from app.store import db as sdb
+    from app.store.service import ensure_expert, memoir_approve
+
+    ensure_expert(session, "mem-1", display_name="멤", lang="ko")
+    out = memoir_approve(session, "mem-1", "도장", "내가 다듬은 문장이다.", lang="ko")
+    assert out["approved"] is True
+    row = session.scalar(
+        __import__("sqlalchemy").select(sdb.MemoirChapter).where(
+            sdb.MemoirChapter.expert == "mem-1")
+    )
+    assert row.prose == "내가 다듬은 문장이다."
+    assert row.approved_at is not None

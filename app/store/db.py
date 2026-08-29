@@ -215,6 +215,24 @@ class Gap(Base):
     last_asked: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class MemoirChapter(Base):
+    """회고록 장(章) 서두의 1인칭 서술 — **본인이 승인해야 확정이다.**
+
+    AI 가 엮은 초안이 본인 검토 없이 확정 기록처럼 보이면, 카드에 없는
+    '실패' 한 문장이 그 사람의 공식 기록이 된다 (QA 실측). 초안은
+    approved_at 이 비어 있고, 본인이 고쳐서 승인한 문장만 확정으로 산다.
+    """
+
+    __tablename__ = "memoir_chapters"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    expert: Mapped[str] = mapped_column(String(64), ForeignKey("experts.id"), index=True)
+    domain: Mapped[str] = mapped_column(String(120), default="")
+    prose: Mapped[str] = mapped_column(Text, default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class Anchor(Base):
     """적용 보고 = 외부 현실 닻 (CAMS-KnowledgeNet verification.py 이식).
 

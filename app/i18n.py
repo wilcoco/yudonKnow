@@ -353,6 +353,27 @@ CATALOG: dict[str, dict[str, str]] = {
     "memoir.title": {"en": "What I knew, and how I knew it",
                      "ko": "내가 알던 것, 그리고 어떻게 알았는가"},
     "memoir.print": {"en": "Print", "ko": "인쇄"},
+    "memoir.weaving": {
+        "en": "Weaving the judgment cards into this chapter…",
+        "ko": "판단 카드를 회고록으로 엮고 있습니다…",
+    },
+    "memoir.draft_note": {
+        "en": "Draft woven by AI from your judgment cards. Fix anything that "
+              "differs from what actually happened, then approve — nothing is "
+              "on the record until you do.",
+        "ko": "판단 카드를 바탕으로 AI가 엮은 초안입니다. 실제 경험과 다른 "
+              "부분을 고친 뒤 승인해 주세요 — 승인 전에는 기록이 아닙니다.",
+    },
+    "memoir.draft_badge": {"en": "DRAFT — not yet approved by the author",
+                            "ko": "초안 — 본인 승인 전"},
+    "memoir.approved_note": {
+        "en": "— approved by the author; woven from the cards below.",
+        "ko": "— 본인이 승인한 서술입니다. 아래 판단 카드에서 엮었습니다.",
+    },
+    "memoir.approve": {"en": "Approve this chapter", "ko": "이 장 승인"},
+    "memoir.approve.done": {"en": "Approved.", "ko": "승인되었습니다."},
+    "memoir.retry": {"en": "Could not weave this chapter — reload to retry.",
+                      "ko": "서술을 엮지 못했습니다 — 새로고침으로 다시 시도하세요."},
     "memoir.prose_note": {
         "en": "— woven by machine from the judgment cards below; the cards are "
               "the record, this passage is the binding.",
