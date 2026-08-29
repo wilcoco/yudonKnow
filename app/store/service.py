@@ -1367,7 +1367,8 @@ def alter_preview(
 
 
 def memoir(
-    session: OrmSession, expert: str, *, lang: str = LANG_DEFAULT
+    session: OrmSession, expert: str, *, viewer: str = "",
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """판단 회고록 — **자서전은 입력이 아니라 출력이다.**
 
@@ -1382,9 +1383,14 @@ def memoir(
     row = get_expert(session, expert, lang=lang)
     lang = row.lang or lang        # 회고록은 그 사람의 언어로 산다
 
+    owner = bool(viewer) and viewer == expert
+    # 통제권은 회고록에서도 산다 — 봉인·비공개·지목 카드는 본인 판에만
+    # 실린다. URL 은 누구나 열 수 있으므로(데모 신원은 soft, SSO 는 P1)
+    # 남의 판은 공개 카드로만 제본된다.
     cards = [
         c for c in cards_of(session, expert)
         if c.status is not CardStatus.DORMANT and c.status is not CardStatus.DRAFT
+        and (owner or c.visible_to(viewer))
     ]
     # 영역별 장(章) — 같은 영역의 판단이 한 장으로 묶인다.
     chapters: dict[str, list[dict[str, Any]]] = {}
@@ -1425,15 +1431,19 @@ def memoir(
         "lang": lang,
         "farewell": row.farewell,
         "leaving_on": row.leaving_on.isoformat() if row.leaving_on else "",
+        # 남의 판에는 **본인이 승인한 서술만** 실린다 — 초안(기계의 문장)이
+        # 그 사람 소개로 나가는 일은 없다. 본인 판에서만 초안을 만들고 다듬는다.
         "chapters": [
             {
                 "domain": d, "entries": entries,
-                "prose": saved[d].prose if d in saved else "",
+                "prose": (saved[d].prose if d in saved and
+                          (owner or saved[d].approved_at) else ""),
                 "approved": bool(d in saved and saved[d].approved_at),
             }
             for d, entries in chapters.items()
         ],
-        "llm": settings.llm_enabled,
+        "llm": settings.llm_enabled and owner,
+        "owner": owner,
         "hands": hands,          # 글로 담지 못한 것 — 부록으로, 감추지 않는다
         "totals": stmt["totals"],
         "date": date.today().isoformat(),
@@ -1441,7 +1451,8 @@ def memoir(
 
 
 def memoir_draft(
-    session: OrmSession, expert: str, domain: str, *, lang: str = LANG_DEFAULT,
+    session: OrmSession, expert: str, domain: str, *, viewer: str = "",
+    lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """장 서두 서술의 초안 — 생성하고 **승인 없이** 저장한다(캐시).
 
@@ -1460,10 +1471,12 @@ def memoir_draft(
                 "approved": bool(existing.approved_at)}
     if not settings.llm_enabled:
         return {"prose": "", "approved": False}   # stub 은 지어내지 않는다
+    owner = bool(viewer) and viewer == expert
     cards = [
         c for c in cards_of(session, expert)
         if (c.domain or "—") == domain
         and c.status not in (CardStatus.DORMANT, CardStatus.DRAFT)
+        and (owner or c.visible_to(viewer))   # 잠긴 카드가 서술로 새지 않게
     ]
     text = memoir_prose(
         get_llm(), name=row.display_name or expert, sayings=_lines(row.sayings),

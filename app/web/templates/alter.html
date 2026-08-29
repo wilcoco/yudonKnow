@@ -33,6 +33,9 @@
   <div class="badges" style="margin-bottom:10px">
     <span class="b am" id="label"></span>
     <span class="b" id="days"></span>
+    {# 소개로서의 회고록 — 후배는 카드만이 아니라 사람을 물려받는다.
+       공개 판: 공개 카드 + 본인이 승인한 서술만 제본된다. #}
+    <a class="b" href="/memoir/{{ expert_id }}?lang={{ lang }}">{{ L['alter.memoir'].replace('{}', expert_name) }}</a>
   </div>
   <p class="quiet" style="margin-top:0">{{ L['alter.disclaimer'] }}</p>
 

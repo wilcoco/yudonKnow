@@ -60,7 +60,7 @@
         <button id="h_toggle" onclick="toggleAlter()"></button>
         <button onclick="exportCards()">{{ L['home.export'] }}</button>
         <button onclick="openStatement()">{{ L['home.statement'] }}</button>
-        <button onclick="location.href='/memoir/'+encodeURIComponent(me())+qs">📖 {{ L['home.memoir'] }}</button>
+        <button onclick="location.href='/memoir/'+encodeURIComponent(me())+qs+'&as='+encodeURIComponent(me())">📖 {{ L['home.memoir'] }}</button>
         <button onclick="meetAlter()">{{ L['home.meet'] }}</button>
       </div>
     </div>

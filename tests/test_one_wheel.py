@@ -559,3 +559,41 @@ def test_a_returning_junior_is_asked_about_last_time(session):
     service.report_anchor(session, card_id, "helped", reporter="kim")
     f2 = service.followup(session, "hong", "kim")
     assert f2["card"] is None, "보고를 마쳤는데 또 물었다 — 채근이 된다"
+
+
+def test_memoir_honors_control_for_strangers(session):
+    """회고록 URL 은 누구나 연다 — 그래서 통제권이 회고록에서도 서야 한다.
+
+    비공개·봉인·지목 카드는 본인 판에만 제본되고, 남의 판에는 공개 카드와
+    본인이 승인한 서술만 실린다 (실측: 필터 없던 시절 봉인 카드가 URL 로
+    새는 구멍이 있었다).
+    """
+    from app.store import db as sdb
+    from app.store.service import ensure_expert, memoir, memoir_approve
+
+    ensure_expert(session, "vis-1", display_name="검", lang="ko")
+    session.add(sdb.CardRow(
+        id="c_vis_p", expert="vis-1", title="공개 판단", domain="영역A",
+        situation="s", cues="신호", judgment="j", status="confirmed",
+        visibility="public"))
+    session.add(sdb.CardRow(
+        id="c_vis_x", expert="vis-1", title="비밀 판단", domain="영역A",
+        situation="s", cues="신호", judgment="j", status="confirmed",
+        visibility="private"))
+    session.commit()
+
+    pub = memoir(session, "vis-1", viewer="junior-x")
+    titles = [e["card"]["title"] for ch in pub["chapters"] for e in ch["entries"]]
+    assert "공개 판단" in titles and "비밀 판단" not in titles
+    assert pub["llm"] is False, "남의 판에서 초안 슬롯이 열렸다"
+
+    own = memoir(session, "vis-1", viewer="vis-1")
+    titles = [e["card"]["title"] for ch in own["chapters"] for e in ch["entries"]]
+    assert "비밀 판단" in titles
+
+    # 승인 전 서술은 남에게 안 보인다 — 승인하면 보인다.
+    session.add(sdb.MemoirChapter(expert="vis-1", domain="영역A", prose="초안 문장"))
+    session.commit()
+    assert memoir(session, "vis-1", viewer="junior-x")["chapters"][0]["prose"] == ""
+    memoir_approve(session, "vis-1", "영역A", "승인된 문장", lang="ko")
+    assert memoir(session, "vis-1", viewer="junior-x")["chapters"][0]["prose"] == "승인된 문장"

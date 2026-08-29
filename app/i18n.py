@@ -353,6 +353,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "memoir.title": {"en": "What I knew, and how I knew it",
                      "ko": "내가 알던 것, 그리고 어떻게 알았는가"},
     "memoir.print": {"en": "Print", "ko": "인쇄"},
+    "alter.memoir": {"en": "📖 {}'s memoir", "ko": "📖 {} 님의 회고록"},
     "memoir.weaving": {
         "en": "Weaving the judgment cards into this chapter…",
         "ko": "판단 카드를 회고록으로 엮고 있습니다…",

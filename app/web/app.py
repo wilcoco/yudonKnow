@@ -170,13 +170,18 @@ def alter(request: Request, expert_id: str) -> HTMLResponse:
 
 
 @app.get("/memoir/{expert_id}", response_class=HTMLResponse)
-def memoir(request: Request, expert_id: str) -> HTMLResponse:
-    """판단 회고록 — 자서전은 입력이 아니라 출력이다. 인쇄가 1급 시민."""
+def memoir(request: Request, expert_id: str, viewer: str = "") -> HTMLResponse:
+    """판단 회고록 — 자서전은 입력이 아니라 출력이다. 인쇄가 1급 시민.
+
+    ``?as=`` 신원으로 판이 갈린다: 본인 판(전부 + 초안·승인 도구) /
+    공개 판(공개 카드 + 승인된 서술만). 데모 신원은 soft — SSO 는 P1.
+    """
     from app.store import service as svc
 
     session = db.SessionLocal()
     try:
-        data = svc.memoir(session, expert_id)
+        data = svc.memoir(
+            session, expert_id, viewer=request.query_params.get("as", ""))
     finally:
         session.close()
     ctx = _ctx(request)

@@ -146,8 +146,10 @@ async function approve(btn){
 document.querySelectorAll('.prose-slot').forEach(async slot => {
   if(slot.dataset.cached){ paint(slot, slot.dataset.cached, false); return; }
   try{
+    const asMe = new URLSearchParams(location.search).get('as') || '';
     const r = await fetch('/api/experts/' + encodeURIComponent(EXPERT) +
-      '/memoir/draft?lang=' + LANG + '&domain=' + encodeURIComponent(slot.dataset.domain));
+      '/memoir/draft?lang=' + LANG + '&viewer=' + encodeURIComponent(asMe) +
+      '&domain=' + encodeURIComponent(slot.dataset.domain));
     const d = await r.json();
     paint(slot, d.prose, d.approved);
   }catch(e){ paint(slot, '', false); }

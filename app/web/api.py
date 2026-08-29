@@ -231,11 +231,12 @@ def toggle_alter(
 def memoir_draft(
     expert: str,
     domain: str,
+    viewer: str = "",
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
     """장 서술 초안 — 회고록 화면이 비동기로 청한다 (첫 화면 백지 방지)."""
-    return service.memoir_draft(session, expert, domain, lang=lang)
+    return service.memoir_draft(session, expert, domain, viewer=viewer, lang=lang)
 
 
 class MemoirApproveIn(BaseModel):
