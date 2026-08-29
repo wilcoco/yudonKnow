@@ -861,6 +861,55 @@ def followup(
     return {"card": None}
 
 
+def route_question(
+    session: OrmSession, question: str, *, asker: str = "",
+    lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """통합 질문창 — 답하지 않고 **누가 판단을 남겼는지 연결만** 한다.
+
+    후배가 선배를 골라 들어가는 대신, 질문부터 던진다: "이 문제는 도장은
+    유돈, 폐수는 Dale 의 판단이 있습니다." 전 전문가의 카드에 같은 결정적
+    검색을 돌린다 — LLM 호출 없음, 즉답, 원장·공백 기록 없음(미리보기와
+    같은 원칙: 실제로 그 분신에게 물을 때만 흔적이 남는다).
+
+    여러 선배의 답을 **합성하지 않는다** — 분신은 한 사람의 카드만 근거로
+    자기 목소리로 말한다는 불변식이 이 서비스의 경계다. 여기서는 문만
+    가리키고, 답은 각 분신의 방에서 듣는다.
+    """
+    from app.core.retrieval import retrieve
+
+    question = (question or "").strip()
+    if not question:
+        return {"experts": []}
+    featured = settings.featured
+    found: list[dict[str, Any]] = []
+    for r in session.scalars(select(db.Expert)).all():
+        if not r.alter_active:
+            continue
+        if featured and r.id not in featured:
+            continue   # 공개 명부와 같은 안전핀 — 손님 계정은 포털에 안 선다
+        cards = cards_of(session, r.id)
+        got = retrieve(
+            cards, question, viewer=asker, top_k=3, explore_quota=0.0,
+            confidence_floor=settings.confidence_floor,
+        )
+        if got.is_gap:
+            continue
+        persona = persona_of(r)
+        found.append({
+            "expert": r.id,
+            "alter": persona.label(lang),
+            "lang": r.lang,
+            "confidence": round(got.confidence, 2),
+            # 제목만 보인다 — retrieve 가 이미 보는 사람의 자격(visible_to,
+            # citable)으로 거른 카드들이라 잠긴 판단이 새지 않는다.
+            "hits": [{"id": h.card.id, "title": h.card.title,
+                      "domain": h.card.domain} for h in got.hits],
+        })
+    found.sort(key=lambda e: -e["confidence"])
+    return {"experts": found}
+
+
 def _other_experts(
     session: OrmSession, expert: str, *, lang: str = ""
 ) -> list[str]:
@@ -1523,6 +1572,7 @@ def expert_home(
             "id": row.id,
             "name": row.display_name or row.id,
             "alter_label": persona_of(row).label(lang),
+            "lang": row.lang,
             "alter_active": row.alter_active,
             "days_left": days_left(row),
         },
@@ -1541,6 +1591,8 @@ def expert_home(
             "missed": summary.missed,
             "help_rate": summary.help_rate,
             "hands_items": summary.hands_items,
+            # 미응답 숫자 — 빠지면 화면이 "미응답 " 으로 끝난다 (QA 실측)
+            "gaps_open": summary.gaps_open,
             "recent": [
                 {
                     "sentence": e.sentence(t(f"ledger.{e.event.value}", lang)),

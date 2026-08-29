@@ -92,17 +92,33 @@ async function api(path, opts){
   }catch(e){}
 })();
 
+(function(){
+  const preq = new URLSearchParams(location.search).get('q');
+  if(preq){ const el = document.getElementById('q'); el.value = preq; el.focus(); }
+})();
+
 async function ask(){
   const q = $('q').value.trim();
   if(!q) return;
   $('err').textContent = '';
   localStorage.setItem('ydk_me', $('asker').value.trim());
+  // 단계별 대기 문구 — 답까지 십수 초가 걸릴 수 있다(생성+근거 검증).
+  // 침묵은 고장으로 읽힌다. 실제 단계 순서대로 문구를 올린다.
+  const wait = document.createElement('p');
+  wait.className = 'quiet'; wait.textContent = L['alter.wait.search'];
+  $('out').prepend(wait);
+  const stages = [L['alter.wait.answer'], L['alter.wait.check']];
+  let si = 0;
+  const tick = setInterval(() => {
+    if(si < stages.length) wait.textContent = stages[si++];
+  }, 4000);
   try{
     const r = await api('/api/alter/'+encodeURIComponent(EXPERT)+'/ask', {method:'POST',
       body: JSON.stringify({question:q, asker: $('asker').value.trim()})});
     render(q, r);
     $('q').value = '';
   }catch(e){ $('err').textContent = e.message; }
+  finally{ clearInterval(tick); wait.remove(); }
 }
 
 function render(q, r){

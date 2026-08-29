@@ -87,7 +87,8 @@
       </div>
     </div>
 
-    <div id="h_gaps" hidden></div>
+    <p id="h_diglang" class="quiet" hidden></p>
+  <div id="h_gaps" hidden></div>
     <div id="h_contested"></div>
 
     <p class="quiet" style="margin-top:18px">
@@ -791,6 +792,14 @@ function renderHome(h){
     : (h.expert.days_left >= 0 ? 'D-' + h.expert.days_left
                                : L['home.left'].replace('{}', -h.expert.days_left));
   $('h_headline').textContent = h.legacy.headline;
+  // 화면 언어 ≠ 발굴 언어 — 질문이 "번역 누락" 으로 보이지 않게 알린다.
+  const dl2 = $('h_diglang');
+  if(dl2){
+    if(h.expert.lang && h.expert.lang !== LANG){
+      dl2.hidden = false;
+      dl2.textContent = fmt(L['home.dig_lang'], {lang: L['langname.' + h.expert.lang] || h.expert.lang});
+    } else { dl2.hidden = true; }
+  }
   $('h_stats').textContent = fmt(L['home.stats'], {
     alive: h.legacy.cards_alive, verified: h.legacy.cards_verified,
     cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed,

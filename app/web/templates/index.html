@@ -29,25 +29,50 @@
     <div class="c">{{ L['landing.yours.body'] }}</div>
   </div>
 
-  {# 심사자 원클릭 입장 — 로그인 벽 대신 역할 버튼. 이름 입력이 "로그인인가?"
-     라는 혼란을 만들었고, 전시 전문가를 본인처럼 여는 사고도 있었다.
-     실배포 신원은 SSO (roadmap 거버넌스). #}
-  <div class="card" style="border-style:dashed">
-    <p class="t">🎫 {{ L['landing.judge.t'] }}</p>
-    <p class="c">{{ L['landing.judge.c'] }}</p>
-    <div class="acts">
-      <button onclick="enterAs('expert','dale')">👀 {{ L['landing.judge.watch'] }}</button>
-      <button class="primary" onclick="enterAs('junior','dale')">💬 {{ L['landing.judge.ask'] }}</button>
-      <button class="amber" onclick="enterAs('mine','')">🧑‍🏭 {{ L['landing.judge.mine'] }}</button>
+  {# 두 개의 문 — "나는 전문가인가 소비자인가" 라는 자기분류 질문 대신,
+     들어가는 행동으로 역할이 정해진다. 심사위원도 같은 문을 쓴다 (로그인
+     벽 없음 — 실배포 신원은 SSO, roadmap 거버넌스). #}
+  <div class="grid g2">
+    <div class="card hero">
+      <p class="t">{{ L['door.expert.t'] }}</p>
+      <p class="c">{{ L['door.expert.c'] }}</p>
+      <div class="acts">
+        <button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button>
+      </div>
     </div>
-    <p class="quiet">{{ L['landing.judge.note'] }}</p>
+    <div class="card hero">
+      <p class="t">{{ L['door.junior.t'] }}</p>
+      <p class="c">{{ L['door.junior.c'] }}</p>
+      <div class="acts">
+        <button class="primary" onclick="document.getElementById('juniors').scrollIntoView({behavior:'smooth'});document.getElementById('pq').focus({preventScroll:true})">{{ L['landing.junior.cta'] }}</button>
+      </div>
+    </div>
   </div>
+  <p class="quiet" style="margin:8px 0 18px">{{ L['door.judge'] }}
+    <a href="#" onclick="enterAs('junior','dale');return false">{{ L['landing.judge.ask'] }}</a> ·
+    <a href="#" onclick="enterAs('expert','dale');return false">{{ L['landing.judge.watch'] }}</a> ·
+    <a href="#" onclick="enterAs('mine','');return false">{{ L['door.judge.mine'] }}</a>
+  </p>
 
   {# 첫 화면은 역할 선택이 아니라 **남겨진 분신들**이다.
      "나는 전문가인가 소비자인가" 는 추상적인 자기분류 질문이고, 아바타 앞에서는
      내 것을 만들거나 남의 것에 말을 걸거나 둘 중 하나라 역할이 행동에서 나온다.
      인격이 아니라 실물(카드 수·✔ 검증·재직일)을 적는다 — 캐릭터 챗봇이 아니다. #}
-  <h2 class="sec">{{ L['landing.alters'] }}</h2>
+  <h2 class="sec" id="juniors">{{ L['landing.alters'] }}</h2>
+
+  {# 통합 질문창 — 선배를 몰라도 질문부터. 전 전문가의 카드에 같은 결정적
+     검색(LLM 0회)을 돌려 **누가 판단을 남겼는지 연결만** 한다. 답은 각
+     분신의 방에서, 그 선배의 카드만 근거로 — 합성하지 않는다. #}
+  <div class="card">
+    <p class="t">{{ L['portal.title'] }}</p>
+    <div class="acts" style="flex-wrap:nowrap">
+      <input type="text" id="pq" style="flex:1;min-width:0" placeholder="{{ L['portal.ph'] }}"
+             onkeydown="if(event.key==='Enter')routeQ()">
+      <button class="primary" onclick="routeQ()">{{ L['portal.btn'] }}</button>
+    </div>
+    <div id="proute"></div>
+  </div>
+
   <div class="grid g3">
     {% for e in experts %}
     <div class="card">
@@ -102,11 +127,35 @@ const LANG = {{ lang | tojson }};
 const L = {{ L | tojson }};
 const q = LANG === 'en' ? '' : ('?lang=' + LANG);
 function go(path){ location.href = path + q; }
-function ask(){
-  const id = document.getElementById('who').value.trim();
-  if(!id){ alert(L['landing.ask.need_id']); return; }
-  go('/alter/' + encodeURIComponent(id));
+async function routeQ(){
+  const question = document.getElementById('pq').value.trim();
+  const box = document.getElementById('proute');
+  if(!question){ document.getElementById('pq').focus(); return; }
+  box.innerHTML = '<p class="quiet">…</p>';
+  try{
+    const r = await fetch('/api/route' + q, {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question, asker:''})});
+    const d = await r.json();
+    if(!d.experts || !d.experts.length){
+      box.innerHTML = '<p class="quiet">' + esc(L['portal.none']) + '</p>';
+      return;
+    }
+    box.innerHTML = d.experts.map(e =>
+      '<div class="card" style="margin-top:8px"><p class="t">' + esc(e.alter) + '</p>' +
+      '<p class="c quiet">' + esc(L['portal.hits'].replace('{}', e.hits.length)) + ' — ' +
+      e.hits.map(h => '「' + esc(h.title) + '」').join(' · ') + '</p>' +
+      '<div class="acts"><button class="primary" onclick="openAlter(\'' + e.expert +
+      '\')">' + esc(L['portal.open']) + '</button></div></div>'
+    ).join('');
+  }catch(err){ box.innerHTML = '<p class="quiet">' + esc(String(err)) + '</p>'; }
 }
+function openAlter(id){
+  const question = document.getElementById('pq').value.trim();
+  const sep = q ? '&' : '?';
+  location.href = '/alter/' + encodeURIComponent(id) + q + sep + 'q=' + encodeURIComponent(question);
+}
+function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 </script>
 </body>
 </html>

@@ -389,9 +389,28 @@ def respond(
         # 있어야 하고, 없는 카드를 인용하면 탈락이다. 탈락하면 지어냈을지도
         # 모르는 문장 대신 **카드 원문**으로 강등한다 — 이 도구에서 생성은
         # 편의고, 원문은 진실이다.
-        log.warning("분신 답변이 인용 검증 탈락 — 카드 원문으로 강등")
-        stubbed = True
-        text = t("alter.msg.ungrounded", lang) + "\n\n" + _cards_block(chosen, lang)
+        # 탈락 시 **한 번만** 교정 재생성한다 — 규약 위반은 대개 형식 실수라
+        # (마지막 문단 인용 누락 등) 사유를 짚어 주면 고쳐 온다. 그래도
+        # 탈락이면 카드 원문으로 강등 — 생성은 편의고, 원문은 진실이다.
+        # (저장 직후 첫 성공 장면이 원문 덤프로 보인 QA 실측이 이 재시도의 이유.)
+        log.warning("분신 답변이 인용 검증 탈락 — 1회 교정 재생성")
+        redo = prompt + (
+            "\n\n[기계 검증 탈락] 직전 답은 문단마다 [#카드아이디] 인용이 "
+            "없거나 목록 밖 카드를 인용해 폐기됐다. 같은 내용을 규약대로 "
+            "다시 써라." if lang == "ko" else
+            "\n\n[Mechanical check failed] The previous answer was discarded: "
+            "a paragraph lacked its [#card-id] citation or cited an unlisted "
+            "card. Rewrite the same answer following the contract."
+        )
+        try:
+            text = llm.answer(_system(persona, lang), redo).strip()
+        except Exception as exc:
+            log.warning("교정 재생성 실패: %s", exc)
+            text = ""
+        if not text or text.startswith("⚠") or not _grounded(text, chosen):
+            log.warning("교정 재생성도 탈락 — 카드 원문으로 강등")
+            stubbed = True
+            text = t("alter.msg.ungrounded", lang) + "\n\n" + _cards_block(chosen, lang)
 
     contested = [c.id for c in chosen if c.status is CardStatus.CONTESTED]
     explored = [h.card.id for h in result.hits if h.explored]

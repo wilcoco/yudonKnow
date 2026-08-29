@@ -114,6 +114,59 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "👀 구경 모드 — 전시용 전문가입니다. 서가·회고록·명세서를 둘러보세요. "
               "발굴과 제어는 본인 전문가에서 열립니다 (첫 화면에서 3분).",
     },
+    # 두 개의 문 — 역할은 자기분류가 아니라 행동에서 나온다.
+    "door.expert.t": {"en": "🧑‍🏭 Enter as the senior", "ko": "🧑‍🏭 선배로 입장"},
+    "door.expert.c": {
+        "en": "The AI interviews you — one judgment card stays in 3 minutes.",
+        "ko": "AI 가 인터뷰합니다 — 3분에 판단 카드 한 장이 남습니다.",
+    },
+    "door.junior.t": {"en": "💬 Enter as the junior", "ko": "💬 후배로 입장"},
+    "door.junior.c": {
+        "en": "Ask — the alters answer only from their seniors' cards.",
+        "ko": "질문하세요 — 분신은 선배가 남긴 카드로만 답합니다.",
+    },
+    "door.judge": {
+        "en": "🎫 Judges use the same two doors — no sign-up, no password. Quick:",
+        "ko": "🎫 심사위원도 같은 두 문입니다 — 가입·비밀번호 없음. 빠른 입장:",
+    },
+    "door.judge.mine": {"en": "expert in one click", "ko": "원클릭 전문가 되기"},
+    # 통합 질문창 — 선배를 몰라도 질문부터. 답은 각 분신의 방에서.
+    "portal.title": {
+        "en": "Don't know whom to ask? Start with the question",
+        "ko": "누구에게 물을지 모르면, 질문부터",
+    },
+    "portal.ph": {
+        "en": "e.g. Outdoors the color looks off, indoor inspection says fine",
+        "ko": "예: 야외에서 보면 색감이 이상한데 실내 검사에선 멀쩡해요",
+    },
+    "portal.btn": {"en": "Who left a judgment?", "ko": "누가 판단을 남겼나"},
+    "portal.none": {
+        "en": "No senior has left a judgment on this yet. Pick an alter below and "
+              "ask anyway — the question reaches the senior as a gap.",
+        "ko": "아직 이 질문에 판단을 남긴 선배가 없습니다. 아래 분신을 골라 그대로 "
+              "물어보세요 — 질문은 공백으로 선배에게 전해집니다.",
+    },
+    "portal.hits": {"en": "{} cards touch this", "ko": "걸린 판단 {}장"},
+    "portal.open": {"en": "Ask this alter →", "ko": "이 분신에게 묻기 →"},
+    # 분신이 답을 짓는 동안의 단계 문구 — 20초가 침묵이면 고장으로 보인다.
+    "alter.wait.search": {"en": "Searching the judgment cards…", "ko": "판단 카드를 찾는 중…"},
+    "alter.wait.answer": {
+        "en": "Composing the answer from the cards found…",
+        "ko": "찾은 카드로 답을 짓는 중…",
+    },
+    "alter.wait.check": {
+        "en": "Verifying every paragraph cites a real card…",
+        "ko": "모든 문단의 근거 인용을 검증하는 중…",
+    },
+    # 화면 언어 ≠ 발굴 언어 — 번역 누락이 아니라 설계다. 그렇다고 말없이
+    # 두면 번역 누락으로 보인다 (QA 실측).
+    "home.dig_lang": {
+        "en": "🔤 This expert digs in {lang} — the questions and cards stay in "
+              "the language they were dug in.",
+        "ko": "🔤 이 전문가는 {lang}로 발굴합니다 — 질문과 카드는 판 언어로 남습니다.",
+    },
+    "langname.ko": {"en": "Korean", "ko": "한국어"},
+    "langname.en": {"en": "English", "ko": "영어"},
     "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
     "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
     "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},

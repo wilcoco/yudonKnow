@@ -332,6 +332,23 @@ def followup(
     return service.followup(session, expert, asker, lang=lang)
 
 
+class RouteIn(BaseModel):
+    question: str
+    asker: str = ""
+
+
+@router.post("/route")
+def route(
+    body: RouteIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """통합 질문창 — 질문에 판단을 남긴 전문가를 찾아 연결한다(답은 안 한다)."""
+    return service.route_question(
+        session, body.question, asker=body.asker, lang=lang
+    )
+
+
 @router.post("/alter/{expert}/ask")
 def ask(
     expert: str,
