@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="{{ p.lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ L['proto.title'].replace('{}', p.name) }}</title>
+{% include "_style.html" %}
+<style>
+  /* 절차 화면 — 대화가 아니라 단계. 큰 글씨, 한 화면 한 결정. */
+  .stage{ display:none; }
+  .stage.on{ display:block; }
+  .cuebox{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
+  .cue{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px;
+        border:1px solid var(--line); border-radius:10px; background:var(--panel);
+        cursor:pointer; font-size:15px; }
+  .cue input{ margin-top:3px; }
+  .cue.picked{ border-color:var(--amber); background:var(--amber-soft); }
+  .judg{ font-size:19px; font-weight:800; line-height:1.5; margin:10px 0; }
+  .steps{ counter-reset:s; list-style:none; padding:0; margin:10px 0; }
+  .steps li{ counter-increment:s; display:flex; gap:12px; padding:10px 0;
+             border-bottom:1px dashed var(--line); font-size:15.5px; }
+  .steps li::before{ content:counter(s); min-width:26px; height:26px; border-radius:50%;
+             background:var(--amber); color:#fff; display:flex; align-items:center;
+             justify-content:center; font-weight:800; font-size:13px; }
+  .branch{ border-left:3px solid var(--danger); background:var(--danger-soft);
+           padding:10px 14px; border-radius:0 8px 8px 0; margin:10px 0; }
+  .failbox{ border:1px solid var(--danger); border-radius:8px; padding:10px 14px;
+            margin:10px 0; font-size:14px; }
+  .basis{ font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/">yudon<span>Know</span></a>
+  <div class="who">
+    <a href="/alter/{{ p.expert }}?lang={{ lang }}">💬 {{ L['proto.ask'] }}</a>
+    <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
+  </div>
+</header>
+
+<main>
+  <h1 style="font-size:22px">📋 {{ L['proto.title'].replace('{}', p.name) }}</h1>
+  <p class="quiet" style="max-width:70ch">{{ L['proto.sub'] }}</p>
+
+  {# ① 영역 — 과업 지도의 가지 하나를 고른다 #}
+  <div class="stage on" id="st1">
+    <h2 class="sec">{{ L['proto.step1'] }}</h2>
+    <div class="grid g3">
+      {% for d in p.domains %}
+      <div class="card" style="cursor:pointer" onclick="pickDomain({{ loop.index0 }})">
+        <p class="t">{{ d.domain }}</p>
+        <p class="c quiet">{{ L['proto.match'].replace('{}', d.cards|length|string) }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ② 신호 — "무엇이 보입니까" 체크. 여기 없으면 공백 경로. #}
+  <div class="stage" id="st2">
+    <h2 class="sec">{{ L['proto.step2'] }}</h2>
+    <div class="cuebox" id="cues"></div>
+    <div class="acts">
+      <button class="primary" id="go3" onclick="showJudgments()">{{ L['proto.step3'] }} →</button>
+      <button onclick="back(1)">←</button>
+    </div>
+    <p class="quiet" style="margin-top:14px">{{ L['proto.none'] }}
+      <a id="askgap" href="/alter/{{ p.expert }}?lang={{ lang }}">{{ L['proto.ask'] }}</a></p>
+  </div>
+
+  {# ③ 판단 — 걸린 카드가 절차 화면으로 #}
+  <div class="stage" id="st3">
+    <h2 class="sec">{{ L['proto.step3'] }}</h2>
+    <div id="out"></div>
+    <div class="acts"><button onclick="back(2)">←</button></div>
+    <p class="quiet">{{ L['proto.verify'] }}</p>
+  </div>
+</main>
+
+<script>
+const P = {{ p | tojson }};
+const L = {{ L | tojson }};
+const LANG = {{ lang | tojson }};
+let DOM = null, picked = new Set();
+function esc(t){ const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
+function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.remove('on'));
+  document.getElementById('st'+n).classList.add('on'); window.scrollTo(0,0); }
+function back(n){ if(n===1){ DOM=null; } picked.clear(); stage(n); }
+
+function pickDomain(i){
+  DOM = P.domains[i]; picked.clear();
+  const box = document.getElementById('cues');
+  box.innerHTML = DOM.cues.map((c,j) =>
+    `<label class="cue" id="cue${j}"><input type="checkbox" onchange="toggleCue(${j})"> <span>${esc(c)}</span></label>`
+  ).join('');
+  stage(2);
+}
+function toggleCue(j){
+  const el = document.getElementById('cue'+j);
+  const cue = DOM.cues[j];
+  if(picked.has(cue)){ picked.delete(cue); el.classList.remove('picked'); }
+  else { picked.add(cue); el.classList.add('picked'); }
+}
+
+// 걸림 판정은 화면에서도 결정적이다 — 고른 신호와 카드 신호의 교집합 수.
+function showJudgments(){
+  const ranked = DOM.cards
+    .map(c => ({ c, hit: c.cues.filter(x => picked.has(x)).length }))
+    .filter(r => picked.size === 0 ? true : r.hit > 0)
+    .sort((a,b) => b.hit - a.hit);
+  const out = document.getElementById('out');
+  if(!ranked.length){
+    out.innerHTML = '<div class="card alarm"><p class="c">' + esc(L['proto.none']) +
+      ' <a href="/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + '">' +
+      esc(L['proto.ask']) + '</a></p></div>';
+  } else {
+    out.innerHTML = ranked.map(({c, hit}) => `
+      <div class="card" style="margin-bottom:18px">
+        <p class="t">${esc(c.title)} ${c.status==='anchored' ? '<span style="color:var(--verify)">✔</span>' : ''}</p>
+        ${picked.size ? `<p class="quiet">${esc(L['proto.match'].replace('{}', hit))}</p>` : ''}
+        <p class="judg">${esc(c.judgment)}</p>
+        ${c.rationale ? `<p class="quiet">${esc(L['proto.why'])} — ${esc(c.rationale)}</p>` : ''}
+        ${c.action.length ? `<p class="lbl" style="font-weight:700;margin:12px 0 0">${esc(L['proto.first'])}</p>
+          <ol class="steps">${c.action.map(a => '<li><span>'+esc(a)+'</span></li>').join('')}</ol>` : ''}
+        ${c.exceptions.length ? `<div class="branch"><b>${esc(L['proto.branch'])}</b>
+          <ul style="margin:6px 0 0;padding-left:18px">${c.exceptions.map(x => '<li>'+esc(x)+'</li>').join('')}</ul></div>` : ''}
+        ${c.failure ? `<div class="failbox">💥 <b>${esc(L['proto.fail'])}</b> — ${esc(c.failure)}</div>` : ''}
+        <p class="basis">${esc(L['proto.basis'])}: [#${esc(c.id)}]</p>
+      </div>`).join('');
+  }
+  // 분신으로 넘어갈 때 고른 신호를 질문으로 들려 보낸다
+  const q = Array.from(picked).join(', ');
+  document.getElementById('askgap').href =
+    '/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + (q ? '&q=' + encodeURIComponent(q) : '');
+  stage(3);
+}
+</script>
+
+<footer>v{{ version }}</footer>
+</body>
+</html>

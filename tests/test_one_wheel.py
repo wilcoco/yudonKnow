@@ -597,3 +597,38 @@ def test_memoir_honors_control_for_strangers(session):
     assert memoir(session, "vis-1", viewer="junior-x")["chapters"][0]["prose"] == ""
     memoir_approve(session, "vis-1", "영역A", "승인된 문장", lang="ko")
     assert memoir(session, "vis-1", viewer="junior-x")["chapters"][0]["prose"] == "승인된 문장"
+
+
+def test_protocol_view_compiles_only_citable_visible_cards(session):
+    """절차 뷰는 검색과 같은 문에서 선다 — 인용 자격 + 통제권.
+
+    비공개 카드·초안이 절차 화면으로 새면, 분신이 지키는 경계를 다른
+    문이 무너뜨리는 것이다.
+    """
+    from app.store import db as sdb
+    from app.store.service import ensure_expert, protocol_view
+
+    ensure_expert(session, "pr-1", display_name="절", lang="ko")
+    session.add(sdb.CardRow(
+        id="c_pr_a", expert="pr-1", title="공개", domain="영역A",
+        situation="s", cues="신호1", judgment="j", status="confirmed",
+        visibility="public"))
+    session.add(sdb.CardRow(
+        id="c_pr_b", expert="pr-1", title="비밀", domain="영역A",
+        situation="s", cues="신호2", judgment="j", status="confirmed",
+        visibility="private"))
+    session.add(sdb.CardRow(
+        id="c_pr_c", expert="pr-1", title="초안", domain="영역A",
+        situation="s", cues="신호3", judgment="j", status="draft",
+        visibility="public"))
+    session.commit()
+
+    pub = protocol_view(session, "pr-1", viewer="junior-x")
+    titles = [c["title"] for d in pub["domains"] for c in d["cards"]]
+    cues = [q for d in pub["domains"] for q in d["cues"]]
+    assert titles == ["공개"], f"절차 뷰에 새어나온 카드: {titles}"
+    assert "신호2" not in cues and "신호3" not in cues, "잠긴 카드의 신호가 체크리스트에 샜다"
+
+    own = protocol_view(session, "pr-1", viewer="pr-1")
+    titles = [c["title"] for d in own["domains"] for c in d["cards"]]
+    assert "비밀" in titles and "초안" not in titles, "본인 판: 비밀은 보이되 초안은 절차가 아니다"

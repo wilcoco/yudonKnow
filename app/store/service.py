@@ -1516,6 +1516,48 @@ def memoir_approve(
     return {"approved": True, "domain": domain}
 
 
+def protocol_view(
+    session: OrmSession, expert: str, *, viewer: str = "",
+    lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """단계별 프로토콜 뷰 — **카드에서 결정적으로 컴파일된다.**
+
+    veTriage(OpenAI Build Week 우승작)가 보여준 형태: 전문가의 판단이
+    조건 분기 있는 단계 화면으로 밟힌다. 차이는 만들어지는 방식이다 —
+    거기서는 전문가가 일주일 손으로 짰고, 여기서는 **대화의 부산물**이다.
+    카드가 이미 프로토콜 노드다: 신호(진입 조건) · 판단 · 행동(단계) ·
+    예외(분기) · 실패(경고). 이 함수는 그걸 영역별로 묶어 내놓을 뿐,
+    LLM 호출도 원장 기록도 없다. 통제권(visible_to)과 인용 자격은
+    검색과 같은 기준으로 선다.
+
+    막다른 길은 우승작에 없는 우리 간선으로 이어진다: 신호가 안 걸리면
+    분신에게 묻고, 분신도 못 답하면 전문가의 발굴 큐로 돌아간다.
+    """
+    row = get_expert(session, expert, lang=lang)
+    owner = bool(viewer) and viewer == expert
+    cards = [
+        c for c in cards_of(session, expert)
+        if c.citable() and (owner or c.visible_to(viewer))
+    ]
+    domains: dict[str, list[Card]] = {}
+    for c in cards:
+        domains.setdefault(c.domain or "—", []).append(c)
+    return {
+        "expert": expert,
+        "name": row.display_name or expert,
+        "lang": row.lang or lang,
+        "domains": [
+            {
+                "domain": d,
+                # 신호 체크리스트 — 영역 안 모든 카드의 신호를 중복 없이.
+                "cues": sorted({cue for c in cs for cue in c.cues}),
+                "cards": [card_view(c) for c in cs],
+            }
+            for d, cs in sorted(domains.items())
+        ],
+    }
+
+
 def card_view(card: Card) -> dict[str, Any]:
     return {
         "id": card.id,

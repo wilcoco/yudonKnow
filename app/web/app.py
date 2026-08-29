@@ -190,6 +190,22 @@ def memoir(request: Request, expert_id: str, viewer: str = "") -> HTMLResponse:
     return TEMPLATES.TemplateResponse(request, "memoir.html", ctx | {"m": data})
 
 
+@app.get("/protocol/{expert_id}", response_class=HTMLResponse)
+def protocol(request: Request, expert_id: str) -> HTMLResponse:
+    """단계별 프로토콜 — 후배가 대화 대신 절차로 밟는 뷰 (카드 컴파일)."""
+    from app.store import service as svc
+
+    session = db.SessionLocal()
+    try:
+        data = svc.protocol_view(
+            session, expert_id, viewer=request.query_params.get("as", ""))
+    finally:
+        session.close()
+    ctx = _ctx(request)
+    ctx["L"] = bundle(data["lang"])
+    return TEMPLATES.TemplateResponse(request, "protocol.html", ctx | {"p": data})
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request) -> HTMLResponse:
     return TEMPLATES.TemplateResponse(request, "admin.html", _ctx(request))

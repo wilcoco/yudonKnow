@@ -10,6 +10,7 @@
 <header>
   <a class="brand" href="/">yudon<span>Know</span></a>
   <div class="who">
+    <a href="#how">{{ L['nav.how'] }}</a>
     {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>{{ L['stub.mode'] }}</span>{% endif %}
     <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
@@ -103,8 +104,20 @@
     <a href="/admin{{ '?lang=' + lang if lang != 'en' else '' }}">{{ L['landing.admin.link'] }}</a>
   </p>
 
-  <h2 class="sec">{{ L['landing.wheel'] }}</h2>
-  <div class="card"><div class="c">{{ L['landing.wheel.body'] }}</div></div>
+  {# 자기설명 — 처음 온 심사자가 외부 문서 없이 제품을 이해한다 (veTriage 의
+     "How it works!" 탭에서 배운 것). 6단계 + 바닥의 정직성 원칙. #}
+  <h2 class="sec" id="how">{{ L['how.title'] }}</h2>
+  <div class="grid g3">
+    {% for i in [1,2,3,4,5,6] %}
+    <div class="card">
+      <p class="t">{{ L['how.' ~ i ~ '.t'] }}</p>
+      <p class="c">{{ L['how.' ~ i ~ '.c'] }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card" style="border-left:3px solid var(--amber)">
+    <div class="c">{{ L['how.honesty'] }}</div>
+  </div>
 </main>
 <script>
 // 역할 입장 — 계정 없는 데모 세션. guest 신원은 브라우저에서 만든다.

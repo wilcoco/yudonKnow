@@ -201,6 +201,97 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "누가 나가면 무엇이 비는지. 정렬 순서가 곧 개입 순서입니다.",
     },
     "landing.admin.cta": {"en": "Succession risk board", "ko": "승계 리스크 보드"},
+    "nav.how": {"en": "How it works", "ko": "어떻게 작동하나"},
+    # 프로토콜 뷰 — 대화가 아니라 절차로 밟는 후배 화면
+    "proto.title": {"en": "{}'s field protocol", "ko": "{} 님의 현장 절차"},
+    "proto.sub": {
+        "en": "Compiled from the judgment cards — every screen cites its card. "
+              "Pick what you see; the protocol branches on the expert's own "
+              "exceptions.",
+        "ko": "판단 카드에서 컴파일된 절차입니다 — 모든 화면에 근거 카드가 "
+              "붙습니다. 보이는 것을 고르세요. 분기는 전문가 본인이 남긴 "
+              "예외를 따릅니다.",
+    },
+    "proto.step1": {"en": "① Where are you?", "ko": "① 어느 일입니까?"},
+    "proto.step2": {"en": "② What do you see?", "ko": "② 무엇이 보입니까?"},
+    "proto.step3": {"en": "③ The judgment", "ko": "③ 판단"},
+    "proto.match": {"en": "{} judgments match", "ko": "걸린 판단 {}건"},
+    "proto.first": {"en": "Do first", "ko": "먼저 할 것"},
+    "proto.branch": {"en": "⚠ When this does NOT hold", "ko": "⚠ 이럴 땐 통하지 않는다"},
+    "proto.fail": {"en": "It cost them once", "ko": "치른 값이 있다"},
+    "proto.why": {"en": "Why", "ko": "왜"},
+    "proto.basis": {"en": "Basis card", "ko": "근거 카드"},
+    "proto.none": {
+        "en": "None of these signs? The expert may not have left this yet — "
+              "ask the alter; unanswered questions reach the expert.",
+        "ko": "보이는 신호가 여기 없습니까? 아직 안 남긴 판단일 수 있습니다 — "
+              "분신에게 물으세요. 못 답한 질문은 전문가에게 전해집니다.",
+    },
+    "proto.ask": {"en": "Ask the alter instead →", "ko": "분신에게 묻기 →"},
+    "proto.verify": {
+        "en": "Used this in the field? Report it on the alter page — that is "
+              "what earns the ✔.",
+        "ko": "현장에서 써보셨으면 분신 화면에서 보고해 주세요 — ✔ 은 그렇게만 "
+              "붙습니다.",
+    },
+    "alter.protocol": {"en": "📋 Step-by-step protocol", "ko": "📋 절차로 밟기"},
+    "how.title": {"en": "How it works — one turn of the wheel",
+                   "ko": "어떻게 작동하나 — 한 바퀴"},
+    "how.1.t": {"en": "1 · The AI interviews you", "ko": "1 · AI가 인터뷰한다"},
+    "how.1.c": {
+        "en": "Not a chatbot waiting for input — it runs the knowledge "
+              "engineer's procedure: task map, incident digging, deepening, "
+              "your own review. You just answer.",
+        "ko": "입력을 기다리는 챗봇이 아니라 지식공학자의 절차(과업 지도 → "
+              "사건 채굴 → 심화 → 본인 검토)로 묻습니다. 당신은 답만 하면 됩니다.",
+    },
+    "how.2.t": {"en": "2 · Answers become judgment cards", "ko": "2 · 답이 판단 카드가 된다"},
+    "how.2.c": {
+        "en": "Situation · cues · judgment · action · exceptions · failure. "
+              "You approve every card and set who may see it.",
+        "ko": "상황·신호·판단·행동·예외·실패. 모든 카드는 본인이 승인하고 "
+              "공개 범위도 본인이 정합니다.",
+    },
+    "how.3.t": {"en": "3 · The alter answers juniors", "ko": "3 · 분신이 후배에게 답한다"},
+    "how.3.c": {
+        "en": "Only from your cards, citing them paragraph by paragraph — a "
+              "mechanical check discards any uncited answer. No cards, no "
+              "answer: the question queues back to you instead.",
+        "ko": "오직 당신의 카드로만, 문단마다 카드를 인용하며 — 인용 없는 답은 "
+              "기계 검증이 통째로 버립니다. 근거가 없으면 답하지 않고, 그 질문이 "
+              "당신의 발굴 큐로 돌아옵니다.",
+    },
+    "how.4.t": {"en": "4 · The field verifies", "ko": "4 · 현장이 검증한다"},
+    "how.4.c": {
+        "en": "Juniors report \"it helped\" or \"it didn't hold\" — the only "
+              "source of the ✔ badge. No views, no likes.",
+        "ko": "후배가 \"도움됐다 / 안 맞았다\" 를 보고합니다 — ✔ 배지의 유일한 "
+              "출처. 조회수·좋아요는 세지 않습니다.",
+    },
+    "how.5.t": {"en": "5 · A memoir, not a database", "ko": "5 · 회고록이 남는다"},
+    "how.5.c": {
+        "en": "The same digging typesets a career memoir — drafts woven by AI, "
+              "on the record only after the author approves.",
+        "ko": "같은 발굴이 직업 회고록으로 조판됩니다 — AI가 엮은 초안은 본인이 "
+              "승인해야 기록이 됩니다.",
+    },
+    "how.6.t": {"en": "6 · Use returns to the retiree", "ko": "6 · 쓰임이 은퇴자에게 돌아간다"},
+    "how.6.c": {
+        "en": "Every citation and field report lands on a usage statement — "
+              "the verifiable basis for compensating knowledge after "
+              "retirement.",
+        "ko": "모든 인용과 현장 보고가 사용 명세서에 쌓입니다 — 퇴직 후 지식 "
+              "보상의 검증 가능한 근거입니다.",
+    },
+    "how.honesty": {
+        "en": "The rule underneath: judgment is never delegated to the LLM. "
+              "Gap decisions, citation checks, memoir honesty — all "
+              "deterministic code, all auditable. Generation is convenience; "
+              "the cards are the truth.",
+        "ko": "바닥의 원칙: 판정을 LLM에 위임하지 않습니다. 공백 판정·인용 "
+              "검증·회고록 검열 — 전부 결정적 코드고, 전부 검사 가능합니다. "
+              "생성은 편의고, 카드가 진실입니다.",
+    },
     "landing.wheel": {"en": "One turn of the wheel", "ko": "한 바퀴"},
     "landing.wheel.body": {
         "en": "① Pick an instrument and dig → ② a judgment card → ③ you approve it "

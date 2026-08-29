@@ -226,6 +226,33 @@ still compiles.
 `app/core/` has zero dependencies — no framework, no ORM, no SDK — and a test
 (`test_isolation.py`) fails the build if anyone imports one into it.
 
+## The OpenAI Build Week winner is the first half of our wheel
+
+veTriage — 1st place, Work & Productivity at OpenAI Build Week — is a
+deterministic, no-LLM-runtime phone-triage protocol that a 61-year-old
+veterinarian talked out of herself over one week of ChatGPT conversations,
+then froze into linked screens. That is manual elicitation: one motivated
+expert, one week, one workflow. yudonKnow productizes exactly that act. The
+agent runs the knowledge engineer's interview procedure, the cards compile
+into the same kind of step-by-step branching protocol (`/protocol/{id}` —
+pick what you see, branch on the expert's own exceptions), and then goes
+where a frozen protocol can't: a dead end routes to the alter, an unanswered
+question routes back to the expert's dig queue, and a "didn't hold" report
+demotes the card until the expert fixes it. A static protocol goes stale
+silently; this one has a pulse.
+
+## Iteration under real fire
+
+The external QA loop reshaped the product measurably. One tester's complete
+restatement ("outdoors the color looks off, indoor inspection says fine")
+exposed the keyword-retrieval ceiling → search aliases generated at approval.
+Another caught the memoir inventing a self-blame sentence the cards never
+recorded ("missing that extra sign was my failure") → a deterministic
+blame-vocabulary censor, author approval gating, and a public/owner split of
+the memoir. Every fix landed as a regression test first — 84 automated checks
+now hold the line, including "the gap decision never calls the LLM" and
+"a card without cues is never citable."
+
 ## What I learned
 
 **Willingness is not the bottleneck; instruments are.** I started out thinking
