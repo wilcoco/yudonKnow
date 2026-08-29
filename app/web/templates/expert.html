@@ -33,12 +33,6 @@
     </div>
 
     <div class="card">
-      <p class="t">{{ L['ob.q1'] }}</p>
-      <textarea id="ob_domains" placeholder="{{ L['ob.q1.ph'] }}"></textarea>
-      <p class="quiet">{{ L['ob.q1.note'] }}</p>
-    </div>
-
-    <div class="card">
       <p class="t">{{ L['ob.q2'] }}</p>
       <textarea id="ob_sayings" style="min-height:70px" placeholder="{{ L['ob.q2.ph1'] }}"></textarea>
       <textarea id="ob_taboos" style="min-height:70px;margin-top:8px" placeholder="{{ L['ob.q2.ph2'] }}"></textarea>
@@ -83,6 +77,7 @@
 
     {# ★ 오늘의 질문 — 홈의 유일한 주인공. MVP 척추: 묻는 대로 답하면,
        당신 없이도 일하는 판단이 남는다. #}
+    <p class="quiet" id="camp_strip" hidden style="margin:0 0 6px"></p>
     <div class="card" id="today" style="border-width:2px">
       <p class="quiet" id="tq_src"></p>
       <p class="t" id="tq_q" style="font-size:17px;line-height:1.6">…</p>
@@ -379,9 +374,6 @@ async function createExpert(){
       taboos: $('ob_taboos').value.split('\n').filter(s=>s.trim()),
       leaving_on: leaving || null,
     })});
-    for(const d of $('ob_domains').value.split('\n').map(s=>s.trim()).filter(Boolean)){
-      await api('/api/flags', {method:'POST', body: JSON.stringify({expert:id, domain:d})});
-    }
     localStorage.setItem('ydk_me', id);
     loadHome();
   }catch(e){ err(e.message); }
@@ -433,6 +425,18 @@ function answerToday(){
   else startSession('ladder');
 }
 function skipToday(){ TODAY_SKIP += 1; loadToday(); }
+
+// 캠페인 스트립 — 왜 이 질문인지, 지도가 어디까지 팠는지 한 줄.
+function renderCampaign(h){
+  const steps = h.campaign_steps || [];
+  const el = $('camp_strip');
+  if(!steps.length){ el.hidden = true; return; }
+  el.innerHTML = '🗺 ' + steps.map(st =>
+    `${st.difficulty==='hard'?'🔴':st.difficulty==='easy'?'🟢':'🟡'}${esc(st.domain)} ${st.cards}${st.ripe?' ·검증대기':''}`
+  ).join(' &nbsp;·&nbsp; ') +
+  ` &nbsp;<a href="#" onclick="show('library');return false">${esc(L['camp.more'])}</a>`;
+  el.hidden = false;
+}
 
 // ── 카드 렌더러 — 카드를 카드답게. afterglow 와 cardview 가 같이 쓴다.
 function slotSec(label, val, cls){
@@ -815,6 +819,7 @@ function renderHome(h){
   $('h_toggle').hidden = ro;
   if(ro) show('library');   // 전시 전문가의 본체는 구경거리(서가·회고록)다
 
+  renderCampaign(h);
   if(h.entry_probe?.question) $('h_probe').textContent = h.entry_probe.question;
   $('h_locked').textContent = h.tool_total
     ? L['home.all_tools'].replace('{}', h.tool_total) : '';

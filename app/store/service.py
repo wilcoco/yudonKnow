@@ -1541,6 +1541,20 @@ def expert_home(
         },
         # 전시 전문가는 구경 모드 — 화면이 본인-행세 버튼을 아예 숨긴다.
         "readonly": expert in settings.featured,
+        # 캠페인 스트립 — 절차(지도→채집→검증)가 메인에서 보이게.
+        "campaign_steps": [
+            {
+                "domain": f.domain, "difficulty": f.difficulty,
+                "cards": (n := sum(
+                    1 for c in live if c.domain == f.domain
+                    and c.status is not CardStatus.DRAFT)),
+                "ripe": n - f.reviewed_cards >= 3,
+            }
+            for f in session.scalars(
+                select(db.Flag).where(db.Flag.expert == expert)
+                .order_by(db.Flag.created_at)
+            ).all()
+        ],
         # 오늘의 입구 질문 (ACTA 지식 감사). 화면은 이걸 그대로 띄운다.
         "entry_probe": dict(
             zip(("kind", "question"), interview.entry_probe(len(live), lang))

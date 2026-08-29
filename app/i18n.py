@@ -88,6 +88,13 @@ CATALOG: dict[str, dict[str, str]] = {
               "· 실패담은 인사 기록과 연결되지 않습니다\n"
               "· 쓰인 만큼 셉니다 — 사용 명세서로 회사에 청구할 수 있습니다",
     },
+    "landing.procedure": {
+        "en": "① Task map → ② incident harvest → ③ timeline → ④ deep probes → "
+              "⑤ judgment cards → ⑥ member checking — the knowledge-engineer's "
+              "procedure, run by the agent, voice-first.",
+        "ko": "① 과업 지도 → ② 사건 채집 → ③ 타임라인 → ④ 심화 → ⑤ 판단 카드 → "
+              "⑥ 검증 — 지식공학자가 하던 절차 그대로, AI가 음성으로 진행합니다.",
+    },
     "landing.judge.t": {"en": "One-click demo entry", "ko": "원클릭 데모 입장"},
     "landing.judge.c": {
         "en": "No sign-up, no password — pick a seat. Production identity is SSO.",
@@ -266,6 +273,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "today.src.review": {
         "en": "Time to check what we hold:", "ko": "쌓인 것을 확인할 차례입니다:",
     },
+    "camp.more": {"en": "map & shelf →", "ko": "지도·서가 →"},
     "map.done": {
         "en": "Got the map: {summary}. {hard} step(s) marked as feel-heavy — "
               "we dig those first. Your next visit starts there.",
