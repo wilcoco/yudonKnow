@@ -318,7 +318,7 @@
 const LANG = {{ lang | tojson }};
 const LLM_ON = {{ 'true' if llm_enabled else 'false' }};
 const L = {{ L | tojson }};
-const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+const qs = '?lang=' + LANG;   // EN 도 명시 — 안 실으면 브라우저 헤더(ko)가 이긴다
 // 역할 입장 버튼(?as=) — 랜딩의 원클릭 데모 입장이 신원을 넘긴다.
 try{
   const asId = new URLSearchParams(location.search).get('as');
@@ -353,7 +353,7 @@ function readError(body, status){
 
 async function api(path, opts){
   const sep = path.includes('?') ? '&' : '?';
-  const url = LANG === 'en' ? path : path + sep + 'lang=' + LANG;
+  const url = path + sep + 'lang=' + LANG;   // 항상 명시
   const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
   const body = await res.json().catch(()=>({}));
   if(!res.ok){ throw new Error(readError(body, res.status)); }
@@ -364,7 +364,7 @@ async function api(path, opts){
 async function createExpert(){
   err('');
   const id = ($('ob_name').value.trim() || me());
-  if(!id){ err(L['ob.need_id']); $('ob_name').focus(); return; }
+  if(!id){ err(L['ob.need_name']); $('ob_name').focus(); return; }
   $('me').value = id;
   const leaving = $('ob_leaving').value.trim();
   try{
@@ -727,7 +727,9 @@ function downloadStatement(){
   const a = document.createElement('a');
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(STMT, null, 2));
   a.download = me() + '-usage-statement-' + STMT.period_end + '.json';
-  a.click();
+  document.body.appendChild(a); a.click(); a.remove();
+  const n=$('err'); n.style.color='var(--verify)'; n.textContent=L['dl.done'];
+  setTimeout(()=>{ n.style.color=''; if(n.textContent===L['dl.done']) n.textContent=''; }, 3000);
 }
 
 // 📄 절차서 빨간펜 — 문서를 심문해서 빠진 판단 지점을 공백 큐로.
@@ -768,7 +770,11 @@ async function loadHome(){
   localStorage.setItem('ydk_me', id);
   let home;
   try{ home = await api('/api/experts/'+encodeURIComponent(id)+'/home'); }
-  catch(e){ show('onboard'); return; }
+  catch(e){
+    show('onboard');
+    err(fmt(L['ob.new_here'], {id}));   // "없습니다" 침묵은 혼란만 남긴다
+    return;
+  }
   STATE.home = home;
   renderHome(home);
   show('home');
@@ -787,7 +793,8 @@ function renderHome(h){
   $('h_headline').textContent = h.legacy.headline;
   $('h_stats').textContent = fmt(L['home.stats'], {
     alive: h.legacy.cards_alive, verified: h.legacy.cards_verified,
-    cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed});
+    cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed,
+    gaps: h.legacy.gaps_open});
   $('h_recent').innerHTML = (h.legacy.recent||[]).slice(0,4)
     .map(e => `<div class="msg">${esc(e.sentence)}</div>`).join('');
   $('h_toggle').textContent = h.expert.alter_active ? L['home.stop_alter'] : L['home.start_alter'];
@@ -869,7 +876,10 @@ async function exportCards(){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = me() + '-cards.json';
-  a.click();
+  document.body.appendChild(a); a.click(); a.remove();   // 미부착 클릭은 일부 브라우저에서 무시된다
+  err(''); $('s_warn') && 0; $('ro_note');
+  const n=$('err'); n.style.color='var(--verify)'; n.textContent=L['dl.done'];
+  setTimeout(()=>{ n.style.color=''; if(n.textContent===L['dl.done']) n.textContent=''; }, 3000);
 }
 
 // 🎙 말로 답하기 — 전사는 답 칸에 채워질 뿐 바로 제출되지 않는다.
@@ -924,7 +934,9 @@ async function toggleMic(target, btn){
 const AUTO_OK = LLM_ON && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
   && 'speechSynthesis' in window && 'MediaRecorder' in window;
 let AUTO = false, AUTO_REC = null;
-try{ AUTO = AUTO_OK && localStorage.getItem('ydk_auto') !== '0'; }catch(e){ AUTO = AUTO_OK; }
+// 기본은 꺼짐 — 첫 방문에 마이크 권한 팝업부터 들이밀지 않는다.
+// 🎙 를 한 번 켜면 기억한다 (음성이 기본이 되는 건 동의 이후).
+try{ AUTO = AUTO_OK && localStorage.getItem('ydk_auto') === '1'; }catch(e){ AUTO = false; }
 
 function autoUi(){
   const btn = $('auto_btn');
@@ -960,7 +972,13 @@ async function listenOnce(){
   // 현장 소음에서의 한계와 푸시투토크 대안은 로드맵 P1.
   let stream;
   try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(e){ err(L['sess.mic.denied']); AUTO = false; autoUi(); return null; }
+  catch(e){
+    // 거절은 오류가 아니다 — 타자로 계속하면 된다. err 로 겁주지 않는다.
+    AUTO = false; autoUi();
+    const _a=$('auto_state'); _a.className='write'; _a.textContent=L['sess.mic.denied'];
+    setTimeout(()=>{ if(_a.textContent===L['sess.mic.denied']){_a.className='';_a.textContent='';} }, 4000);
+    return null;
+  }
   const ctx = new AudioContext();
   const an = ctx.createAnalyser(); an.fftSize = 2048;
   ctx.createMediaStreamSource(stream).connect(an);

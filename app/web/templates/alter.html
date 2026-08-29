@@ -60,14 +60,14 @@
 const EXPERT = {{ expert_id | tojson }};
 const LANG = {{ lang | tojson }};
 const L = {{ L | tojson }};
-const qs = LANG === 'en' ? '' : ('?lang=' + LANG);
+const qs = '?lang=' + LANG;   // EN 도 명시 — 안 실으면 브라우저 헤더(ko)가 이긴다
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 async function api(path, opts){
   const sep = path.includes('?') ? '&' : '?';
-  const url = LANG === 'en' ? path : path + sep + 'lang=' + LANG;
+  const url = path + sep + 'lang=' + LANG;   // 항상 명시
   const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
   const body = await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(body.error || body.detail || ('HTTP ' + res.status));

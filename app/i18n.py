@@ -224,6 +224,15 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "비밀번호는 없습니다. 분신이 달고 다닐 이름이자, 내 카드로 다시 "
               "돌아오는 열쇠입니다.",
     },
+    "ob.need_name": {
+        "en": "Start with your name — the first box below (0).",
+        "ko": "성함이나 사번부터요 — 아래 0번 칸입니다.",
+    },
+    "ob.new_here": {
+        "en": "No one named '{id}' yet — three minutes below and there will be.",
+        "ko": "'{id}' 는 아직 없습니다 — 아래에서 3분이면 생깁니다.",
+    },
+    "dl.done": {"en": "Downloaded ✓", "ko": "내려받았습니다 ✓"},
     "ob.need_id": {
         "en": "Enter your id at the top first.", "ko": "상단에 아이디를 입력해 주세요.",
     },
@@ -348,10 +357,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "home.staying": {"en": "still here", "ko": "재직 중"},
     "home.left": {"en": "{} days since leaving", "ko": "퇴직 후 {}일"},
     "home.stats": {
-        "en": "{alive} judgments live · {verified} verified in the field · "
-              "cited {cited} times · helped {helped} / missed {missed}",
+        "en": "{alive} judgments live · {verified} field-verified · cited {cited} · "
+              "\"helped\" {helped} / \"didn't hold\" {missed} · unanswered {gaps}",
         "ko": "살아있는 판단 {alive} · 현장 검증 {verified} · 인용 {cited}회 · "
-              "도움됨 {helped} / 안 맞음 {missed}",
+              "'도움됐다' {helped} / '안 맞았다' {missed} · 미응답 {gaps}",
     },
     "home.gaps.head": {
         "en": "🔴 Juniors asked these and I could not answer — {} of them",

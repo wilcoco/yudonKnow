@@ -141,14 +141,27 @@ class GeminiLLM:
         raise RuntimeError("unreachable")
 
     def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str:
-        response = self._gen(
-            model=self._model,
-            contents=prompt,
-            config=self._types.GenerateContentConfig(
-                system_instruction=system,
-                max_output_tokens=max_tokens or self._max_tokens,
-            ),
+        cfg = dict(
+            system_instruction=system,
+            max_output_tokens=max_tokens or self._max_tokens,
         )
+        if max_tokens and max_tokens <= 512:
+            # 짧은 출력 캡에서는 사고 예산을 끈다 — 사고가 출력 예산을 먹어
+            # 문장이 중간에서 잘렸다 (사용자 QA 실측: "...striped under").
+            try:
+                cfg["thinking_config"] = self._types.ThinkingConfig(thinking_budget=0)
+            except Exception:
+                pass
+        response = self._gen(model=self._model, contents=prompt,
+                             config=self._types.GenerateContentConfig(**cfg))
+        # 그래도 잘렸으면(MAX_TOKENS) 빈 문자열 — 규칙 기반 질문으로 강등된다.
+        # 잘린 문장을 화면에 내보내는 것보다 낫다.
+        try:
+            fr = str(getattr(response.candidates[0], "finish_reason", ""))
+            if "MAX_TOKEN" in fr.upper():
+                return ""
+        except Exception:
+            pass
         return (response.text or "").strip()
 
     def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str:
