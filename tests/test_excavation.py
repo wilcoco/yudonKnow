@@ -371,3 +371,65 @@ def test_the_timeline_sweep_sits_between_incident_and_cues(session):
     ladder = [r for r, _ in rungs("ko")]
     assert ladder.index("timeline") == ladder.index("recall") + 1
     assert ladder.index("cue") == ladder.index("timeline") + 1
+
+
+def _dig_titled(session, expert, title_seed, lang="ko"):
+    """한 영역에 카드 한 장을 빠르게 남긴다 (검증 세션 시험용)."""
+    started = service.start_session(session, expert, instrument="moment", lang=lang)
+    t = started["turn_id"]
+    for a in [f"{title_seed} 상황이 있었다", f"{title_seed} 신호가 보였다",
+              f"{title_seed}는 속도 문제다"]:
+        r = service.answer_turn(session, t, a, lang=lang)
+        t = r["turn_id"]
+    cid = r["card"]["id"]
+    service.confirm_card(session, cid, edits={"domain": "도장"}, lang=lang)
+    return cid
+
+
+def test_member_checking_ripens_seals_and_queues(session):
+    """영역 검증 세션 — 절차 ⑥(member checking)의 이식.
+
+    ① 한 단계에 카드 3장이 쌓이면 오늘의 질문이 검증으로 익는다.
+    ② "됐다" → 봉인되고, 다시 3장이 쌓이기 전엔 재검을 묻지 않는다.
+    ③ 빠진 것을 부르면 즉시 다음 발굴 주제가 되고, 그 질문의 프레이밍은
+       "후배가 물었다" 가 아니라 "검토에서 스스로 짚으셨죠" 다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    session.add(db.Flag(expert="hong", domain="도장", difficulty="hard"))
+    session.commit()
+
+    for seed in ("얼룩", "흐름", "광택"):
+        _dig_titled(session, "hong", seed)
+
+    n = service.peek_next_question(session, "hong", lang="ko")
+    assert n["source"] == "review" and n.get("step") == "도장", (
+        f"3장이 쌓였는데 검증이 익지 않았다: {n['source']}"
+    )
+
+    # "됐다" → 봉인
+    started = service.start_session(session, "hong", instrument="review",
+                                    step="도장", lang="ko")
+    assert "3장" in started["question"] or "카드" in started["question"]
+    done = service.answer_turn(session, started["turn_id"], "됐다, 다 있어", lang="ko")
+    assert done["review_done"]
+    n2 = service.peek_next_question(session, "hong", lang="ko")
+    assert n2["source"] != "review", "봉인했는데 또 검토를 물었다"
+
+    # 카드 3장 더 → 다시 익고, 이번엔 빠진 것을 부른다
+    for seed in ("기포", "번짐", "말림"):
+        _dig_titled(session, "hong", seed)
+    n3 = service.peek_next_question(session, "hong", lang="ko")
+    assert n3["source"] == "review", "재숙성되지 않았다 — 검증은 주기다"
+
+    started = service.start_session(session, "hong", instrument="review",
+                                    step="도장", lang="ko")
+    out = service.answer_turn(session, started["turn_id"],
+                              "겨울철 첫 가동 때 얼룩은 다른 얘기인데 그게 없네", lang="ko")
+    assert out["review_done"]
+    nxt = service.peek_next_question(session, "hong", lang="ko")
+    assert nxt["source"] == "review" or nxt["source"] == "junior"
+    # 검토발 공백이 큐 최상단(공백 취급)이며, 프레이밍이 정직한지
+    home = service.expert_home(session, "hong", lang="ko")
+    assert any("겨울철" in g["question"] for g in home["gaps"])
+    dig = service.start_session(session, "hong", lang="ko")
+    assert "검토에서" in dig["question"], f"검토발 프레이밍 아님: {dig['question'][:40]}"

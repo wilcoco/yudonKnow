@@ -74,6 +74,9 @@ class Flag(Base):
     difficulty: Mapped[str] = mapped_column(String(8), default="")
     #: 어디서 왔나 — expert(온보딩·직접) / taskmap(과업 지도 인터뷰)
     origin: Mapped[str] = mapped_column(String(16), default="expert")
+    #: 마지막 영역 검증(member checking) 때의 카드 수. 그 뒤로 3장 쌓이면
+    #: 다시 검증이 익는다(ripe) — 검증은 한 번이 아니라 주기다.
+    reviewed_cards: Mapped[int] = mapped_column(Integer, default=0)
     note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

@@ -55,6 +55,7 @@ class SessionIn(BaseModel):
     expert: str
     instrument: str = LADDER
     gap_id: str = ""
+    step: str = ""
 
 
 class AnswerIn(BaseModel):
@@ -250,7 +251,7 @@ def start_session(
 ) -> dict:
     return service.start_session(
         session, body.expert, instrument=body.instrument,
-        gap_id=body.gap_id, lang=lang,
+        gap_id=body.gap_id, step=body.step, lang=lang,
     )
 
 

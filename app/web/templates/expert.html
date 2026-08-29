@@ -421,13 +421,15 @@ async function loadToday(){
       : TODAY.source === 'doc' ? L['today.src.doc']
       : TODAY.source === 'voice' ? L['today.src.voice']
       : TODAY.source === 'flag' ? L['today.src.flag']
-      : TODAY.source === 'map' ? L['today.src.map'] : L['today.src.probe'];
+      : TODAY.source === 'map' ? L['today.src.map']
+      : TODAY.source === 'review' ? L['today.src.review'] : L['today.src.probe'];
     $('today').hidden = !!TODAY.readonly;
   }catch(e){ $('today').hidden = true; }
 }
 function answerToday(){
   if(TODAY && TODAY.gap_id) startGap(TODAY.gap_id);
   else if(TODAY && TODAY.source === 'map') startSession('taskmap');
+  else if(TODAY && TODAY.source === 'review') startReview(TODAY.step);
   else startSession('ladder');
 }
 function skipToday(){ TODAY_SKIP += 1; loadToday(); }
@@ -628,6 +630,23 @@ async function startGap(gapId){
     $('s_thread').innerHTML = ''; say('ask', s2.question);
     $('s_rung').textContent = s2.from_gap ? L['sess.from_gap'] : '';
     $('s_progress').textContent = `${s2.index} / ${s2.target}`;
+    $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
+    show('session');
+    autoUi(); if(AUTO) askCycle();
+  }catch(e){ err(e.message); }
+}
+
+async function startReview(step){
+  err('');
+  try{
+    const s2 = await api('/api/sessions', {method:'POST',
+      body: JSON.stringify({expert: me(), instrument: 'review', step})});
+    STATE.session = s2; STATE.turn = s2.turn_id; STATE.card = null;
+    $('s_tool').textContent = '🗺 ' + (s2.domain || '');
+    $('s_thread').innerHTML = ''; say('ask', s2.question);
+    $('s_rung').textContent = '';
+    $('s_progress').textContent = '';
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
     $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
     show('session');
@@ -1060,6 +1079,14 @@ async function sendAnswer(skip){
   try{
     const r = await api('/api/turns/'+STATE.turn, {method:'POST',
       body: JSON.stringify({answer, skip})});
+    if(r.review_done){
+      say('said', answer);
+      say('echo', r.question);
+      $('s_warn').textContent = r.question;
+      if(AUTO) speakQ(r.question);
+      setTimeout(loadHome, 2400);
+      return;
+    }
     if(r.map_built){
       say('said', answer);
       say('echo', r.question);          // 지도 요약을 읽어준다

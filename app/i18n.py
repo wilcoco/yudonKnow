@@ -240,6 +240,32 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "First, the map — where does the feel live in your job?",
         "ko": "먼저 지도부터 — 당신 일에서 '감'이 사는 곳이 어딘지요:",
     },
+    "review.invite": {
+        "en": "'{step}' has new cards piled up — shall we read them back and "
+              "check nothing is missing?",
+        "ko": "'{step}' 에 카드가 쌓였습니다 — 한번 읽어드릴 테니 빠진 게 "
+              "없는지 봐주시겠어요?",
+    },
+    "review.opener": {
+        "en": "Here is what we hold for '{step}' — {n} cards:\n{listing}\n\n"
+              "Is a judgment missing? Name just one. If it is all there, say "
+              "\"that's all\". (To fix a card's content, open it in your study.)",
+        "ko": "'{step}' 에서 지금까지 뽑은 카드 {n}장입니다:\n{listing}\n\n"
+              "빠진 판단이 있으면 하나만 불러주세요. 다 있으면 \"됐다\" 고 "
+              "하시면 됩니다. (카드 내용을 고치실 건 서가에서 열어 고치세요.)",
+    },
+    "review.sealed": {
+        "en": "'{step}' reviewed and sealed — I will ask again after a few more "
+              "cards pile up.",
+        "ko": "'{step}' 검토 완료 — 카드가 몇 장 더 쌓이면 다시 여쭙겠습니다.",
+    },
+    "review.queued": {
+        "en": "Queued: \"{what}\" — your next visit digs exactly that.",
+        "ko": "「{what}」 를 큐에 올렸습니다 — 다음 질문이 바로 그걸 팝니다.",
+    },
+    "today.src.review": {
+        "en": "Time to check what we hold:", "ko": "쌓인 것을 확인할 차례입니다:",
+    },
     "map.done": {
         "en": "Got the map: {summary}. {hard} step(s) marked as feel-heavy — "
               "we dig those first. Your next visit starts there.",

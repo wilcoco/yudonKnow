@@ -202,7 +202,8 @@ def peek_next_question(
 
     for gap in open_gaps(session, expert):
         src = ("doc" if _lines(gap.askers) == ["📄"]
-               else "voice" if _lines(gap.askers) == ["🎙"] else "junior")
+               else "voice" if _lines(gap.askers) == ["🎙"]
+            else "review" if _lines(gap.askers) == ["🗺"] else "junior")
         queue.append({"question": gap.question, "source": src, "gap_id": gap.id})
 
     live = [c for c in cards_of(session, expert) if c.status is not CardStatus.DORMANT]
@@ -216,10 +217,17 @@ def peek_next_question(
     move = campaign.next_move(
         open_gaps=0,   # 공백은 위에서 이미 큐 앞에 앉았다
         steps=[{"domain": f.domain, "difficulty": f.difficulty,
-                "cards": sum(1 for c in live if c.domain == f.domain)}
+                "cards": sum(1 for c in live if c.domain == f.domain
+                             and c.status is not CardStatus.DRAFT),
+                "reviewed": f.reviewed_cards}
                for f in flags],
         total_cards=len(live),
     )
+    if move.phase == "review":
+        queue.append({
+            "question": t("review.invite", lang, step=move.step),
+            "source": "review", "gap_id": "", "step": move.step,
+        })
     if move.phase == "map":
         queue.append({
             "question": interview.TASKMAP_OPENER.get(lang, interview.TASKMAP_OPENER["en"]),
@@ -245,7 +253,7 @@ def peek_next_question(
 
 def start_session(
     session: OrmSession, expert: str, *, instrument: str = LADDER,
-    gap_id: str = "", lang: str = LANG_DEFAULT,
+    gap_id: str = "", step: str = "", lang: str = LANG_DEFAULT,
 ) -> dict[str, Any]:
     """발굴 세션 시작. **연장은 전문가가 고른다** — 기본값은 사다리.
 
@@ -260,6 +268,31 @@ def start_session(
     lang = expert_row.lang or lang
     row = db.Session(id=_uid("s"), expert=expert, instrument=instrument)
     session.add(row)
+
+    if instrument == "review":
+        # 영역 검증(member checking) — 결정적 되읽기 + 한 가지 질문.
+        # 즉석 카드 편집은 하지 않는다(음성 중 오해 위험) — 수정은 서가로.
+        live = [c for c in cards_of(session, expert)
+                if c.status is not CardStatus.DORMANT
+                and c.status is not CardStatus.DRAFT
+                and (c.domain or "—") == step]
+        if not live:
+            raise ServiceError(t("err.no_card", lang))
+        listing = "\n".join(
+            f"{i+1}. {c.title} — {c.judgment[:60]}" for i, c in enumerate(live)
+        )
+        row.domain = step
+        text_q = t("review.opener", lang, step=step, n=len(live), listing=listing)
+        turn = db.Turn(id=_uid("t"), session_id=row.id, question=text_q,
+                       rung="review", targets="")
+        session.add(turn)
+        session.commit()
+        return {
+            "session_id": row.id, "instrument": instrument,
+            "turn_id": turn.id, "question": text_q, "rung": "review",
+            "from_gap": False, "domain": step,
+            "target": 1, "index": 1,
+        }
 
     gap = None
     if gap_id:
@@ -319,6 +352,7 @@ def start_session(
         gap_source=(
             "doc" if bool(gap) and _lines(gap.askers) == ["📄"]
             else "voice" if bool(gap) and _lines(gap.askers) == ["🎙"]
+            else "review" if bool(gap) and _lines(gap.askers) == ["🗺"]
             else "junior"
         ),
         lang=lang,
@@ -364,6 +398,50 @@ def answer_turn(
     expert_row = session.get(db.Expert, sess.expert)
     if expert_row is not None and expert_row.lang:
         lang = expert_row.lang   # 발굴은 전문가의 언어로 산다
+
+    if sess.instrument == "review":
+        # "됐다" → 검토 봉인. 빠진 것을 불렀다 → 즉시 다음 발굴 주제(공백 큐).
+        flag = session.scalar(
+            select(db.Flag).where(db.Flag.expert == sess.expert,
+                                  db.Flag.domain == sess.domain)
+        )
+        live_n = sum(
+            1 for c in cards_of(session, sess.expert)
+            if c.status is not CardStatus.DORMANT
+            and c.status is not CardStatus.DRAFT
+            and (c.domain or "—") == sess.domain
+        )
+        # 완료 판정 — **짧은 답만** 완료다. "빠진 게 없다"(완료)와
+        # "겨울철 얘기가 없네"(빠진 것!)가 같은 '없' 을 쓴다. 긴 문장은
+        # 내용이지 승인이 아니다.
+        done_words = ("됐", "없", "다 있", "충분", "맞아", "괜찮",
+                      "done", "that's all", "nothing", "all there", "good", "fine")
+        said = turn.answer.strip().lower()
+        is_done = (turn.skipped
+                   or (len(said) <= 14 and any(w in said for w in done_words)))
+        sess.closed = True
+        if flag is not None:
+            flag.reviewed_cards = live_n
+        if is_done:
+            session.commit()
+            return {
+                "review_done": True, "question": t("review.sealed", lang, step=sess.domain),
+                "reflection": "", "rung": "review", "targets": "", "turn_id": "",
+                "card": None, "report": {"slots": []},
+                "index": 1, "target": 1, "wrap_up": True, "fallback": False,
+            }
+        gap_q = (f"{turn.answer.strip()} ('{sess.domain}' 검토에서 짚으심)"
+                 if lang == "ko" else
+                 f"{turn.answer.strip()} (raised in the '{sess.domain}' review)")
+        _record_gap(session, sess.expert, gap_q, asker="🗺")
+        session.commit()
+        return {
+            "review_done": True,
+            "question": t("review.queued", lang, what=turn.answer.strip()[:50]),
+            "reflection": "", "rung": "review", "targets": "", "turn_id": "",
+            "card": None, "report": {"slots": []},
+            "index": 1, "target": 1, "wrap_up": True, "fallback": False,
+        }
 
     if sess.instrument == "taskmap":
         # Phase 0 — 과업 지도. 카드를 만들지 않는다: 산출물은 단계 목록이고,

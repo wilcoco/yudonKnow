@@ -48,6 +48,14 @@ def next_move(
         return Move(phase="gap")
     if not steps:
         return Move(phase="map")
+    # 검증이 익은 단계 — 새로 판 것부터 확인하고 다음을 판다 (member checking
+    # 은 채집 블록 뒤에 온다). 검증 없이 계속 파면 오해가 쌓인 채 굳는다.
+    RIPE = 3
+    ripe = [s2 for s2 in steps
+            if s2.get("cards", 0) - s2.get("reviewed", 0) >= RIPE]
+    if ripe:
+        top = max(ripe, key=lambda x: x.get("cards", 0) - x.get("reviewed", 0))
+        return Move(phase="review", step=top["domain"])
     ranked = sorted(
         (s for s in steps if s.get("cards", 0) == 0),
         key=lambda s: {"hard": 0, "mid": 1, "easy": 2, "": 1}.get(

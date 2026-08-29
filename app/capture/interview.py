@@ -379,6 +379,14 @@ def next_question(
                 text = ("Reading your procedure, I found something it does not "
                         "answer.\n\n"
                         f"\u201c{gap_question}\u201d\n\nWhat do you do?")
+        elif gap_source == "review":
+            if lang == "ko":
+                text = ("검토에서 스스로 짚으셨죠.\n\n"
+                        f"「{gap_question}」\n\n그 이야기로 가보죠 — 그때 상황 하나만.")
+            else:
+                text = ("You raised this yourself in the review.\n\n"
+                        f"\u201c{gap_question}\u201d\n\nLet's go there — one "
+                        "actual time it happened.")
         elif gap_source == "voice":
             if lang == "ko":
                 text = ("지난번 혼잣말에서 이걸 건졌습니다.\n\n"
