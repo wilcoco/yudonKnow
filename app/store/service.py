@@ -302,6 +302,26 @@ def start_session(
     if gap is None:
         gap = _top_gap(session, expert)
 
+    if gap is None and instrument == LADDER and step:
+        # 드릴다운 — 전문가가 지도에서 단계를 직접 짚었다. 캠페인의 추천
+        # 순서보다 본인의 선택이 먼저다 (운전대는 전문가에게).
+        live_n = sum(
+            1 for c in cards_of(session, expert)
+            if c.status is not CardStatus.DORMANT
+        )
+        text_q = interview.flag_probe(step, live_n, lang)
+        row.domain = step
+        turn = db.Turn(id=_uid("t"), session_id=row.id, question=text_q,
+                       rung="opener", targets="situation")
+        session.add(turn)
+        session.commit()
+        return {
+            "session_id": row.id, "instrument": instrument,
+            "turn_id": turn.id, "question": text_q, "rung": "opener",
+            "from_gap": False, "domain": step,
+            "target": settings.interview_turns, "index": 1,
+        }
+
     if gap is None and instrument == LADDER:
         # ② 카드 없는 이관 업무 — 전문가가 "남겨야 한다" 고 적은 영역인데
         # 아직 한 장도 없는 곳부터. 깃발은 본인이 그린 발굴 지도다.

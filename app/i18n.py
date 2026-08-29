@@ -273,6 +273,9 @@ CATALOG: dict[str, dict[str, str]] = {
     "today.src.review": {
         "en": "Time to check what we hold:", "ko": "쌓인 것을 확인할 차례입니다:",
     },
+    "camp.title": {
+        "en": "Where it breaks without you —", "ko": "당신이 없으면 비는 곳 —",
+    },
     "camp.more": {"en": "map & shelf →", "ko": "지도·서가 →"},
     "map.done": {
         "en": "Got the map: {summary}. {hard} step(s) marked as feel-heavy — "

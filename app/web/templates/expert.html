@@ -428,14 +428,37 @@ function skipToday(){ TODAY_SKIP += 1; loadToday(); }
 
 // 캠페인 스트립 — 왜 이 질문인지, 지도가 어디까지 팠는지 한 줄.
 function renderCampaign(h){
+  // 리스크 나열 + 항목별 드릴다운 — 칩을 누르면 바로 그 영역을 판다.
+  // 캠페인은 순서를 추천할 뿐, 어디부터 팔지는 전문가가 짚을 수 있다.
   const steps = h.campaign_steps || [];
   const el = $('camp_strip');
   if(!steps.length){ el.hidden = true; return; }
-  el.innerHTML = '🗺 ' + steps.map(st =>
-    `${st.difficulty==='hard'?'🔴':st.difficulty==='easy'?'🟢':'🟡'}${esc(st.domain)} ${st.cards}${st.ripe?' ·검증대기':''}`
-  ).join(' &nbsp;·&nbsp; ') +
-  ` &nbsp;<a href="#" onclick="show('library');return false">${esc(L['camp.more'])}</a>`;
+  el.innerHTML = esc(L['camp.title']) + ' ' + steps.map(st =>
+    `<button class="b ${st.difficulty==='hard'?'warn':'am'}" style="cursor:pointer;min-height:32px"
+       onclick="digStep(${JSON.stringify(st.domain)})">
+       ${st.difficulty==='hard'?'🔴':st.difficulty==='easy'?'🟢':'🟡'}
+       ${esc(st.domain)} · ${st.cards}${st.ripe?' ⏳':''}</button>`
+  ).join(' ') +
+  ` <a href="#" onclick="show('library');return false">${esc(L['camp.more'])}</a>`;
   el.hidden = false;
+}
+
+// 지도에서 단계 하나를 짚어 바로 판다 — 드릴다운.
+async function digStep(step){
+  err('');
+  try{
+    const s2 = await api('/api/sessions', {method:'POST',
+      body: JSON.stringify({expert: me(), instrument: 'ladder', step})});
+    STATE.session = s2; STATE.turn = s2.turn_id; STATE.card = null;
+    $('s_tool').textContent = '🗺 ' + (s2.domain || '');
+    $('s_thread').innerHTML = ''; say('ask', s2.question);
+    $('s_rung').textContent = '';
+    $('s_progress').textContent = `${s2.index} / ${s2.target}`;
+    $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
+    show('session');
+    autoUi(); if(AUTO) askCycle();
+  }catch(e){ err(e.message); }
 }
 
 // ── 카드 렌더러 — 카드를 카드답게. afterglow 와 cardview 가 같이 쓴다.

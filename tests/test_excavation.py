@@ -433,3 +433,25 @@ def test_member_checking_ripens_seals_and_queues(session):
     assert any("겨울철" in g["question"] for g in home["gaps"])
     dig = service.start_session(session, "hong", lang="ko")
     assert "검토에서" in dig["question"], f"검토발 프레이밍 아님: {dig['question'][:40]}"
+
+
+def test_the_expert_can_drill_into_any_step_from_the_map(session):
+    """드릴다운 — 나열된 리스크(단계)를 전문가가 직접 짚어 들어간다.
+
+    캠페인은 순서를 추천할 뿐이다. 지도에서 단계를 짚으면 그 단계를 겨냥한
+    질문으로 세션이 열리고, 나온 카드는 그 영역으로 귀속된다 —
+    운전대는 전문가에게.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    for d, diff in (("입고 검사", "mid"), ("도장", "hard"), ("출하", "easy")):
+        session.add(db.Flag(expert="hong", domain=d, difficulty=diff))
+    session.commit()
+
+    # 캠페인 추천(🔴 도장)과 다른 단계를 본인이 짚는다
+    started = service.start_session(session, "hong", step="출하", lang="ko")
+    assert "출하" in started["question"], "짚은 단계를 겨냥하지 않았다"
+    assert started["domain"] == "출하"
+
+    r = service.answer_turn(session, started["turn_id"],
+                            "출하 직전에 라벨이 뒤집혀 나간 적이 있었다", lang="ko")
+    assert r["card"]["domain"] == "출하", "드릴다운 카드가 영역을 물려받지 않았다"
