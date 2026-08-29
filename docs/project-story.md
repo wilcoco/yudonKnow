@@ -13,6 +13,20 @@ retiring expert to dig out the judgment they can't write down, then stays
 behind as their alter so juniors keep working with it.
 ```
 
+발표에서 쓰는 한 문장 (ko):
+
+```
+선배는 떠나도 판단은 남고, 그 판단이 일할 때마다 기여도도 선배에게
+돌아갑니다.
+```
+
+세 정체성으로 말할 때: ① 수십 년 직업 인생을 남기는 **직업 회고록**,
+② 후배가 실제 업무에 쓰는 **살아 있는 판단 아카이브**, ③ 사용된 만큼
+은퇴자에게 돌려주는 **지식 기여 보상체계** — 셋이 한 순환이다. 기존
+지식관리가 "퇴직 전에 지식을 회사에 넘기세요"(추출)라면, 이 제품은
+"당신의 판단은 당신 것이고, 남긴 만큼 기록되고 돌아옵니다"(교환)에서
+출발한다.
+
 ---
 
 ## Project Story (Markdown — 그대로 붙여넣는다)
@@ -294,8 +308,12 @@ settlement — precisely because it refuses vanity metrics. It counts only
 citations and explicit field reports, so the same numbers that give the expert
 their pride can, under an HR policy, give them their fee. The boundary that
 matters: settle on **field-verified use**, never on card count — pay per card
-and you get thin cards. That policy lives in HR, not in code; what the product
-contributes is a ledger clean enough to settle on.
+and you get thin cards. Nor on raw ask counts: weight the ledger by trust —
+citation (low) < "it helped" (mid) < field-verified ✔ (high) < prevented-loss
+reports (highest), with repeat use across juniors compounding; "didn't hold"
+is a review signal, never a penalty. That policy lives in HR, not in code;
+what the product contributes is a ledger clean enough to settle on — each
+grade counted verifiably, no vanity proxies.
 
 ## Video closing (30 seconds, spoken or subtitled)
 

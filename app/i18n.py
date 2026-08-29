@@ -135,9 +135,11 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Don't know whom to ask? Start with the question",
         "ko": "누구에게 물을지 모르면, 질문부터",
     },
+    # 예시는 전시 전문가의 카드에 **실제로 걸리는** 질문이어야 한다 —
+    # 첫 검색이 "없습니다" 로 끝나는 입구는 고장으로 보인다 (프로덕션 실측).
     "portal.ph": {
-        "en": "e.g. Outdoors the color looks off, indoor inspection says fine",
-        "ko": "예: 야외에서 보면 색감이 이상한데 실내 검사에선 멀쩡해요",
+        "en": "e.g. The aeration foam went brown overnight — what now?",
+        "ko": "예: 플로우마크가 게이트 반대쪽에만 생겨요",
     },
     "portal.btn": {"en": "Who left a judgment?", "ko": "누가 판단을 남겼나"},
     "portal.none": {
