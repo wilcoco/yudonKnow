@@ -371,3 +371,19 @@ def test_an_ungrounded_answer_is_demoted_to_verbatim_cards():
         "플로우마크가 한쪽만 나와요", lang="ko",
     )
     assert not good.stubbed, "제대로 인용한 답까지 강등했다"
+
+
+def test_an_expert_confirmed_card_is_citable_regardless_of_completeness():
+    """전문가 승인이 품질 권위다 — 수치 완성도가 그 위에 앉지 않는다.
+
+    4턴 만에 일찍 승인한 카드(완성도 0.57)가 완성도 0.6 문턱에 걸려
+    **승인됐는데도 분신이 영영 못 쓰는** 상태였다(프로덕션 실측). 자격은
+    원칙대로: 승인 + 신호 + 판단. 판단 없는 카드만 추가로 막는다 —
+    신호만으로는 "그래서?" 가 없다.
+    """
+    thin = make_card(action=[], rationale="", exceptions=[], failure="")
+    assert thin.completeness < 0.6
+    assert thin.citable(), "승인·신호·판단이 있는데 완성도 숫자가 막았다"
+
+    no_judgment = make_card(judgment="", action=[], rationale="")
+    assert not no_judgment.citable(), "판단 없는 카드가 인용됐다"

@@ -137,7 +137,14 @@ class Card:
             return False
         if not self.cues:
             return False
-        return self.completeness >= floor
+        # 판단이 없는 카드는 답이 될 수 없다 — 신호만으로는 "그래서?" 가 없다.
+        if not self.judgment:
+            return False
+        # 수치 완성도 문턱은 두지 않는다. 전문가 승인이 품질 권위인데
+        # (설계 원칙: 전문가가 고친 것이 기계보다 우선) 완성도 0.6 문턱이
+        # 그 위에 앉아, 일찍 승인한 카드를 분신이 영영 못 쓰게 만들었다
+        # (프로덕션 스팟 워크 실측 — 4턴 승인 카드 0.57 → 조용히 비인용).
+        return True
 
     def visible_to(self, viewer: str, *, today: date | None = None) -> bool:
         """통제권의 구현. 전문가 본인은 언제나 자기 카드를 본다."""
