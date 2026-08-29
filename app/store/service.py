@@ -1275,9 +1275,14 @@ def alter_preview(
         raise ServiceError(t("err.no_card", lang))
     expert_row = get_expert(session, row.expert, lang=lang)
 
+    # 시연 질문은 제목이 아니라 **신호**에서 만든다. 후배는 "이런 게
+    # 보이는데" 로 묻고, 검색도 신호 칸 가중이 최고다. (제목은 일찍 승인한
+    # 카드에선 정련 전 원문 문장이라 검색이 빗나간다 — 스팟 워크 실측.)
+    card0 = row_to_card(row)
+    seed = card0.cues[0] if card0.cues else row.title
     question = (
-        f"{row.title} — 이럴 땐 어떻게 하죠?" if lang == "ko"
-        else f"{row.title} — what do I do?"
+        f"{seed} — 이럴 땐 어떻게 하죠?" if lang == "ko"
+        else f"{seed} — what do I do?"
     )
     reply = respond(
         get_llm(),
