@@ -420,12 +420,14 @@ async function loadToday(){
       TODAY.source === 'junior' ? L['today.src.junior']
       : TODAY.source === 'doc' ? L['today.src.doc']
       : TODAY.source === 'voice' ? L['today.src.voice']
-      : TODAY.source === 'flag' ? L['today.src.flag'] : L['today.src.probe'];
+      : TODAY.source === 'flag' ? L['today.src.flag']
+      : TODAY.source === 'map' ? L['today.src.map'] : L['today.src.probe'];
     $('today').hidden = !!TODAY.readonly;
   }catch(e){ $('today').hidden = true; }
 }
 function answerToday(){
   if(TODAY && TODAY.gap_id) startGap(TODAY.gap_id);
+  else if(TODAY && TODAY.source === 'map') startSession('taskmap');
   else startSession('ladder');
 }
 function skipToday(){ TODAY_SKIP += 1; loadToday(); }
@@ -1058,6 +1060,15 @@ async function sendAnswer(skip){
   try{
     const r = await api('/api/turns/'+STATE.turn, {method:'POST',
       body: JSON.stringify({answer, skip})});
+    if(r.map_built){
+      say('said', answer);
+      say('echo', r.question);          // 지도 요약을 읽어준다
+      STATE.lastEcho = r.question; STATE.lastQ = ''; STATE.wrapUp = false;
+      $('s_warn').textContent = r.question;
+      if(AUTO) speakQ(r.question);
+      setTimeout(loadHome, 2600);
+      return;
+    }
     STATE.turn = r.turn_id; STATE.card = r.card;
     say('said', skip ? L['sess.skip'] : answer);
     say('echo', r.reflection);

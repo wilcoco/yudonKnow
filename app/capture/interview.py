@@ -29,7 +29,9 @@ log = logging.getLogger(__name__)
 _RUNGS: dict[str, tuple[tuple[str, str], ...]] = {
     "ko": (
         ("recall", "최근 6개월 중, 당신이 없었으면 팀이 크게 잘못됐을 순간을 하나만 떠올려 주세요."),
-        ("cue", "그때 무엇을 보고 그렇게 판단하셨나요? 화면? 소리? 냄새? 손끝 느낌?"),
+        ("timeline", "그날을 순서대로 짚어보죠 — 처음 뭔가 이상하다고 느낀 순간부터, "
+                     "판단이 갈린 지점까지. 시간순으로 말씀해 주세요."),
+        ("cue", "그 판단이 갈린 지점에서 — 무엇을 보고 그렇게 판단하셨나요? 화면? 소리? 냄새? 손끝 느낌?"),
         ("counterfactual", "5년차 후배가 그 상황이었다면 뭘 했을 것 같나요? 그게 왜 틀렸을까요?"),
         ("boundary", "이 판단이 안 통하는 경우가 있나요? 언제 이 규칙을 버리시나요?"),
         ("failure", "이 판단으로 크게 틀렸던 적이 있나요? 그때 무슨 일이 있었나요?"),
@@ -37,8 +39,10 @@ _RUNGS: dict[str, tuple[tuple[str, str], ...]] = {
     "en": (
         ("recall", "Think of one moment in the last six months when this team would "
                    "have gone badly wrong without you."),
-        ("cue", "What did you see that told you? A screen? A sound? A smell? "
-                "Something in your hands?"),
+        ("timeline", "Walk me through that day in order — from the first moment "
+                     "something felt off, to the point where the call was made."),
+        ("cue", "At that point where the call was made — what did you see? A screen? "
+                "A sound? A smell? Something in your hands?"),
         ("counterfactual", "If someone five years in had been standing there, what "
                            "would they have done? Why would that be wrong?"),
         ("boundary", "Is there a case where this judgment does not hold? When do you "
@@ -89,6 +93,79 @@ def entry_probe(card_count: int, lang: str = "en") -> tuple[str, str]:
     """
     probes = _ENTRY_PROBES.get(lang, _ENTRY_PROBES["en"])
     return probes[card_count % len(probes)]
+
+
+#: Phase 0 — 과업 지도 인터뷰의 오프너. 전문 지식공학의 1단계(Task Diagram).
+TASKMAP_OPENER = {
+    "ko": "하시는 일을 처음부터 끝까지, 큰 단계로 불러주세요 — 보통 4~7개쯤 "
+          "됩니다. 그리고 그중에 '이건 글로 안 되고 감이 필요하다' 싶은 단계가 "
+          "어디인지도요.",
+    "en": "Walk me through your job start to finish, in big steps — usually four "
+          "to seven. And tell me which of those steps take feel, not paperwork.",
+}
+
+_TASKMAP_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "steps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "difficulty": {"type": "string",
+                                   "enum": ["hard", "mid", "easy"]},
+                },
+                "required": ["name", "difficulty"],
+            },
+        },
+    },
+    "required": ["steps"],
+}
+
+
+def extract_task_map(
+    llm: BaseLLM, narration: str, *, lang: str = "en", limit: int = 9
+) -> list[dict[str, str]]:
+    """일의 서사 → 단계 목록(이름+난이도). 지어내지 않는다 — 부른 것만.
+
+    stub 폴백은 줄 단위 분해: 한 줄 = 한 단계, 난이도는 감각·감 어휘가 있으면
+    hard. 결정적이라 기저 없이도 지도는 그려진다.
+    """
+    body = (narration or "").strip()
+    if not body:
+        return []
+    if lang == "ko":
+        prompt = ("아래는 전문가가 자기 일을 단계로 부른 것이다. 단계 이름과 "
+                  "난이도(hard=감이 필요하다고 한 곳, easy=글로 된다고 한 곳, "
+                  "그 외 mid)를 뽑아라. **말한 단계만** — 지어내지 마라. "
+                  f"최대 {limit}개.\n\n{body}")
+    else:
+        prompt = ("Below an expert names the steps of their job. Extract step "
+                  "names and difficulty (hard = they said it takes feel, easy = "
+                  "they said it is by the book, else mid). **Only steps they "
+                  f"named** — invent none. At most {limit}.\n\n{body}")
+    try:
+        raw = llm.extract(prompt, _TASKMAP_SCHEMA)
+    except Exception as exc:
+        log.warning("과업 지도 추출 실패, 규칙 기반: %s", exc)
+        raw = {}
+    steps = [
+        {"name": str(x.get("name", "")).strip()[:120],
+         "difficulty": x.get("difficulty", "mid")}
+        for x in (raw.get("steps") or []) if str(x.get("name", "")).strip()
+    ]
+    if steps:
+        return steps[:limit]
+    out = []
+    for line in body.splitlines():
+        line = line.strip(" -·0123456789.\t")
+        if not line:
+            continue
+        hard = any(w in line for w in ("감", "느낌", "손끝", "냄새", "소리",
+                                       "feel", "gut", "ear", "smell"))
+        out.append({"name": line[:120], "difficulty": "hard" if hard else "mid"})
+    return out[:limit]
 
 
 def flag_probe(domain: str, card_count: int, lang: str = "en") -> str:
@@ -728,6 +805,7 @@ _SENTENCE = re.compile(r"(?<=[.!?。？！])\s+|\n+")
 _RUNG_SLOT: dict[str, str] = {
     "opener": "situation",
     "recall": "situation",
+    "timeline": "situation",
     "cue": "cues",
     "counterfactual": "judgment",
     "boundary": "exceptions",

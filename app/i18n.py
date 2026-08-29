@@ -236,6 +236,16 @@ CATALOG: dict[str, dict[str, str]] = {
                          "ko": "혼잣말에서 건졌습니다:"},
     "today.src.flag": {"en": "You said this must be handed over:",
                         "ko": "남겨야 한다고 적으신 영역입니다:"},
+    "today.src.map": {
+        "en": "First, the map — where does the feel live in your job?",
+        "ko": "먼저 지도부터 — 당신 일에서 '감'이 사는 곳이 어딘지요:",
+    },
+    "map.done": {
+        "en": "Got the map: {summary}. {hard} step(s) marked as feel-heavy — "
+              "we dig those first. Your next visit starts there.",
+        "ko": "지도를 그렸습니다: {summary}. '감이 필요한' 단계 {hard}곳 — "
+              "거기부터 팝니다. 다음에 오시면 그 질문이 기다립니다.",
+    },
     "today.src.probe": {"en": "Today's opener:", "ko": "오늘의 첫 질문:"},
     "home.memoir": {"en": "Memoir", "ko": "회고록"},
     "memoir.series": {"en": "A record of judgment", "ko": "판단의 기록"},

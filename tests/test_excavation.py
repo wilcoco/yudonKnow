@@ -323,3 +323,51 @@ def test_refinement_may_polish_but_never_lose(session):
     )
     assert any("느슨" in c for c in refined.data["cues"]), "규칙 기반 신호가 사라졌다"
     assert refined.data["judgment"] == "속도 문제", "정련의 다듬기는 유지되어야 한다"
+
+
+def test_the_campaign_follows_the_knowledge_engineers_procedure(session):
+    """캠페인 = 사람 지식공학자의 절차: 지도 없으면 지도부터, 있으면 🔴부터.
+
+    ① 단계가 하나도 없으면 오늘의 질문이 과업 지도 인터뷰다 (ACTA 1단계 —
+       지도 없이 파는 것은 손전등 없이 갱도에 들어가는 것).
+    ② 지도가 그려지면 '감이 필요하다(hard)' 고 표시된 단계가 먼저 온다.
+    ③ 공백은 언제나 지도보다 앞선다 — 주제는 현장 수요가 정한다.
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+
+    first = service.peek_next_question(session, "hong", lang="ko")
+    assert first["source"] == "map", "지도 없는 첫 손님에게 지도부터 묻지 않았다"
+    assert "단계" in first["question"]
+
+    started = service.start_session(session, "hong", instrument="taskmap", lang="ko")
+    done = service.answer_turn(
+        session, started["turn_id"],
+        "입고 검사, 그다음 도장 준비, 도장은 감이 필요하지, 마지막 출하 검사는 "
+        "체크리스트대로 하면 돼", lang="ko",
+    )
+    assert done["map_built"] and done["wrap_up"]
+    flags = {f.domain: f.difficulty for f in session.scalars(
+        __import__("sqlalchemy").select(db.Flag).where(db.Flag.expert == "hong")
+    ).all()}
+    assert flags, "지도가 저장되지 않았다"
+    assert any(d == "hard" for d in flags.values()), "'감이 필요' 표시가 유실됐다"
+
+    nxt = service.peek_next_question(session, "hong", lang="ko")
+    assert nxt["source"] == "flag", "지도를 그렸는데 단계 발굴로 넘어가지 않았다"
+    hard_names = [n for n, d in flags.items() if d == "hard"]
+    assert any(h[:6] in nxt["question"] for h in hard_names), (
+        f"🔴 단계보다 다른 것이 먼저 왔다: {nxt['question'][:40]}"
+    )
+
+
+def test_the_timeline_sweep_sits_between_incident_and_cues(session):
+    """CDM 2스윕 — 사건을 확보하면 신호로 점프하지 않고 타임라인부터 편다.
+
+    판단 지점은 타임라인 위에서 드러난다. 사건→신호 직행은 복잡한 사건에서
+    구조를 잃는 지름길이었다.
+    """
+    from app.capture.interview import rungs
+
+    ladder = [r for r, _ in rungs("ko")]
+    assert ladder.index("timeline") == ladder.index("recall") + 1
+    assert ladder.index("cue") == ladder.index("timeline") + 1

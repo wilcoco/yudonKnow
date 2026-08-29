@@ -54,6 +54,11 @@ class Expert(Base):
 
 
 class Flag(Base):
+    """과업 단계이자 깃발 — 발굴 캠페인의 지도 조각.
+
+    전문 지식공학의 1단계(Task Diagram)는 일의 단계를 그리고 **어느 단계가
+    인지적으로 어려운지** 표시하는 것이다. 그 표시가 발굴 우선순위가 된다.
+    """
     """🚩 머릿속 지도 — **전문가 본인이** "여기 아직 남았다" 고 꽂은 깃발.
 
     기계가 계산한 커버리지보다 이 깃발을 먼저 본다. 기계가 "다 됐다"고 해도
@@ -65,6 +70,10 @@ class Flag(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     expert: Mapped[str] = mapped_column(String(64), index=True)
     domain: Mapped[str] = mapped_column(String(128))
+    #: 인지 난이도 — hard(감이 필요) / mid / easy. 캠페인이 hard 부터 판다.
+    difficulty: Mapped[str] = mapped_column(String(8), default="")
+    #: 어디서 왔나 — expert(온보딩·직접) / taskmap(과업 지도 인터뷰)
+    origin: Mapped[str] = mapped_column(String(16), default="expert")
     note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

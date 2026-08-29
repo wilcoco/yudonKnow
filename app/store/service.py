@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session as OrmSession
 
 from app.alter.persona import AlterReply, Persona, memoir_prose, respond
-from app.capture import interview
+from app.capture import campaign, interview
 from app.capture.instruments import LADDER, recommend, unlocked
 from app.capture.llm import get_llm
 from app.config import settings
@@ -207,14 +207,33 @@ def peek_next_question(
 
     live = [c for c in cards_of(session, expert) if c.status is not CardStatus.DORMANT]
     covered = {c.domain for c in live if c.domain}
-    for f in session.scalars(
+    flags = session.scalars(
         select(db.Flag).where(db.Flag.expert == expert).order_by(db.Flag.created_at)
-    ).all():
-        if f.domain not in covered:
-            queue.append({
-                "question": interview.flag_probe(f.domain, len(live), lang),
-                "source": "flag", "gap_id": "",
-            })
+    ).all()
+
+    # 캠페인 지휘 — 사람 지식공학자의 절차: 지도 없으면 지도부터,
+    # 있으면 🔴(감이 필요) 단계의 빈 곳부터 (app/capture/campaign.py).
+    move = campaign.next_move(
+        open_gaps=0,   # 공백은 위에서 이미 큐 앞에 앉았다
+        steps=[{"domain": f.domain, "difficulty": f.difficulty,
+                "cards": sum(1 for c in live if c.domain == f.domain)}
+               for f in flags],
+        total_cards=len(live),
+    )
+    if move.phase == "map":
+        queue.append({
+            "question": interview.TASKMAP_OPENER.get(lang, interview.TASKMAP_OPENER["en"]),
+            "source": "map", "gap_id": "",
+        })
+    ordered = sorted(
+        (f for f in flags if f.domain not in covered),
+        key=lambda f: {"hard": 0, "mid": 1, "easy": 2, "": 1}.get(f.difficulty, 1),
+    )
+    for f in ordered:
+        queue.append({
+            "question": interview.flag_probe(f.domain, len(live), lang),
+            "source": "flag", "gap_id": "",
+        })
 
     probes = [interview.entry_probe(len(live) + i, lang) for i in range(4)]
     for kind, q in probes:
@@ -345,6 +364,34 @@ def answer_turn(
     expert_row = session.get(db.Expert, sess.expert)
     if expert_row is not None and expert_row.lang:
         lang = expert_row.lang   # 발굴은 전문가의 언어로 산다
+
+    if sess.instrument == "taskmap":
+        # Phase 0 — 과업 지도. 카드를 만들지 않는다: 산출물은 단계 목록이고,
+        # 그 목록이 이후 모든 발굴의 지도가 된다 (ACTA Task Diagram).
+        steps = interview.extract_task_map(get_llm(), turn.answer, lang=lang)
+        existing = {
+            f.domain for f in session.scalars(
+                select(db.Flag).where(db.Flag.expert == sess.expert)
+            ).all()
+        }
+        for st in steps:
+            if st["name"] not in existing:
+                session.add(db.Flag(expert=sess.expert, domain=st["name"],
+                                    difficulty=st["difficulty"], origin="taskmap"))
+        sess.closed = True
+        session.commit()
+        summary = " / ".join(
+            f"{'🔴' if st['difficulty']=='hard' else '🟡' if st['difficulty']=='mid' else '🟢'}"
+            f"{st['name']}" for st in steps
+        )
+        return {
+            "map_built": True, "steps": steps,
+            "question": t("map.done", lang, summary=summary,
+                          hard=sum(1 for x in steps if x["difficulty"] == "hard")),
+            "reflection": "", "rung": "map", "targets": "",
+            "turn_id": "", "card": None, "report": {"slots": []},
+            "index": 1, "target": 1, "wrap_up": True, "fallback": False,
+        }
 
     history = _history(session, sess.id)
     last_slot = turn.targets or interview.RUNG_SLOT.get(turn.rung, "")
