@@ -64,6 +64,7 @@ def row_to_card(row: db.CardRow) -> Card:
         exceptions=_lines(row.exceptions),
         failure=row.failure,
         unspeakable=_lines(row.unspeakable),
+        aliases=_lines(row.aliases),
         status=CardStatus(row.status),
         tacitness=Tacitness(row.tacitness),
         visibility=Visibility(row.visibility),
@@ -89,6 +90,7 @@ def write_card(row: db.CardRow, card: Card) -> None:
     row.exceptions = _join(card.exceptions)
     row.failure = card.failure
     row.unspeakable = _join(card.unspeakable)
+    row.aliases = _join(card.aliases)
     row.status = card.status.value
     row.tacitness = card.tacitness.value
     row.visibility = card.visibility.value
@@ -699,6 +701,15 @@ def confirm_card(
         verification_reset = True
 
     card.status = CardStatus.CONFIRMED
+    # 검색어 별칭 — 승인 순간이 "후배가 뭐라고 물을까" 를 뽑기 가장 좋은
+    # 때다(내용 확정). 실질 수정 시에도 재생성. 실패는 무해(빈 목록).
+    if substantive or not card.aliases:
+        expert_row3 = session.get(db.Expert, card.expert)
+        card.aliases = interview.search_aliases(
+            get_llm(), title=card.title, situation=card.situation,
+            cues=card.cues,
+            lang=(expert_row3.lang if expert_row3 and expert_row3.lang else lang),
+        )
     write_card(row, card)
     _log(session, card.expert, legacy.LedgerEvent.CARD_CONFIRMED, card_id=card.id)
 
@@ -1613,6 +1624,35 @@ def flag_domain(
     session.add(db.Flag(expert=expert, domain=domain, note=note))
     session.commit()
     return {"ok": True, "domain": domain}
+
+
+def backfill_aliases(session: Session, *, lang: str = LANG_DEFAULT) -> dict[str, Any]:
+    """별칭 도입 이전에 승인된 카드에 검색어 별칭을 채운다.
+
+    빈 별칭 + 인용 가능 카드만, 한 번에 40장 상한(호출당 비용 상한).
+    시연 전문가(read-only 가드)도 대상이다 — 내용 수정이 아니라 검색 보조라
+    전문가의 말은 한 글자도 안 바뀐다.
+    """
+    rows = session.scalars(
+        select(db.CardRow).where(
+            db.CardRow.aliases == "",
+            db.CardRow.status.in_(["confirmed", "anchored", "contested"]),
+        ).limit(40)
+    ).all()
+    llm = get_llm()
+    filled = 0
+    for row in rows:
+        expert_row = session.get(db.Expert, row.expert)
+        terms = interview.search_aliases(
+            llm, title=row.title, situation=row.situation,
+            cues=_lines(row.cues),
+            lang=(expert_row.lang if expert_row and expert_row.lang else lang),
+        )
+        if terms:
+            row.aliases = _join(terms)
+            filled += 1
+    session.commit()
+    return {"scanned": len(rows), "filled": filled}
 
 
 def admin_board(session: OrmSession, *, lang: str = LANG_DEFAULT) -> dict[str, Any]:

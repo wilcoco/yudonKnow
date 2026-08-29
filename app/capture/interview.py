@@ -658,6 +658,48 @@ def probe_monologue(
     return out
 
 
+_ALIAS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"terms": {"type": "array", "items": {"type": "string"}}},
+    "required": ["terms"],
+}
+
+
+def search_aliases(
+    llm: BaseLLM, *, title: str, situation: str, cues: list[str],
+    lang: str = "en", limit: int = 10,
+) -> list[str]:
+    """"후배가 이걸 뭐라고 물을까" — 숨은 검색 보조 토큰.
+
+    L3 패러프레이즈("야외에서 색감이 이상해요")는 카드 어휘와 한 글자도 안
+    겹쳐 키워드 검색이 놓친다. 임베딩 대신 별칭을 택한 이유: 판정(문턱·겹침)
+    은 그대로 결정적으로 남고, **무엇이 걸리는지 눈으로 검사 가능**하다.
+    화면·인용에는 절대 나가지 않는다 — 검색만 본다. 실패하면 빈 목록(무해).
+    """
+    body = f"{title}\n{situation}\n" + "\n".join(cues)
+    if not body.strip():
+        return []
+    if lang == "ko":
+        prompt = ("아래는 현장 판단 카드의 제목·상황·신호다. 2~3년차 후배가 "
+                  "이 상황을 겪고 물을 법한 **표현**을 뽑아라 — 동의어, 현장 "
+                  "속어, 증상 중심 서술(예: '야외에서 색이 이상해요'). 문장이 "
+                  f"아니라 짧은 구 위주로 최대 {limit}개. 카드에 이미 있는 "
+                  f"단어는 빼라.\n\n{body}")
+    else:
+        prompt = ("Below are a shop-floor judgment card's title, situation and "
+                  "cues. List the **phrasings** a 2-3 year junior would use when "
+                  "hitting this — synonyms, floor slang, symptom-first wording. "
+                  f"Short phrases, at most {limit}. Skip words already on the "
+                  f"card.\n\n{body}")
+    try:
+        raw = llm.extract(prompt, _ALIAS_SCHEMA)
+    except Exception as exc:
+        log.warning("검색 별칭 생성 실패(무해): %s", exc)
+        return []
+    return [str(t).strip()[:60] for t in (raw.get("terms") or [])
+            if str(t).strip()][:limit]
+
+
 def wrong_answer(
     llm: BaseLLM, topic: str, domain: str = "", *, lang: str = "en"
 ) -> dict[str, str]:

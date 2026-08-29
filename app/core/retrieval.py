@@ -141,6 +141,9 @@ class Retrieval:
 _FIELD_WEIGHT = {
     "title": 3.0,
     "cues": 3.0,
+    # 별칭은 cues 와 같은 급 — "후배의 표현"이니까. 화면엔 안 나가고
+    # 검색만 본다. 승인 시점에 LLM 이 생성, 실패하면 그냥 빈 칸.
+    "aliases": 3.0,
     "situation": 2.0,
     "judgment": 1.5,
     "domain": 1.5,
@@ -154,6 +157,7 @@ def _card_fields(card: Card) -> dict[str, str]:
     return {
         "title": card.title,
         "cues": " ".join(card.cues),
+        "aliases": " ".join(card.aliases),
         "situation": card.situation,
         "judgment": card.judgment,
         "domain": card.domain,

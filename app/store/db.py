@@ -135,6 +135,10 @@ class CardRow(Base):
     exceptions: Mapped[str] = mapped_column(Text, default="")
     failure: Mapped[str] = mapped_column(Text, default="")
     unspeakable: Mapped[str] = mapped_column(Text, default="")
+    #: 검색어 별칭 — "후배가 이걸 뭐라고 물을까". 승인 시점에 생성되는
+    #: 숨은 검색 보조 토큰(화면·인용에 안 나감). 판정은 여전히 키워드
+    #: 겹침의 결정적 문턱이고, 필드만 넓어진다.
+    aliases: Mapped[str] = mapped_column(Text, default="")
 
     status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
     tacitness: Mapped[str] = mapped_column(String(16), default="partial")

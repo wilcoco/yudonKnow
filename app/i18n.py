@@ -186,7 +186,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ob.q2": {
         "en": "2. How you talk — your alter will speak like this",
-        "ko": "2. 당신의 말투 — 분신이 이걸로 말합니다",
+        "ko": "1. 당신의 말투 — 분신이 이걸로 말합니다",
     },
     "ob.q2.ph1": {
         "en": "Things you say often (one per line)\ne.g. It's not the temperature. "
@@ -201,7 +201,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ob.q3": {
         "en": "3. How long are you here?",
-        "ko": "3. 언제까지 계시나요?",
+        "ko": "2. 언제까지 계시나요?",
     },
     "ob.q3.note": {
         "en": "(optional — so we dig the urgent areas first)",

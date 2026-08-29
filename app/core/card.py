@@ -85,6 +85,8 @@ class Card:
 
     #: 말로 담기지 않은 것. **지우지 않고 남긴다** — 도제 항목으로 이관된다.
     unspeakable: list[str] = field(default_factory=list)
+    #: 검색어 별칭 — 숨은 검색 보조(화면·인용 제외). retrieval 만 본다.
+    aliases: list[str] = field(default_factory=list)
 
     status: CardStatus = CardStatus.DRAFT
     tacitness: Tacitness = Tacitness.PARTIAL

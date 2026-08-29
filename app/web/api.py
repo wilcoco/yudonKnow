@@ -480,6 +480,17 @@ def thanks(
     )
 
 
+@router.post("/admin/backfill-aliases")
+def backfill_aliases(
+    session: Session = Depends(get_session), lang: str = Depends(get_lang)
+) -> dict:
+    """검색어 별칭 뒤채움 — 별칭 도입 이전에 승인된 카드들.
+
+    빈 별칭 카드만 건드리는 멱등 연산이라 반복 호출은 무해하다(비용 상한).
+    """
+    return service.backfill_aliases(session, lang=lang)
+
+
 @router.get("/admin/board")
 def board(
     session: Session = Depends(get_session), lang: str = Depends(get_lang)

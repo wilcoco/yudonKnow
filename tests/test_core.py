@@ -387,3 +387,31 @@ def test_an_expert_confirmed_card_is_citable_regardless_of_completeness():
 
     no_judgment = make_card(judgment="", action=[], rationale="")
     assert not no_judgment.citable(), "판단 없는 카드가 인용됐다"
+
+
+def test_aliases_catch_a_full_restatement_the_card_vocabulary_misses():
+    """L3 패러프레이즈 — 어휘가 한 글자도 안 겹치는 완전 재서술.
+
+    프로덕션 황금 경로 실측에서 L1(핵심어)·L2(동의어)는 인용됐지만
+    "야외에서 보면 색감이 이상한데 실내 검사에선 멀쩡해요" 류의 완전
+    재서술은 공백으로 떨어졌다. 별칭은 승인 시점에 "후배가 뭐라고 물을까"
+    를 미리 뽑아 두는 숨은 검색 칸이다 — 판정 문턱은 그대로 결정적이다.
+    """
+    bare = make_card()
+    q = "성형품 겉면 잔물결 요철이 검사에서 자꾸 걸려요"
+    assert retrieve([bare], q).is_gap is True, "전제: 별칭 없이는 공백이어야 실험이 성립"
+
+    aliased = make_card(aliases=["겉면 잔물결", "표면 요철", "외관 검사 불량"])
+    got = retrieve([aliased], q)
+    assert got.is_gap is False, "별칭이 검색에 안 걸렸다"
+    assert got.hits and got.hits[0].card.id == "c1"
+
+
+def test_alias_generation_failure_is_harmless():
+    """별칭 LLM 이 죽어도 승인은 죽지 않는다 — 빈 목록으로 넘어간다."""
+    from app.capture.interview import search_aliases
+
+    got = search_aliases(
+        ExplodingLLM(), title="t", situation="s", cues=["c"], lang="ko",
+    )
+    assert got == []
