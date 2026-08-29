@@ -241,6 +241,18 @@ question routes back to the expert's dig queue, and a "didn't hold" report
 demotes the card until the expert fixes it. A static protocol goes stale
 silently; this one has a pulse.
 
+We then tested the claim head-on (docs/vetriage-experiment.md): playing a
+veterinarian armed with veTriage's own clinical rules, we let yudonKnow
+interview us — 13 turns, two pathways (blocked male cat, GDV). The interview
+extracted the same front-desk triage structure (the three deciding questions,
+the "unknown never downgrades" rule, the systemic-signs override) plus assets
+the hand-built app doesn't carry: the failure story behind the rule and the
+trap vocabulary ("constipated is the word that fools everyone"). Ten synthetic
+cases: 0 missed emergencies, 7/8 exact classification agreement (1 safe-side
+refusal), and on the two pathways we deliberately did not dig, the alter
+invented nothing. One conversation, two assets: an executable protocol for
+the organization, a memoir chapter for the person.
+
 ## Iteration under real fire
 
 The external QA loop reshaped the product measurably. One tester's complete
