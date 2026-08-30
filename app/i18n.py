@@ -327,6 +327,16 @@ CATALOG: dict[str, dict[str, str]] = {
               "그 전까지 이 화면은 열람 전용입니다: 판단을 보여줄 뿐, "
               "대신 내리지 않습니다.",
     },
+    "proto.step_n": {"en": "Question {i} of {n}", "ko": "질문 {i} / {n}"},
+    "proto.tri.skip": {"en": "Don't know — skip", "ko": "모름 — 넘어가기"},
+    "proto.early": {
+        "en": "An urgent judgment stands — questionnaire ends here.",
+        "ko": "위급 판단이 성립했습니다 — 문진을 여기서 마칩니다.",
+    },
+    "proto.strip.standing": {"en": "standing", "ko": "성립·상향"},
+    "proto.strip.out": {"en": "ruled out", "ko": "배제"},
+    "proto.strip.waiting": {"en": "watching", "ko": "대기"},
+    "proto.showall": {"en": "See all questions at once", "ko": "질문 전체를 한 번에 보기"},
     "proto.tri.yes": {"en": "Yes", "ko": "예"},
     "proto.tri.no": {"en": "No", "ko": "아니오"},
     "proto.tri.unk": {"en": "Don't know", "ko": "모름"},

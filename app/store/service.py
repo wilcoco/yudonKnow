@@ -1613,14 +1613,20 @@ def _triage_signs(ruled_cards: list[Card]) -> list[dict[str, str]]:
     """
     from app.core.protocol import sign_key
 
+    # 순서가 곧 문진의 다단이다: 위급한 카드(우선순위 높은 쪽)의 조건부터,
+    # 전문가가 규칙을 적은 줄 순서대로 묻는다 — 응급 배제 먼저, 완화 확인
+    # 나중. 알파벳 정렬은 그 의도를 지운다.
     seen: dict[str, str] = {}
-    for c in ruled_cards:
+    ordered: list[dict[str, str]] = []
+    for c in sorted(ruled_cards, key=lambda c: -c.rule_priority):
         lines = ((list(c.cues) if not c.rule_all else [])
                  + list(c.rule_all) + list(c.rule_none))
         for line in lines:
             k, lbl = sign_key(line)
-            seen.setdefault(k, lbl)
-    return [{"key": k, "label": lbl} for k, lbl in sorted(seen.items())]
+            if k not in seen:
+                seen[k] = lbl
+                ordered.append({"key": k, "label": lbl})
+    return ordered
 
 
 def rules_draft(

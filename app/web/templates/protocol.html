@@ -37,6 +37,14 @@
          padding:10px 14px; border:1px solid var(--line); border-radius:10px;
          background:var(--panel); font-size:14.5px; }
   .topv{ font-size:20px; font-weight:900; line-height:1.4; }
+  .bigq{ font-size:22px; font-weight:800; line-height:1.5; margin:18px 0; }
+  .bigtri button{ padding:14px 26px; font-size:17px; border-radius:24px;
+                  border:1px solid var(--line); background:var(--panel); cursor:pointer; }
+  .strip{ display:flex; flex-wrap:wrap; gap:6px; margin-top:18px; }
+  .strip .chip{ font-size:11.5px; padding:4px 10px; border-radius:12px;
+                border:1px solid var(--line); color:var(--muted); }
+  .strip .chip.standing{ border-color:var(--danger); color:var(--danger); font-weight:700; }
+  .strip .chip.out{ text-decoration:line-through; opacity:.6; }
 </style>
 </head>
 <body>
@@ -114,7 +122,8 @@ function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.re
 function back(n){
   // n===2 는 "답을 고치러 돌아가기" 다 — 상태를 지우면 화면의 체크와
   // 내부 picked 가 갈린다 (QA 실측: 다 체크돼 보이는데 첫 선택이 빠짐).
-  if(n === 1){ DOM = null; picked.clear(); ANSWERS = {}; }
+  if(n === 1){ DOM = null; picked.clear(); ANSWERS = {}; STAGE = null; }
+  if(n === 2 && STAGE){ renderStep(); }
   stage(n);
 }
 
@@ -136,25 +145,83 @@ function pickDomain(i){
 function renderSigns(){
   const box = document.getElementById('cues');
   if(DOM.ruled){
-    // 판정 모드 — 예/아니오/모름 3상. '모름' 이 기본이고 1급 시민이다:
-    // 결정론 엔진에서 모름은 절대 하향의 근거가 되지 않는다.
-    // signs: [{key, label}] — 같은 canonical ID 는 여기 한 번만 온다.
-    box.innerHTML = '<p class="quiet">' + esc(L['proto.engine_note']) + '</p>' +
-      DOM.signs.map((c,j) => { const lbl = c.label || c; return `
-      <div class="sign" id="sign${j}"><span>${esc(lbl)}</span>
-        <span class="tri" role="group" aria-label="${esc(lbl)}">
-          <button aria-label="${esc(lbl)} — ${esc(L['proto.tri.yes'])}" onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
-          <button aria-label="${esc(lbl)} — ${esc(L['proto.tri.no'])}" onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
-          <button class="on-unk" aria-label="${esc(lbl)} — ${esc(L['proto.tri.unk'])}" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
-        </span></div>`; }).join('');
+    // 다단 문진 — 암묵지가 다단이면 묻는 것도 다단이다. 한 번에 한 질문,
+    // 답할 때마다 서버 엔진이 판을 다시 세우고(성립·배제·대기), 위급
+    // 판단이 성립하는 순간 문진을 멈춘다. 질문 순서는 전문가가 규칙을
+    // 적은 순서다(우선순위 높은 카드부터) — 응급 배제 먼저. '모름' 은
+    // 여전히 1급 시민: 절대 하향의 근거가 되지 않는다.
+    STAGE = { verdict: null };
+    renderStep();
     document.getElementById('go3').textContent = L['proto.evaluate'];
-  } else {
+    return;
+  }
+  if(false){} else {
     box.innerHTML = DOM.cues.map((c,j) =>
       `<label class="cue" id="cue${j}"><input type="checkbox" onchange="toggleCue(${j})"> <span>${esc(c)}</span></label>`
     ).join('');
     document.getElementById('go3').textContent = L['proto.browse3'] + ' →';
   }
 }
+let STAGE = null;
+function _signkey(line){ return line.includes('::') ? line.split('::')[0].trim() : line.trim(); }
+function relevantSign(verdicts){
+  // 아직 서 있는 카드(대기·상향)에 속한 미답 신호만 묻는다 — 배제·성립된
+  // 카드의 질문은 자동으로 사라진다. 이것이 '연결된 프로세스' 의 실체다.
+  const alive = new Set();
+  const byId = {}; DOM.cards.forEach(c => byId[c.id] = c);
+  const vs = verdicts || DOM.cards.map(c => ({card_id: c.id, state: 'insufficient'}));
+  vs.forEach(v => {
+    if(v.state === 'refuted' || v.state === 'applies') return;
+    const c = byId[v.card_id]; if(!c) return;
+    const lines = (c.rule_all||[]).concat(c.rule_none||[], (c.rule_all||[]).length ? [] : (c.cues||[]));
+    lines.forEach(line => alive.add(_signkey(line)));
+  });
+  return DOM.signs.find(sg => !(sg.key in ANSWERS) && alive.has(sg.key));
+}
+function renderStep(){
+  const box = document.getElementById('cues');
+  const vs = STAGE.verdict && STAGE.verdict.verdicts;
+  const sign = relevantSign(vs);
+  if(!sign){ return showVerdict(''); }
+  const total = DOM.signs.length, done = Object.keys(ANSWERS).length;
+  const strip = (vs || DOM.cards.map(c => ({card_id:c.id, title:c.title, state:'insufficient'})))
+    .map(v => { const cls = (v.state==='applies'||v.state==='escalate') ? 'standing' : (v.state==='refuted' ? 'out' : '');
+      const lab = cls==='standing' ? L['proto.strip.standing'] : cls==='out' ? L['proto.strip.out'] : L['proto.strip.waiting'];
+      return `<span class="chip ${cls}">${esc((v.title||'').slice(0,36))} · ${esc(lab)}</span>`; }).join('');
+  box.innerHTML =
+    '<p class="quiet">' + esc(L['proto.engine_note']) + '</p>' +
+    '<p class="quiet">' + esc(fmt(L['proto.step_n'], {i: done+1, n: total})) + '</p>' +
+    `<p class="bigq">${esc(sign.label)}</p>` +
+    `<div class="acts bigtri" role="group" aria-label="${esc(sign.label)}">
+       <button class="primary" onclick="stepAnswer(this,'yes')">${esc(L['proto.tri.yes'])}</button>
+       <button onclick="stepAnswer(this,'no')">${esc(L['proto.tri.no'])}</button>
+       <button class="ghost" onclick="stepAnswer(this,'unknown')">${esc(L['proto.tri.skip'])}</button>
+     </div>` +
+    `<div class="strip">${strip}</div>`;
+  box.dataset.currentKey = sign.key;
+}
+async function stepAnswer(btn, val){
+  const key = document.getElementById('cues').dataset.currentKey;
+  if(!key) return;
+  ANSWERS[key] = val;
+  try{
+    const r = await fetch('/api/protocol/' + encodeURIComponent(P.expert) + '/evaluate?lang=' + LANG,
+      {method:'POST', headers:{'Content-Type':'application/json'},
+       body: JSON.stringify({domain: '', answers: ANSWERS})});
+    STAGE.verdict = await r.json();
+  }catch(e){ /* 판정 실패 시에도 다음 질문은 이어진다 */ }
+  const top = STAGE.verdict && STAGE.verdict.top;
+  if(top && top.state === 'applies' && top.priority >= 3){
+    // 위급 성립 — 즉시 종료 (응급이면 거기서 멈춘다)
+    return showVerdict('<p class="quiet" style="color:var(--danger);font-weight:700">' + esc(L['proto.early']) + '</p>');
+  }
+  renderStep();
+}
+function showVerdict(prefix){
+  stage(3);
+  renderVerdictBody(STAGE && STAGE.verdict, prefix || '');
+}
+
 function triSet(j, val){
   const sig = DOM.signs[j];
   ANSWERS[sig.key || sig] = val;
@@ -178,6 +245,8 @@ async function showJudgments(){
 }
 
 async function evaluateRuled(){
+  // 다단 문진에서는 STAGE.verdict 가 이미 최신 판이다.
+  if(STAGE){ return showVerdict(''); }
   document.getElementById('st3h').textContent = L['proto.step3'];
   const out = document.getElementById('out');
   out.innerHTML = '<p class="quiet">…</p>'; stage(3);
@@ -186,6 +255,15 @@ async function evaluateRuled(){
       {method:'POST', headers:{'Content-Type':'application/json'},
        body: JSON.stringify({domain: DOM.domain, answers: ANSWERS})});
     const d = await r.json();
+    return renderVerdictBody(d, '');
+  }catch(e){ out.innerHTML = '<p class="quiet">' + esc(String(e)) + '</p>'; }
+}
+
+function renderVerdictBody(d, prefix){
+  document.getElementById('st3h').textContent = L['proto.step3'];
+  const out = document.getElementById('out');
+  if(!d){ out.innerHTML = '<p class="quiet">…</p>'; return; }
+  try{
     const byId = {}; DOM.cards.forEach(c => byId[c.id] = c);
     let html = '';
     // 동시 성립 — 무엇이 실행되고 무엇이 보류되는지 명시한다 (QA:
@@ -218,7 +296,7 @@ async function evaluateRuled(){
           ${v.refuted_by && v.refuted_by.length ? ' — ' + esc(L['proto.v.refutedby']) + ': ' + v.refuted_by.map(esc).join(', ') : ''}
           ${v.state!=='refuted' && v.unknowns && v.unknowns.length ? ' — ' + esc(L['proto.v.blockers']) + ' ' + v.unknowns.map(esc).join(', ') : ''}</p>
       </div>`).join('');
-    out.innerHTML = html;
+    out.innerHTML = (prefix || '') + html;
   }catch(e){ out.innerHTML = '<p class="quiet">' + esc(String(e)) + '</p>'; }
 }
 
