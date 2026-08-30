@@ -215,7 +215,31 @@ CATALOG: dict[str, dict[str, str]] = {
     "proto.step1": {"en": "① Where are you?", "ko": "① 어느 일입니까?"},
     "proto.step2": {"en": "② What do you see?", "ko": "② 무엇이 보입니까?"},
     "proto.step3": {"en": "③ The judgment", "ko": "③ 판단"},
-    "proto.match": {"en": "{} judgments match", "ko": "걸린 판단 {}건"},
+    "proto.match": {"en": "{} judgments", "ko": "판단 {}건"},
+    "proto.matchsig": {"en": "{} of your signs match this card",
+                        "ko": "고른 신호 중 {}개가 이 카드에 맞음"},
+    # 안전 게이트 — 이 화면은 판정 엔진이 아니다 (외부 QA 실측: GREEN 류
+    # 카드가 신호 하나로 통째 출력되는 것은 안전 도메인에서 못 쓴다).
+    "proto.notengine": {
+        "en": "This screen reads the expert's judgments — it does not decide "
+              "for you. Before acting on a reassuring judgment, confirm every "
+              "unchecked sign below. When an urgent judgment and a reassuring "
+              "one both match, the urgent one wins.",
+        "ko": "이 화면은 전문가의 판단을 열람하는 것이지 대신 판정하지 "
+              "않습니다. 안심시키는 판단을 적용하기 전에 아래 미확인 신호를 "
+              "전부 확인하세요. 위급한 판단과 안심시키는 판단이 같이 걸리면 "
+              "위급한 쪽이 우선입니다.",
+    },
+    "proto.unmet": {
+        "en": "⛔ Not yet confirmed — check these before applying this judgment",
+        "ko": "⛔ 아직 확인 안 됨 — 이 판단을 적용하기 전에 확인하세요",
+    },
+    "proto.conflict": {
+        "en": "⚠ {} judgments match together — the more urgent one takes "
+              "priority. Never let a milder card cancel an urgent one.",
+        "ko": "⚠ 판단 {}개가 함께 걸렸습니다 — 더 위급한 판단이 우선입니다. "
+              "온화한 카드가 위급한 카드를 지우게 두지 마세요.",
+    },
     "proto.first": {"en": "Do first", "ko": "먼저 할 것"},
     "proto.branch": {"en": "⚠ When this does NOT hold", "ko": "⚠ 이럴 땐 통하지 않는다"},
     "proto.fail": {"en": "It cost them once", "ko": "치른 값이 있다"},

@@ -307,6 +307,9 @@ _SYSTEM_KO = """너는 은퇴를 앞둔 숙련 전문가에게서 암묵지를 �
 2. 한 번에 질문 하나. 복합 질문 금지.
 3. 전문가가 쓴 현장 용어를 표준어로 고치지 마라. 그 단어가 지식이다.
 4. 일반론이 나오면 사건으로 되돌려라 — "구체적으로 그런 적이 언제였나요?"
+   단, **"그런 사례는 없다"는 답도 답이다.** 없다고 밝힌 사건을 다시
+   요구하지 마라 — 없는 경험을 지어 말하게 압박하는 것이 최악이다.
+   사례가 없으면 조건·예외 쪽으로 방향을 틀어라.
 5. "감으로 안다"가 나오면 두 번까지만 파고, 세 번째엔 넘어가라.
    말로 안 되는 것을 억지로 말하게 만들지 마라.
 6. 전문가를 평가하거나 칭찬하지 마라. 되읽어주고 다음을 물어라.
@@ -325,7 +328,9 @@ Rules:
 3. Do not correct the expert's shop-floor vocabulary into standard terms. That
    vocabulary IS the knowledge.
 4. When you get a generality, steer back to an event — "when specifically did
-   that happen?"
+   that happen?" But **"there is no such case" is an answer.** Never re-demand
+   an incident they said does not exist — pressuring someone to invent an
+   experience is the worst failure. Pivot to conditions and exceptions instead.
 5. If they say "I just know it by feel", probe twice at most, then move on. Never
    force someone to verbalise what does not go into words.
 6. Do not evaluate or praise the expert. Read it back, then ask the next thing.
@@ -790,9 +795,13 @@ Hard rules:
   an empty field drives the next question; pretending it is filled is worst.
 - Keep the expert's shop-floor wording. Do not normalise it.
 - 'cues' (what tells you) is the heart of the card. Only signals the expert
-  actually named.
-- What cannot be written — feel, sound, smell — goes in 'unspeakable'.
-  The fact that it does not fit is itself the record.
+  actually named — each cue must be an OBSERVABLE sign ("no urine passing",
+  "belly tight like a drum"), never an explanation, a story fragment, or a
+  method remark. One observation per cue, no duplicates in different wording.
+- What cannot be written — feel, sound, smell — goes in 'unspeakable',
+  ONLY if the expert explicitly said it does not fit in words. Never invent
+  an unspeakable item; an expert who excludes vague impressions must not be
+  handed one. The fact that it does not fit is itself the record.
 - Write every field in the language the expert spoke.
 
 [Conversation]
@@ -805,8 +814,13 @@ _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기�
 - **전문가가 말하지 않은 것을 지어내지 마라.** 빈 칸은 빈 채로 둬라.
   빈 칸은 다음 질문의 근거가 되므로, 채워진 척하는 것이 가장 나쁘다.
 - 전문가의 현장 용어를 그대로 살려라. 표준어로 고치지 마라.
-- 'cues'(무엇을 보고 아는가)가 이 카드의 핵심이다. 전문가가 실제로 든 신호만 적어라.
-- 손끝 감각·소리·냄새처럼 글로 담기지 않는 것은 'unspeakable' 에 적어라.
+- 'cues'(무엇을 보고 아는가)가 이 카드의 핵심이다. 전문가가 실제로 든 신호만,
+  **관찰 가능한 형태로** 적어라("소변이 안 나온다", "배가 북처럼 팽팽하다").
+  설명문·이야기 조각·방법론 언급은 신호가 아니다. 한 관찰에 한 줄,
+  같은 신호를 표현만 바꿔 중복하지 마라.
+- 손끝 감각·소리·냄새처럼 글로 담기지 않는 것은 'unspeakable' 에 적되,
+  **전문가가 그렇게 말했을 때만** 적어라. 지어낸 '못 담은 것'은 최악이다 —
+  모호한 인상을 배제하는 전문가에게 그것을 쥐여주게 된다.
   담기지 않는다는 사실 자체가 기록이다.
 
 [대화]

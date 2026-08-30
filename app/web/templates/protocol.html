@@ -41,6 +41,7 @@
 <main>
   <h1 style="font-size:22px">📋 {{ L['proto.title'].replace('{}', p.name) }}</h1>
   <p class="quiet" style="max-width:70ch">{{ L['proto.sub'] }}</p>
+  <p class="quiet" style="max-width:70ch;border-left:3px solid var(--amber);padding-left:10px">{{ L['proto.notengine'] }}</p>
 
   {# ① 영역 — 과업 지도의 가지 하나를 고른다 #}
   <div class="stage on" id="st1">
@@ -113,10 +114,21 @@ function showJudgments(){
       ' <a href="/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + '">' +
       esc(L['proto.ask']) + '</a></p></div>';
   } else {
-    out.innerHTML = ranked.map(({c, hit}) => `
+    // 충돌 배너 — 판단 여러 개가 같이 걸리면 위급한 쪽 우선을 사람에게 상기.
+    // 심각도 메타데이터가 없는 동안의 보수적 규칙이다 (P1: priority 칸).
+    const conflict = ranked.length > 1 && picked.size > 0
+      ? `<div class="branch" style="margin-bottom:14px"><b>${esc(L['proto.conflict'].replace('{}', ranked.length))}</b></div>` : '';
+    out.innerHTML = conflict + ranked.map(({c, hit}) => {
+      // 안전 게이트: 확인 안 된 신호를 판단보다 먼저 세운다. 신호 하나로
+      // 카드 전체 판단이 확정된 것처럼 보이는 것이 QA 가 잡은 구멍이다.
+      const unmet = picked.size ? c.cues.filter(x => !picked.has(x)) : [];
+      return `
       <div class="card" style="margin-bottom:18px">
         <p class="t">${esc(c.title)} ${c.status==='anchored' ? '<span style="color:var(--verify)">✔</span>' : ''}</p>
-        ${picked.size ? `<p class="quiet">${esc(L['proto.match'].replace('{}', hit))}</p>` : ''}
+        ${picked.size ? `<p class="quiet">${esc(L['proto.matchsig'].replace('{}', hit))}</p>` : ''}
+        ${unmet.length ? `<div class="branch" style="border-color:var(--amber);background:var(--amber-soft)">
+          <b>${esc(L['proto.unmet'])}</b>
+          <ul style="margin:6px 0 0;padding-left:18px">${unmet.map(x => '<li>'+esc(x)+'</li>').join('')}</ul></div>` : ''}
         <p class="judg">${esc(c.judgment)}</p>
         ${c.rationale ? `<p class="quiet">${esc(L['proto.why'])} — ${esc(c.rationale)}</p>` : ''}
         ${c.action.length ? `<p class="lbl" style="font-weight:700;margin:12px 0 0">${esc(L['proto.first'])}</p>
@@ -125,7 +137,7 @@ function showJudgments(){
           <ul style="margin:6px 0 0;padding-left:18px">${c.exceptions.map(x => '<li>'+esc(x)+'</li>').join('')}</ul></div>` : ''}
         ${c.failure ? `<div class="failbox">💥 <b>${esc(L['proto.fail'])}</b> — ${esc(c.failure)}</div>` : ''}
         <p class="basis">${esc(L['proto.basis'])}: [#${esc(c.id)}]</p>
-      </div>`).join('');
+      </div>`; }).join('');
   }
   // 분신으로 넘어갈 때 고른 신호를 질문으로 들려 보낸다
   const q = Array.from(picked).join(', ');
