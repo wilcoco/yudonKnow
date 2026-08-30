@@ -171,7 +171,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "아직 이 질문에 판단을 남긴 선배가 없습니다. 아래 분신을 골라 그대로 "
               "물어보세요 — 질문은 공백으로 선배에게 전해집니다.",
     },
-    "portal.hits": {"en": "{} cards touch this", "ko": "걸린 판단 {}장"},
+    "portal.hits": {"en": "cards that touch this: {}", "ko": "걸린 판단 {}장"},
     "portal.open": {"en": "Ask this alter →", "ko": "이 분신에게 묻기 →"},
     # 분신이 답을 짓는 동안의 단계 문구 — 20초가 침묵이면 고장으로 보인다.
     "alter.wait.search": {"en": "Searching the judgment cards…", "ko": "판단 카드를 찾는 중…"},

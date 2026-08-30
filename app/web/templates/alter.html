@@ -52,7 +52,7 @@
   {% if expert_lang and expert_lang != lang %}
   <p class="quiet" style="margin-top:8px;max-width:70ch;border-left:3px solid var(--amber);padding-left:10px">
     {{ L['alter.langwall'].replace('{who}', expert_name).replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}
-    <a href="/alter/{{ expert_id }}?lang={{ expert_lang }}">{{ L['alter.langwall.switch'].replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}</a>
+    <a id="langswitch" href="/alter/{{ expert_id }}?lang={{ expert_lang }}">{{ L['alter.langwall.switch'].replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}</a>
   </p>
   {% endif %}
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.steps'] }}</p>
@@ -96,6 +96,12 @@ async function api(path, opts){
     if(asId){ localStorage.setItem('ydk_me', asId); }
   }catch(e){}
   $('asker').value = localStorage.getItem('ydk_me') || '';
+  // 언어 전환 시 들고 온 질문(q)을 잃지 않는다 (심사 시뮬레이션 실측).
+  try{
+    const params = new URLSearchParams(location.search);
+    const preq2 = params.get('q'); const ls = document.getElementById('langswitch');
+    if(ls && preq2) ls.href += '&q=' + encodeURIComponent(preq2);
+  }catch(e){}
   // 신원은 링크로 흐른다 — 화면을 오가는 사이 ?as 가 떨어지면 지목 카드
   // 접근이 다른 사람으로 바뀐다 (QA P0 실측). 저장소는 보조일 뿐,
   // 나가는 링크마다 현재 신원을 명시적으로 싣는다.
