@@ -939,7 +939,7 @@ CATALOG: dict[str, dict[str, str]] = {
                    "ko": "들리는 말이 없었습니다 — 🎙 를 다시 누르시거나 타자로 하셔도 됩니다."},
     "sess.wrap.note": {
         "en": "That's a full dig — the card on the right is ready. Set who may "
-              "see it and press \"Save my judgment\", or keep going if there's more.",
+              "see it and press \"Leave it like this\", or keep going if there's more.",
         "ko": "한 판을 다 팠습니다 — 오른쪽 카드가 준비됐습니다. 공개 범위를 "
               "정하고 [이대로 남기기]를 누르세요. 더 있으면 계속하셔도 됩니다.",
     },
@@ -995,6 +995,8 @@ CATALOG: dict[str, dict[str, str]] = {
     "sess.tacit.q": {"en": "🌡 Does this go into words?", "ko": "🌡 이건 읽어서 되나요?"},
     "sess.vis.q": {"en": "Who may see this?", "ko": "누가 볼 수 있나요?"},
     "sess.confirm": {"en": "Leave it like this", "ko": "이대로 남기기"},
+    "sess.saving": {"en": "Saving — drafting search aliases…",
+                     "ko": "저장 중 — 검색 별칭을 뽑는 중…"},
     "sess.wrap_up": {
         "en": " · a good place to wrap up", "ko": " · 슬슬 마무리해도 좋습니다",
     },

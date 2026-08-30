@@ -69,7 +69,8 @@
     {% if p.triage.count %}
     {# 판정 문진 — 업무명과 무관하게 규칙 전부에 대한 한 문진. 위급 카드가
        다른 업무명 뒤에 숨어 충돌 검사에서 빠지는 구멍(QA 실측)의 봉인. #}
-    <div class="card hero" style="cursor:pointer;margin-bottom:14px" onclick="startTriage()">
+    <div class="card hero" style="cursor:pointer;margin-bottom:14px" role="button" tabindex="0"
+         onclick="startTriage()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();startTriage()}">
       <p class="t">{{ L['proto.triage.t'] }}</p>
       <p class="c">{{ L['proto.triage.c'] }}</p>
     </div>
@@ -77,7 +78,9 @@
     <h2 class="sec">{{ L['proto.step1'] }}</h2>
     <div class="grid g3">
       {% for d in p.domains %}
-      <div class="card" style="cursor:pointer" onclick="pickDomain({{ loop.index0 }})">
+      <div class="card" style="cursor:pointer" role="button" tabindex="0"
+           onclick="pickDomain({{ loop.index0 }})"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickDomain({{ loop.index0 }})}">
         <p class="t">{{ d.domain }}</p>
         <p class="c quiet">{{ L['proto.match'].replace('{}', d.cards|length|string) }}</p>
       </div>

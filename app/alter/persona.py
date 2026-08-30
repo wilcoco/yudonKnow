@@ -458,14 +458,23 @@ def respond(
             stubbed = True
             text = t("alter.msg.ungrounded", lang) + "\n\n" + _cards_block(chosen, lang)
 
-    contested = [c.id for c in chosen if c.status is CardStatus.CONTESTED]
+    # 근거는 **실제로 인용된 카드만**이다. 검색이 6장을 골랐어도(탐색
+    # 쿼터가 밀어 올린 카드 포함) 답이 2장만 인용했으면 Evidence 는 2장 —
+    # 무관한 카드의 ⚠ 경고가 이 답에 붙고 인용 수까지 부풀던 것이 QA
+    # 실측이다. 원문 강등(stubbed)일 때만 보여준 원문 전체가 근거다.
+    if not stubbed:
+        cited_ids = set(_CITE.findall(text))
+        evidence = [c for c in chosen if c.id in cited_ids] or chosen[:1]
+    else:
+        evidence = chosen
+    contested = [c.id for c in evidence if c.status is CardStatus.CONTESTED]
     explored = [h.card.id for h in result.hits if h.explored]
     notice = ""
-    if any(c.tacitness is Tacitness.HANDS for c in chosen):
+    if any(c.tacitness is Tacitness.HANDS for c in evidence):
         notice = t("alter.msg.apprentice", lang)
     return AlterReply(
         text=text,
-        cards=chosen,
+        cards=evidence,
         confidence=result.confidence,
         is_gap=False,
         contested=contested,

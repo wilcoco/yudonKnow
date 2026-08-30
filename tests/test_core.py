@@ -473,3 +473,26 @@ def test_refinement_folds_summary_and_verbatim_duplicates():
     ])
     assert out == ["에어압을 0.2 올린다.", "시편 한 장을 쏴 본다",
                    "도료 로트를 의심한다"]
+
+
+def test_evidence_shows_only_cited_cards():
+    """QA 실측: 탐색 쿼터가 끼워 넣은 무관 카드가 Evidence 에 노출되고
+    그 카드의 경고·인용 수까지 붙었다. 근거는 실제 인용된 카드만이다."""
+    from app.alter.persona import Persona, respond
+
+    cited = make_card(id="c_cited", cues=["게이트 반대편 물결무늬"])
+    stray = make_card(id="c_stray", title="무관", cues=["물결무늬 유사"],
+                      status=CardStatus.CONTESTED)
+
+    class OneCiteLLM:
+        name = "t"
+        def answer(self, system, prompt, max_tokens=None):
+            return "속도부터 봐라. [#c_cited]"
+        def extract(self, prompt, schema): return {}
+
+    persona = Persona(expert="hong", display_name="홍", sayings=[], taboos=[],
+                      active=True)
+    reply = respond(OneCiteLLM(), persona, [cited, stray],
+                    "물결무늬가 한쪽만 나와요", lang="ko")
+    assert [c.id for c in reply.cards] == ["c_cited"], "인용 안 된 카드가 근거에 섰다"
+    assert reply.contested == [], "무관 카드의 ⚠ 가 이 답에 붙었다"

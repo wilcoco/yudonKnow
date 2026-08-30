@@ -1077,12 +1077,22 @@ def _norm_line(t: str) -> str:
     return re.sub(r"[\s\.,·—\-()\[\]]+", "", str(t)).lower()
 
 
+#: 맞장구·확인 응답 — 지식이 아니라 대화의 기름칠이다. 예외 칸에
+#: "Yes." 가 들어가 카드가 지저분해지던 QA 실측.
+_ACKS = {"yes", "yes.", "no", "no.", "ok", "okay", "sure", "right",
+         "네", "네.", "예", "예.", "응", "그렇다", "그렇습니다", "맞다",
+         "맞습니다", "아니요", "아니오"}
+
+
 def _dedupe_lines(items: list[str]) -> list[str]:
-    """정규화 동치 + 포함 관계 중복 제거 — 먼저 온 줄이 산다."""
+    """정규화 동치 + 포함 관계 중복 제거 — 먼저 온 줄이 산다.
+    맞장구 한 마디("Yes.")는 칸에 넣지 않는다."""
     kept: list[str] = []
     for it in items:
         n = _norm_line(it)
         if not n:
+            continue
+        if str(it).strip().lower().rstrip('.!') in _ACKS or len(n) < 3:
             continue
         if any(n == _norm_line(k) or n in _norm_line(k) or _norm_line(k) in n
                for k in kept):

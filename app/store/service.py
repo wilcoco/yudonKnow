@@ -554,7 +554,7 @@ def answer_turn(
         "rung": question.rung,
         "targets": question.targets,
         "fallback": question.fallback,
-        "index": answered + 1,
+        "index": min(answered + 1, settings.interview_turns),
         "target": settings.interview_turns,
         "wrap_up": answered >= settings.interview_turns,
     }
@@ -779,7 +779,7 @@ def ask_alter(
         explore_quota=settings.explore_quota,
         confidence_floor=settings.confidence_floor,
         days_left=days_left(expert_row),
-        alternatives=_other_experts(session, expert, lang=lang),
+        alternatives=_experts_who_can_answer(session, expert, question, lang=lang),
         lang=lang,
     )
 
@@ -922,6 +922,30 @@ def route_question(
         })
     found.sort(key=lambda e: -e["confidence"])
     return {"experts": found}
+
+
+def _experts_who_can_answer(
+    session: OrmSession, expert: str, question: str, *, lang: str = ""
+) -> list[str]:
+    """공백 안내의 대안 — **이 질문에 실제로 카드가 걸리는** 전문가만.
+
+    분야 일치 없이 이름을 대면 잘못된 라우팅이다 (QA 실측: 급여 질문에
+    "Dale 도 남겼다"). 같은 결정적 검색을 다른 전시 전문가에게 돌려,
+    공백이 아닌 사람만 세운다 — 아무도 없으면 빈 목록(그게 정답이다).
+    """
+    routed = route_question(session, question, lang=lang)
+    names = [e["alter"] for e in routed["experts"] if e["expert"] != expert][:3]
+    if names:
+        return names
+    # 언어 벽일 때는 주제를 알 수 없다 — 질문의 언어로 판 전시 전문가를
+    # 안내한다 (그것이 이 공백의 실제 출구다). 같은 언어의 주제 공백이면
+    # 빈 목록이 정답이다.
+    import re as _re
+    exp_row = session.get(db.Expert, expert)
+    qlang = "ko" if _re.search(r"[가-힣]", question) else "en"
+    if exp_row is not None and (exp_row.lang or "") != qlang:
+        return _other_experts(session, expert, lang=qlang)
+    return []
 
 
 def _other_experts(
@@ -1333,7 +1357,7 @@ def resume_session(
         "card": card_view(card),
         "report": interview.slot_report(card, lang),
         "target": settings.interview_turns,
-        "index": answered + 1,
+        "index": min(answered + 1, settings.interview_turns),
     }
 
 
@@ -2008,7 +2032,11 @@ def admin_board(session: OrmSession, *, lang: str = LANG_DEFAULT) -> dict[str, A
                 "hands_ratio": risk.hands_ratio,
                 "risk": risk.score,
                 "level": t(level_key, lang),
-                "cards": len(cards),
+                # 전문가 화면의 '살아있는 판단' 과 같은 수 — 초안·잠복이
+                # 섞이면 두 화면의 수가 갈려 계수 신뢰가 깨진다 (QA 실측).
+                "cards": sum(1 for c in cards
+                             if c.status not in (CardStatus.DRAFT,
+                                                 CardStatus.DORMANT)),
                 "gaps": len(open_gaps(session, row.id)),
                 "weakest": risk.domains[0].domain if risk.domains else "",
             }
