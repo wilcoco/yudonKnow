@@ -835,6 +835,18 @@ CATALOG: dict[str, dict[str, str]] = {
     "invite.copy": {"en": "Copy", "ko": "복사"},
     "cv.utter": {"en": "What you actually said (kept verbatim, never deleted)",
                  "ko": "당신이 실제로 한 말 (원문 보존 — 지워지지 않습니다)"},
+    "cv.talk": {
+        "en": "💬 Dig this judgment further (talk with the AI)",
+        "ko": "💬 이 판단 더 파기 (AI와 대화)",
+    },
+    "sess.method": {
+        "en": "Questions follow the cognitive-task-analysis playbook — ACTA "
+              "knowledge audit & task diagram, CDM timeline, vague-word "
+              "pinning, member checking. (docs/elicitation-protocol.md)",
+        "ko": "질문은 인지 과업 분석(CTA) 문헌의 사다리를 따릅니다 — ACTA "
+              "지식 감사·과업 지도, CDM 타임라인, 모호어 짚기, 본인 검토. "
+              "(docs/elicitation-protocol.md)",
+    },
     "cv.edit": {"en": "Fix this card (what you write wins over the machine)",
                 "ko": "카드 고치기 (당신이 고친 것이 기계보다 우선합니다)"},
     "cv.reports": {"en": "What juniors reported", "ko": "후배들의 보고"},
