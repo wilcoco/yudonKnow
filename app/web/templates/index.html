@@ -51,6 +51,9 @@
   <div class="card">
     <p class="t">{{ L['landing.yours.title'] }}</p>
     <div class="c">{{ L['landing.yours.body'] }}</div>
+    {# "전부 비공개" 로 읽히는 과장을 정직하게 좁힌다 (QA 실측: 이름·
+       사용 횟수는 보인다). #}
+    <p class="quiet" style="margin-top:8px">{{ L['landing.demo_scope'] }}</p>
   </div>
   {# 실제 href — onclick 만 있으면 JS 한 줄 실패에 링크가 죽는다 (QA 실측).
      손님 아이디는 마지막 링크만 필요해 서버 템플릿 난수 없이 JS 로 보강. #}

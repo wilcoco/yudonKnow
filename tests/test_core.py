@@ -496,3 +496,16 @@ def test_evidence_shows_only_cited_cards():
                     "물결무늬가 한쪽만 나와요", lang="ko")
     assert [c.id for c in reply.cards] == ["c_cited"], "인용 안 된 카드가 근거에 섰다"
     assert reply.contested == [], "무관 카드의 ⚠ 가 이 답에 붙었다"
+
+
+def test_semantic_duplicate_cues_are_folded():
+    """QA 실측: "The needle swept smoothly…" 와 "atomizing-air gauge
+    needle sweeping smoothly…" — 원문과 정제본이 나란히 남았다. 내용
+    토큰이 겹치면 하나만 남는다. 서로 다른 신호는 산다."""
+    from app.capture.interview import _covers
+
+    refined = "atomizing-air gauge needle sweeping smoothly between readings"
+    raw = "The needle swept smoothly, no flutter at all."
+    other = "belly looks swollen or tight"
+    assert _covers(raw, refined, loose=True), "정제본이 담은 원문이 다시 들어온다"
+    assert not _covers(other, refined, loose=True), "무관한 신호까지 접었다"

@@ -1450,6 +1450,15 @@ def memoir(
             {"card": card_view(c), "notes": notes}
         )
 
+    # 공개로 남긴 것이 하나도 없는 전문가의 회고록을 남이 열면 —
+    # 이름·통계까지 보여줄 이유가 없다. 빈 책 대신 문 닫힌 문장 하나.
+    if not owner and not cards:
+        return {"expert": expert, "name": "", "lang": lang, "farewell": "",
+                "leaving_on": "", "chapters": [], "hands": [], "llm": False,
+                "owner": False, "nothing_public": True,
+                "totals": {"cited": 0, "helped": 0, "card_citations": 0},
+                "date": date.today().isoformat()}
+
     hands = [
         {"title": c.title, "items": c.unspeakable}
         for c in cards if c.unspeakable

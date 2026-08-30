@@ -40,6 +40,10 @@
 <body>
 <button class="print-btn" onclick="window.print()">🖨 {{ L['memoir.print'] }}</button>
 <div class="page">
+  {% if m.nothing_public %}
+  <div class="cover"><div class="small">yudonKnow</div>
+    <p style="margin-top:30px;color:var(--soft)">{{ L['memoir.nothing_public'] }}</p></div>
+  {% else %}
 
   <div class="cover">
     <div class="small">{{ L['memoir.series'] }}</div>
@@ -100,6 +104,7 @@
     <p>{{ L['memoir.colophon'].replace('{}', m.date) }}</p>
   </div>
 
+{% endif %}
 </div>
 
 <script>

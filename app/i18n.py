@@ -192,6 +192,19 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "langname.ko": {"en": "Korean", "ko": "한국어"},
     "langname.en": {"en": "English", "ko": "영어"},
+    "landing.demo_scope": {
+        "en": "Demo scope: card content honors your visibility settings; "
+              "profile name and usage counts are visible in this demo. "
+              "Production scopes those behind corporate SSO.",
+        "ko": "데모 범위: 카드 내용은 공개 설정을 따르지만, 프로필 이름과 "
+              "사용 횟수는 이 데모에서 보입니다. 실배포에선 사내 SSO 가 "
+              "이 범위를 잠급니다.",
+    },
+    "memoir.nothing_public": {
+        "en": "This expert has not made anything public. The memoir is theirs.",
+        "ko": "이 전문가는 공개로 남긴 것이 없습니다. 회고록은 본인의 "
+              "것입니다.",
+    },
     "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
     "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
     "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},

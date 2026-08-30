@@ -136,15 +136,23 @@ def extract_task_map(
     if not body:
         return []
     if lang == "ko":
-        prompt = ("아래는 전문가가 자기 일을 단계로 부른 것이다. 단계 이름과 "
-                  "난이도(hard=감이 필요하다고 한 곳, easy=글로 된다고 한 곳, "
-                  "그 외 mid)를 뽑아라. **말한 단계만** — 지어내지 마라. "
+        prompt = ("아래는 전문가가 자기 일을 부른 것이다. **반복되는 직무·판단 "
+                  "영역**의 이름과 난이도(hard=감이 필요하다고 한 곳, easy=글로 "
+                  "된다고 한 곳, 그 외 mid)를 뽑아라.\n"
+                  "주의: 한 사건에서 수행한 조치('로트를 세웠다', '필터를 "
+                  "갈았다')는 단계가 아니다 — 그 조치가 속한 **직무 영역**"
+                  "('도장 불량 진단', '에어압 관리')으로 이름을 세워라. "
+                  "이야기에 없는 영역은 지어내지 마라. "
                   f"최대 {limit}개.\n\n{body}")
     else:
-        prompt = ("Below an expert names the steps of their job. Extract step "
-                  "names and difficulty (hard = they said it takes feel, easy = "
-                  "they said it is by the book, else mid). **Only steps they "
-                  f"named** — invent none. At most {limit}.\n\n{body}")
+        prompt = ("Below an expert describes their job. Extract the names of "
+                  "**recurring duty / judgment areas** and difficulty (hard = "
+                  "they said it takes feel, easy = by the book, else mid).\n"
+                  "Caution: one-time actions from a story ('stopped the lot', "
+                  "'replaced the filter') are NOT steps — name the **duty area** "
+                  "they belong to ('paint-defect diagnosis', 'atomizing-air "
+                  "stability') instead. Invent no area the text does not "
+                  f"support. At most {limit}.\n\n{body}")
     try:
         raw = llm.extract(prompt, _TASKMAP_SCHEMA)
     except Exception as exc:
@@ -1062,7 +1070,9 @@ def capture(
     for key in ("cues", "action", "exceptions", "unspeakable"):
         have = [str(x) for x in (raw.get(key) or [])]
         for item in rule.data.get(key, []):
-            if item and not any(item in h or h in item for h in have):
+            if item and not any(item in h or h in item
+                                or _covers(item, h, loose=True)
+                                for h in have):
                 have.append(item)
         # 정련이 거듭되며 요약본과 원문이 나란히 남는 중복(실측: 행동
         # 10개가 사실상 5+5)을 접는다 — 정규화 동치·포함 관계는 뒤가 진다.
@@ -1075,6 +1085,46 @@ def capture(
 
 def _norm_line(t: str) -> str:
     return re.sub(r"[\s\.,·—\-()\[\]]+", "", str(t)).lower()
+
+
+_STOP_TOKENS = {"the", "a", "an", "is", "was", "were", "and", "or", "of",
+                "to", "in", "on", "it", "that", "this", "with", "at"}
+
+
+def _stem(w: str) -> str:
+    for suf in ("ing", "ed", "es", "ly", "s"):
+        if len(w) > 4 and w.endswith(suf):
+            return w[: -len(suf)]
+    return w
+
+
+def _tokens(t: str) -> set:
+    words = {_stem(w) for w in re.findall(r"[a-z0-9]+", str(t).lower())
+             if len(w) > 2 and w not in _STOP_TOKENS}
+    # 한국어는 단어 경계가 약하다 — 2음절 조각으로 겹침을 본다.
+    hangul = re.sub(r"[^가-힣]", "", str(t))
+    words |= {hangul[i:i+2] for i in range(len(hangul) - 1)}
+    return words
+
+
+def _covers(a: str, b: str, *, loose: bool = False) -> bool:
+    """a 와 b 가 같은 내용인가 — 내용 토큰(어간) 겹침으로 본다.
+
+    엄격(기본): 짧은 쪽 토큰의 60% 겹침 — 일반 중복 제거용.
+    무름(loose): 어간 2개 이상 겹침 — **병합 전용**. 정제본이 이미 있는
+    자리에 그 재료였던 원문이 다시 들어오는 것("The needle swept
+    smoothly…" 옆에 "…needle sweeping smoothly…", QA 실측)을 막는다.
+    무른 기준을 일반 중복 제거에 쓰면 반대 신호("바늘 떨림" vs "바늘
+    안정")까지 접을 수 있어 병합에만 쓴다.
+    """
+    ta, tb = _tokens(a), _tokens(b)
+    if not ta or not tb:
+        return False
+    shared = len(ta & tb)
+    if loose:
+        return shared >= 2
+    small = min(ta, tb, key=len)
+    return shared >= max(2, int(len(small) * 0.6))
 
 
 #: 맞장구·확인 응답 — 지식이 아니라 대화의 기름칠이다. 예외 칸에
@@ -1095,7 +1145,7 @@ def _dedupe_lines(items: list[str]) -> list[str]:
         if str(it).strip().lower().rstrip('.!') in _ACKS or len(n) < 3:
             continue
         if any(n == _norm_line(k) or n in _norm_line(k) or _norm_line(k) in n
-               for k in kept):
+               or _covers(it, k) for k in kept):
             continue
         kept.append(it)
     return kept
