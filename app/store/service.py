@@ -1574,6 +1574,31 @@ def protocol_view(
     }
 
 
+def rules_draft(
+    session: OrmSession, card_id: str, *, lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """규칙 초안 제안 — **저장하지 않는다.** 승인 화면의 미리 채움 전용.
+
+    이미 규칙이 있으면 그걸 돌려준다(초안이 승인분을 덮어 보이면 안 된다).
+    stub 모드는 빈 초안 — 지어내지 않는다.
+    """
+    row = session.get(db.CardRow, card_id)
+    if row is None:
+        raise ServiceError(t("err.no_card", lang))
+    if row.rule_all or row.rule_none or row.rule_priority:
+        return {"rule_all": _lines(row.rule_all), "rule_none": _lines(row.rule_none),
+                "rule_priority": row.rule_priority or 0, "draft": False}
+    if not settings.llm_enabled:
+        return {"rule_all": [], "rule_none": [], "rule_priority": 0, "draft": True}
+    expert_row = session.get(db.Expert, row.expert)
+    out = interview.draft_rules(
+        get_llm(), title=row.title, judgment=row.judgment,
+        cues=_lines(row.cues), exceptions=_lines(row.exceptions),
+        lang=(expert_row.lang if expert_row and expert_row.lang else lang),
+    )
+    return {**out, "draft": True}
+
+
 def protocol_evaluate(
     session: OrmSession, expert: str, domain: str,
     answers: dict[str, str], *, viewer: str = "", lang: str = LANG_DEFAULT,

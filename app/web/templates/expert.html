@@ -305,6 +305,7 @@
         {# 규칙 칸 — 여기서 승인한 것만 결정론 판정에 쓰인다. LLM 은 이
            칸을 채우지 않는다: 채우는 손이 곧 승인이다. #}
         <p class="quiet" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px">{{ L['cv.f.rule_note'] }}</p>
+        <p class="quiet" id="cv_rule_draft" style="color:var(--amber)"></p>
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.rule_all'] }}</p><textarea id="cv_rule_all" style="min-height:52px"></textarea>
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.rule_none'] }}</p><textarea id="cv_rule_none" style="min-height:52px"></textarea>
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.rule_priority'] }}</p><input type="number" id="cv_rule_priority" min="0" max="9" value="0" style="width:80px">
@@ -576,6 +577,18 @@ async function openCard(id){
     $('cv_rule_all').value = (c.rule_all || []).join('\n');
     $('cv_rule_none').value = (c.rule_none || []).join('\n');
     $('cv_rule_priority').value = c.rule_priority || 0;
+    $('cv_rule_draft').textContent = '';
+    // 규칙이 비면 AI 초안을 미리 채운다 — 저장(=승인) 전에는 규칙이 아니다.
+    if(!(c.rule_all||[]).length && !(c.rule_none||[]).length && !c.rule_priority){
+      api('/api/cards/' + encodeURIComponent(c.id) + '/rules-draft').then(d => {
+        if(!d.draft) return;
+        if(!(d.rule_all||[]).length && !(d.rule_none||[]).length) return;
+        $('cv_rule_all').value = d.rule_all.join('\n');
+        $('cv_rule_none').value = d.rule_none.join('\n');
+        $('cv_rule_priority').value = d.rule_priority || 0;
+        $('cv_rule_draft').textContent = L['cv.rule_draft'];
+      }).catch(()=>{});
+    }
     $('cv_warn').textContent = c.status === 'anchored' ? L['cv.warn.anchored'] : '';
     $('cv_edit_wrap').open = (c.status === 'contested');
     $('cv_actions').innerHTML = c.status === 'draft'

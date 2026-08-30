@@ -632,3 +632,28 @@ def test_protocol_view_compiles_only_citable_visible_cards(session):
     own = protocol_view(session, "pr-1", viewer="pr-1")
     titles = [c["title"] for d in own["domains"] for c in d["cards"]]
     assert "비밀" in titles and "초안" not in titles, "본인 판: 비밀은 보이되 초안은 절차가 아니다"
+
+
+def test_rules_draft_never_persists_and_never_overrides_approved(session):
+    """규칙 초안은 제안일 뿐이다 — 저장하지 않고, 승인분을 덮지 않는다."""
+    from app.store import db as sdb
+    from app.store.service import ensure_expert, rules_draft
+
+    ensure_expert(session, "rd-1", display_name="초", lang="ko")
+    session.add(sdb.CardRow(
+        id="c_rd_a", expert="rd-1", title="t", domain="d", situation="s",
+        cues="신호", judgment="j", status="confirmed", visibility="public"))
+    session.commit()
+
+    # stub 모드: 빈 초안, draft=True, DB 무변화
+    out = rules_draft(session, "c_rd_a", lang="ko")
+    assert out["draft"] is True and out["rule_all"] == []
+    row = session.get(sdb.CardRow, "c_rd_a")
+    assert row.rule_all == "" and row.rule_priority == 0, "초안이 저장됐다"
+
+    # 승인된 규칙이 있으면 그것이 돌아온다 (draft=False)
+    row.rule_all = "물 유지"
+    row.rule_priority = 1
+    session.commit()
+    out2 = rules_draft(session, "c_rd_a", lang="ko")
+    assert out2["draft"] is False and out2["rule_all"] == ["물 유지"]

@@ -293,6 +293,12 @@ CATALOG: dict[str, dict[str, str]] = {
     "cv.f.rule_none": {"en": "Rules — must ALL be absent", "ko": "규칙 — 전부 '아니오' 여야 성립"},
     "cv.f.rule_priority": {"en": "Priority on conflict (0 = reading, higher wins)",
                             "ko": "충돌 시 우선순위 (0 = 열람 전용 · 높을수록 우선)"},
+    "cv.rule_draft": {
+        "en": "✍ AI-drafted from this card's cues and exceptions — review, fix, "
+              "then save. Nothing runs until you save.",
+        "ko": "✍ 이 카드의 신호·예외에서 AI가 제안한 초안입니다 — 검토·수정 후 "
+              "저장하세요. 저장 전에는 아무것도 실행되지 않습니다.",
+    },
     "cv.f.rule_note": {
         "en": "Rules you approve here run deterministically on the protocol "
               "screen. Unknown answers never downgrade — they escalate.",

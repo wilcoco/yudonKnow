@@ -371,6 +371,16 @@ class EvaluateIn(BaseModel):
     viewer: str = ""
 
 
+@router.get("/cards/{card_id}/rules-draft")
+def rules_draft(
+    card_id: str,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """규칙 초안 제안 — 승인 화면 미리 채움 전용. 저장은 confirm 이 한다."""
+    return service.rules_draft(session, card_id, lang=lang)
+
+
 @router.post("/protocol/{expert}/evaluate")
 def protocol_evaluate(
     expert: str,

@@ -705,6 +705,70 @@ def search_aliases(
             if str(t).strip()][:limit]
 
 
+_RULES_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "rule_all": {"type": "array", "items": {"type": "string"}},
+        "rule_none": {"type": "array", "items": {"type": "string"}},
+        "rule_priority": {"type": "integer"},
+    },
+    "required": ["rule_all", "rule_none", "rule_priority"],
+}
+
+
+def draft_rules(
+    llm: BaseLLM, *, title: str, judgment: str, cues: list[str],
+    exceptions: list[str], lang: str = "en",
+) -> dict[str, Any]:
+    """카드 → 규칙 **초안** — 제안일 뿐, 승인 없이는 아무것도 실행되지 않는다.
+
+    컴파일러의 마지막 이음새다: 인터뷰가 채운 신호·예외를 판정 규칙
+    후보(전부 있어야/없어야/우선순위)로 바꿔 승인 화면에 미리 채워 준다.
+    전문가가 검토·수정해 저장하는 순간에만 규칙이 된다. 재료는 카드에
+    적힌 조건뿐 — 새 조건을 발명하면 전문가가 승인 화면에서 걸러낸다는
+    가정에 기대지 말고, 프롬프트가 먼저 막는다. 실패하면 빈 초안(무해).
+    """
+    body = (f"{title}\n[judgment] {judgment}\n[cues] " + "; ".join(cues)
+            + "\n[exceptions] " + "; ".join(exceptions))
+    if lang == "ko":
+        prompt = (
+            "아래 판단 카드를 결정론 판정 규칙 초안으로 바꿔라.\n"
+            "- rule_all: 이 판단이 성립하려면 **전부 '예'** 여야 하는 관찰 조건.\n"
+            "- rule_none: **전부 '아니오'** 여야 하는 위험 신호 (예외 칸의 "
+            "'~면 통하지 않는다' 가 주 재료).\n"
+            "- rule_priority: 위급(즉시·응급·중단)한 판단이면 3, 시간 여유가 "
+            "있으면 2, 안심시키는(정상 예약류) 판단이면 1.\n"
+            "- 안심시키는 판단일수록 rule_all 을 촘촘히: 확인 안 된 것을 "
+            "안심의 근거로 두지 마라.\n"
+            "- **카드에 적힌 조건만** 짧은 관찰 구문으로 옮겨라. 카드에 없는 "
+            f"조건을 발명하지 마라.\n\n{body}"
+        )
+    else:
+        prompt = (
+            "Turn the judgment card below into DRAFT deterministic rules.\n"
+            "- rule_all: observable conditions that must ALL be 'yes' for this "
+            "judgment to stand.\n"
+            "- rule_none: danger signs that must ALL be 'no' (the exceptions "
+            "field's 'does not hold when…' items are the main source).\n"
+            "- rule_priority: 3 if the judgment is urgent (now / emergency / "
+            "stop), 2 if time-bounded, 1 if reassuring (routine booking).\n"
+            "- The more reassuring the judgment, the tighter rule_all must be: "
+            "never let an unconfirmed item support reassurance.\n"
+            "- Use ONLY conditions written on the card, as short observable "
+            f"phrases. Invent nothing.\n\n{body}"
+        )
+    try:
+        raw = llm.extract(prompt, _RULES_SCHEMA)
+    except Exception as exc:
+        log.warning("규칙 초안 제안 실패(무해): %s", exc)
+        return {"rule_all": [], "rule_none": [], "rule_priority": 0}
+    return {
+        "rule_all": [str(x).strip()[:120] for x in (raw.get("rule_all") or []) if str(x).strip()][:8],
+        "rule_none": [str(x).strip()[:120] for x in (raw.get("rule_none") or []) if str(x).strip()][:8],
+        "rule_priority": max(0, min(9, int(raw.get("rule_priority") or 0))),
+    }
+
+
 def wrong_answer(
     llm: BaseLLM, topic: str, domain: str = "", *, lang: str = "en"
 ) -> dict[str, str]:
