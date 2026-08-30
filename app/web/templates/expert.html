@@ -768,6 +768,12 @@ async function openStatement(){
         esc(fmt(L['statement.card'],
           {cited:c.cited, ccit:c.citations ?? c.cited, helped:c.helped,
            anchored:c.anchored, missed:c.missed})) +
+        ((c.items||[]).length ? '<details style="margin-top:4px"><summary class="quiet" style="cursor:pointer">' +
+          esc(L['statement.detail']) + ' (' + c.items.length + ')</summary>' +
+          c.items.map(i => '<div class="quiet">' + esc(i.at) + ' · ' + esc(i.event) +
+            (i.actor ? ' · ' + esc(i.actor) : '') +
+            (i.detail ? ' — ' + esc(String(i.detail).slice(0,80)) : '') + '</div>').join('') +
+          '</details>' : '') +
         '</div>').join('');
     $('stmt').hidden = false;
     $('stmt').scrollIntoView({behavior:'smooth'});
@@ -873,7 +879,7 @@ function renderHome(h){
       h.contested.map(c => `<div class="card alarm">
         <p class="t">${esc(c.title)}</p>
         <p class="c">${esc(fmt(L['home.contested.body'], {helped:c.helped, missed:c.missed}))}</p>
-        <div class="acts"><button class="amber" onclick="openCard('${c.id}')">${esc(L['shelf.fix'])}</button></div>
+        <div class="acts"><button class="amber" onclick="openCard('${c.id}')">${esc((STATE.home && STATE.home.readonly) ? L['shelf.view'] : L['shelf.fix'])}</button></div>
       </div>`).join('')
     : '';
 
@@ -904,7 +910,7 @@ function renderHome(h){
   // 눌러서 거절당하는 것보다 애초에 없는 쪽이 데모답다).
   const ro = !!h.readonly;
   $('ro_note').hidden = !ro;
-  if(ro) $('ro_note').textContent = L['home.readonly'];
+  if(ro) $('ro_note').textContent = L['home.readonly'] + ' ' + L['demo.synthetic'];
   $('flag_row').hidden = ro;
   $('h_toggle').hidden = ro;
   if(ro) show('library');   // 전시 전문가의 본체는 구경거리(서가·회고록)다

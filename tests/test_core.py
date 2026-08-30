@@ -457,3 +457,19 @@ def test_memoir_prose_is_draft_until_the_author_approves(session):
     )
     assert row.prose == "내가 다듬은 문장이다."
     assert row.approved_at is not None
+
+
+def test_refinement_folds_summary_and_verbatim_duplicates():
+    """실측: 정련 반복으로 행동 10개가 사실상 5+5 — 정규화 동치·포함
+    중복은 병합에서 접힌다. 서로 다른 행동은 산다."""
+    from app.capture.interview import _dedupe_lines
+
+    out = _dedupe_lines([
+        "에어압을 0.2 올린다.",
+        "에어압을 0.2 올린다",           # 문장부호만 다른 중복
+        "시편 한 장을 쏴 본다",
+        "에어압을 0.2 올린다. 그리고 시편 한 장을 쏴 본다",  # 포함 관계
+        "도료 로트를 의심한다",
+    ])
+    assert out == ["에어압을 0.2 올린다.", "시편 한 장을 쏴 본다",
+                   "도료 로트를 의심한다"]

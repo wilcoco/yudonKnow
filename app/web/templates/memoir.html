@@ -123,13 +123,24 @@ function paint(slot, prose, approved){
     esc(prose) + '</p>' +
     '<p class="prose-note">⚠ ' + esc(L['memoir.draft_badge']) + ' · ' + esc(L['memoir.draft_note']) + '</p>';
   if(OWNER){
+    // 새로고침 유실 방지 — 승인 전 편집본을 브라우저에 임시 보관.
+    // 서버에 초안을 저장하지 않는 원칙(승인만이 저장)은 그대로다.
+    let kept = '';
+    const draftKey = 'ydk_memoir_' + EXPERT + '_' + slot.dataset.domain;
+    try{ kept = localStorage.getItem(draftKey) || ''; }catch(e){}
     html += '<div class="draft-edit" style="font-family:sans-serif">' +
       '<textarea style="width:100%;min-height:90px;font-family:inherit;font-size:14px">' +
-      esc(prose) + '</textarea>' +
+      esc(kept || prose) + '</textarea>' +
       '<button class="print-btn" style="position:static;margin-top:6px" ' +
       'onclick="approve(this)">' + esc(L['memoir.approve']) + '</button></div>';
   }
   slot.innerHTML = html;
+  // 임시 보관 리스너 — 인라인 속성 대신 (도메인명의 따옴표·공백 안전)
+  const ta = slot.querySelector('.draft-edit textarea');
+  if(ta){
+    const key = 'ydk_memoir_' + EXPERT + '_' + slot.dataset.domain;
+    ta.addEventListener('input', () => { try{ localStorage.setItem(key, ta.value); }catch(e){} });
+  }
 }
 
 async function approve(btn){
@@ -139,7 +150,9 @@ async function approve(btn){
     '/memoir/approve?lang=' + LANG, {method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({domain: slot.dataset.domain, prose})});
-  if(r.ok){ paint(slot, prose, true); }
+  if(r.ok){
+    try{ localStorage.removeItem('ydk_memoir_' + EXPERT + '_' + slot.dataset.domain); }catch(e){}
+    paint(slot, prose, true); }
   else { btn.textContent = '⚠'; }
 }
 

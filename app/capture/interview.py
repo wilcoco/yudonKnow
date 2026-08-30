@@ -1064,11 +1064,31 @@ def capture(
         for item in rule.data.get(key, []):
             if item and not any(item in h or h in item for h in have):
                 have.append(item)
-        raw[key] = have
+        # 정련이 거듭되며 요약본과 원문이 나란히 남는 중복(실측: 행동
+        # 10개가 사실상 5+5)을 접는다 — 정규화 동치·포함 관계는 뒤가 진다.
+        raw[key] = _dedupe_lines(have)
     for key in ("situation", "judgment", "rationale", "failure", "title"):
         if not str(raw.get(key) or "").strip() and rule.data.get(key):
             raw[key] = rule.data[key]
     return CardDraft(data=raw)
+
+
+def _norm_line(t: str) -> str:
+    return re.sub(r"[\s\.,·—\-()\[\]]+", "", str(t)).lower()
+
+
+def _dedupe_lines(items: list[str]) -> list[str]:
+    """정규화 동치 + 포함 관계 중복 제거 — 먼저 온 줄이 산다."""
+    kept: list[str] = []
+    for it in items:
+        n = _norm_line(it)
+        if not n:
+            continue
+        if any(n == _norm_line(k) or n in _norm_line(k) or _norm_line(k) in n
+               for k in kept):
+            continue
+        kept.append(it)
+    return kept
 
 
 def _fallback(

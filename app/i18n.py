@@ -728,6 +728,16 @@ CATALOG: dict[str, dict[str, str]] = {
     "shelf.contested": {"en": "A junior says it did not hold — tap to fix.",
                         "ko": "후배가 안 맞았다고 합니다 — 눌러서 고쳐주세요."},
     "shelf.fix": {"en": "Fix this card", "ko": "이 카드 고치기"},
+    "shelf.view": {"en": "Open this card", "ko": "이 카드 보기"},
+    # 전시 전문가의 활동 인물(Rosa·Tom 등)은 합성이다 — 표시 없이 두면
+    # 실데이터로 읽힌다 (QA 지적).
+    "demo.synthetic": {
+        "en": "🎬 Showcase expert — the juniors and reports on this screen "
+              "are synthetic demo data.",
+        "ko": "🎬 전시 전문가입니다 — 이 화면의 후배·보고 인물은 합성 시연 "
+              "데이터입니다.",
+    },
+    "statement.detail": {"en": "event log", "ko": "사용 내역"},
     "doors.head": {"en": "How would you like to leave something today?",
                    "ko": "오늘은 어떻게 남기시겠어요?"},
     "door1.t": {"en": "Just ask me", "ko": "그냥 물어봐 주세요"},
