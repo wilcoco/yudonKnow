@@ -259,6 +259,46 @@ CATALOG: dict[str, dict[str, str]] = {
               "붙습니다.",
     },
     "alter.protocol": {"en": "📋 Step-by-step protocol", "ko": "📋 절차로 밟기"},
+    # 판정 모드 — 예/아니오/모름 3상 문진. '모름' 이 1급 시민이다.
+    "proto.tri.yes": {"en": "Yes", "ko": "예"},
+    "proto.tri.no": {"en": "No", "ko": "아니오"},
+    "proto.tri.unk": {"en": "Don't know", "ko": "모름"},
+    "proto.evaluate": {"en": "Get the judgment →", "ko": "판정 받기 →"},
+    "proto.v.applies": {"en": "The judgment stands", "ko": "판단 성립"},
+    "proto.v.escalate": {
+        "en": "⚠ Cannot be ruled out — do NOT downgrade. Confirm the items "
+              "below or escalate now.",
+        "ko": "⚠ 배제할 수 없습니다 — 하향하지 마세요. 아래 항목을 확인하거나 "
+              "지금 상향하세요.",
+    },
+    "proto.v.refuted": {"en": "Ruled out by your answers", "ko": "답에 의해 배제됨"},
+    "proto.v.insufficient": {"en": "Not triggered by your answers", "ko": "해당 신호 없음"},
+    "proto.v.open": {
+        "en": "No approved judgment stands on these answers — this is exactly "
+              "when you ask the alter; the question reaches the expert.",
+        "ko": "이 답으로는 성립하는 승인 판단이 없습니다 — 이럴 때가 분신에게 "
+              "물을 때입니다. 질문은 전문가에게 전해집니다.",
+    },
+    "proto.v.blockers": {"en": "Confirm before this applies:", "ko": "성립 전 확인할 것:"},
+    "proto.v.refutedby": {"en": "ruled out by", "ko": "배제 근거"},
+    "proto.engine_note": {
+        "en": "Deterministic run — only rules the expert approved execute; "
+              "the AI is not consulted. Same answers, same verdict, every time.",
+        "ko": "결정론 실행입니다 — 전문가가 승인한 규칙만 실행되고 AI 는 "
+              "개입하지 않습니다. 같은 답이면 언제나 같은 판정입니다.",
+    },
+    # 전문가 승인 화면의 규칙 칸
+    "cv.f.rule_all": {"en": "Rules — ALL must be true for this judgment (one per line; empty = reading only)",
+                       "ko": "규칙 — 전부 '예' 여야 성립 (줄마다 하나 · 비우면 열람 전용)"},
+    "cv.f.rule_none": {"en": "Rules — must ALL be absent", "ko": "규칙 — 전부 '아니오' 여야 성립"},
+    "cv.f.rule_priority": {"en": "Priority on conflict (0 = reading, higher wins)",
+                            "ko": "충돌 시 우선순위 (0 = 열람 전용 · 높을수록 우선)"},
+    "cv.f.rule_note": {
+        "en": "Rules you approve here run deterministically on the protocol "
+              "screen. Unknown answers never downgrade — they escalate.",
+        "ko": "여기서 승인한 규칙만 절차 화면에서 결정론으로 실행됩니다. "
+              "'모름' 은 절대 하향되지 않고 상향됩니다.",
+    },
     "how.title": {"en": "How it works — one turn of the wheel",
                    "ko": "어떻게 작동하나 — 한 바퀴"},
     "how.1.t": {"en": "1 · The AI interviews you", "ko": "1 · AI가 인터뷰한다"},

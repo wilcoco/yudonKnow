@@ -365,6 +365,26 @@ class RouteIn(BaseModel):
     asker: str = ""
 
 
+class EvaluateIn(BaseModel):
+    domain: str
+    answers: dict[str, str] = Field(default_factory=dict)
+    viewer: str = ""
+
+
+@router.post("/protocol/{expert}/evaluate")
+def protocol_evaluate(
+    expert: str,
+    body: EvaluateIn,
+    session: Session = Depends(get_session),
+    lang: str = Depends(get_lang),
+) -> dict:
+    """결정론 판정 — LLM 없음. 승인된 규칙(rule_*)만 실행된다."""
+    return service.protocol_evaluate(
+        session, expert, body.domain, body.answers,
+        viewer=body.viewer, lang=lang,
+    )
+
+
 @router.post("/route")
 def route(
     body: RouteIn,

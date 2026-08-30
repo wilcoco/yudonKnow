@@ -87,6 +87,15 @@ class Card:
     unspeakable: list[str] = field(default_factory=list)
     #: 검색어 별칭 — 숨은 검색 보조(화면·인용 제외). retrieval 만 본다.
     aliases: list[str] = field(default_factory=list)
+    #: 규칙 칸 — **전문가가 승인 화면에서 직접 채운 것만** 결정론 판정에
+    #: 쓰인다. LLM 은 이 칸에 손대지 않는다 (컴파일러 원칙: LLM 은
+    #: 발견하고, 승인된 규칙만 결정론이 실행한다). 비어 있으면 그 카드는
+    #: 판정 대상이 아니라 열람 대상이다.
+    rule_all: list[str] = field(default_factory=list)    # 전부 '예' 여야 성립
+    rule_none: list[str] = field(default_factory=list)   # 전부 '아니오' 여야 성립
+    rule_priority: int = 0                               # 충돌 시 높은 쪽 우선
+    #: 모를 때의 방향 — 하향은 없다. "escalate"(상향) | "ask"(재질문)
+    rule_unknown: str = "escalate"
 
     status: CardStatus = CardStatus.DRAFT
     tacitness: Tacitness = Tacitness.PARTIAL

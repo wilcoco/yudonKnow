@@ -65,6 +65,10 @@ def row_to_card(row: db.CardRow) -> Card:
         failure=row.failure,
         unspeakable=_lines(row.unspeakable),
         aliases=_lines(row.aliases),
+        rule_all=_lines(row.rule_all),
+        rule_none=_lines(row.rule_none),
+        rule_priority=row.rule_priority or 0,
+        rule_unknown=row.rule_unknown or "escalate",
         status=CardStatus(row.status),
         tacitness=Tacitness(row.tacitness),
         visibility=Visibility(row.visibility),
@@ -91,6 +95,10 @@ def write_card(row: db.CardRow, card: Card) -> None:
     row.failure = card.failure
     row.unspeakable = _join(card.unspeakable)
     row.aliases = _join(card.aliases)
+    row.rule_all = _join(card.rule_all)
+    row.rule_none = _join(card.rule_none)
+    row.rule_priority = int(card.rule_priority or 0)
+    row.rule_unknown = card.rule_unknown or "escalate"
     row.status = card.status.value
     row.tacitness = card.tacitness.value
     row.visibility = card.visibility.value
@@ -1551,10 +1559,49 @@ def protocol_view(
                 "domain": d,
                 # 신호 체크리스트 — 영역 안 모든 카드의 신호를 중복 없이.
                 "cues": sorted({cue for c in cs for cue in c.cues}),
+                # 판정 모드 — 규칙 있는 카드가 하나라도 있으면 이 영역은
+                # 예/아니오/모름 문진으로 선다. 물을 것: 신호 ∪ 규칙 조건.
+                "ruled": any(c.rule_all or c.rule_none or c.rule_priority
+                             for c in cs),
+                "signs": sorted({
+                    s for c in cs
+                    for s in (list(c.cues) + list(c.rule_all) + list(c.rule_none))
+                }),
                 "cards": [card_view(c) for c in cs],
             }
             for d, cs in sorted(domains.items())
         ],
+    }
+
+
+def protocol_evaluate(
+    session: OrmSession, expert: str, domain: str,
+    answers: dict[str, str], *, viewer: str = "", lang: str = LANG_DEFAULT,
+) -> dict[str, Any]:
+    """결정론 판정 — 승인된 규칙만, 서버 한 곳에서 실행한다.
+
+    화면에 평가기를 복제하지 않는 이유: 판정 코드가 두 벌이면 언젠가
+    갈라지고, 갈라진 쪽이 안전 구멍이 된다. 원장에는 기록하지 않는다 —
+    문진은 미리보기와 같은 원칙(실제 흔적은 분신 질문·보고로만).
+    """
+    from app.core.protocol import evaluate
+
+    get_expert(session, expert, lang=lang)
+    owner = bool(viewer) and viewer == expert
+    cards = [
+        c for c in cards_of(session, expert)
+        if c.citable() and (owner or c.visible_to(viewer))
+        and (c.domain or "—") == domain
+    ]
+    out = evaluate(cards, {str(k): str(v) for k, v in answers.items()})
+    def vd(v):
+        return {"card_id": v.card_id, "title": v.title, "state": v.state,
+                "priority": v.priority, "unknowns": v.unknowns,
+                "refuted_by": v.refuted_by}
+    return {
+        "top": vd(out["top"]) if out["top"] else None,
+        "verdicts": [vd(v) for v in out["verdicts"]],
+        "open": out["open"],
     }
 
 
@@ -1581,6 +1628,10 @@ def card_view(card: Card) -> dict[str, Any]:
         "completeness": round(card.completeness, 2),
         "citable": card.citable(),
         "citations": card.citations,
+        "rule_all": card.rule_all,
+        "rule_none": card.rule_none,
+        "rule_priority": card.rule_priority,
+        "rule_unknown": card.rule_unknown,
         "helped": card.helped,
         "missed": card.missed,
     }

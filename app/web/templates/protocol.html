@@ -27,6 +27,16 @@
   .failbox{ border:1px solid var(--danger); border-radius:8px; padding:10px 14px;
             margin:10px 0; font-size:14px; }
   .basis{ font-size:12px; color:var(--muted); }
+  .tri{ display:flex; gap:6px; }
+  .tri button{ padding:6px 12px; border:1px solid var(--line); border-radius:16px;
+               background:var(--panel); cursor:pointer; font-size:13px; }
+  .tri button.on-yes{ background:var(--danger-soft); border-color:var(--danger); font-weight:700; }
+  .tri button.on-no{ background:var(--verify-soft); border-color:var(--verify); font-weight:700; }
+  .tri button.on-unk{ background:var(--amber-soft); border-color:var(--amber); font-weight:700; }
+  .sign{ display:flex; justify-content:space-between; gap:12px; align-items:center;
+         padding:10px 14px; border:1px solid var(--line); border-radius:10px;
+         background:var(--panel); font-size:14.5px; }
+  .topv{ font-size:20px; font-weight:900; line-height:1.4; }
 </style>
 </head>
 <body>
@@ -87,13 +97,36 @@ function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.re
   document.getElementById('st'+n).classList.add('on'); window.scrollTo(0,0); }
 function back(n){ if(n===1){ DOM=null; } picked.clear(); stage(n); }
 
+let ANSWERS = {};
 function pickDomain(i){
-  DOM = P.domains[i]; picked.clear();
+  DOM = P.domains[i]; picked.clear(); ANSWERS = {};
   const box = document.getElementById('cues');
-  box.innerHTML = DOM.cues.map((c,j) =>
-    `<label class="cue" id="cue${j}"><input type="checkbox" onchange="toggleCue(${j})"> <span>${esc(c)}</span></label>`
-  ).join('');
+  if(DOM.ruled){
+    // 판정 모드 — 예/아니오/모름 3상. '모름' 이 기본이고 1급 시민이다:
+    // 결정론 엔진에서 모름은 절대 하향의 근거가 되지 않는다.
+    box.innerHTML = '<p class="quiet">' + esc(L['proto.engine_note']) + '</p>' +
+      DOM.signs.map((c,j) => `
+      <div class="sign" id="sign${j}"><span>${esc(c)}</span>
+        <span class="tri">
+          <button onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
+          <button onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
+          <button class="on-unk" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
+        </span></div>`).join('');
+    document.getElementById('go3').textContent = L['proto.evaluate'];
+  } else {
+    box.innerHTML = DOM.cues.map((c,j) =>
+      `<label class="cue" id="cue${j}"><input type="checkbox" onchange="toggleCue(${j})"> <span>${esc(c)}</span></label>`
+    ).join('');
+    document.getElementById('go3').textContent = L['proto.step3'] + ' →';
+  }
   stage(2);
+}
+function triSet(j, val){
+  ANSWERS[DOM.signs[j]] = val;
+  const row = document.getElementById('sign'+j);
+  row.querySelectorAll('.tri button').forEach((b,k) => {
+    b.className = (k===0&&val==='yes')?'on-yes':(k===1&&val==='no')?'on-no':(k===2&&val==='unknown')?'on-unk':'';
+  });
 }
 function toggleCue(j){
   const el = document.getElementById('cue'+j);
@@ -102,8 +135,51 @@ function toggleCue(j){
   else { picked.add(cue); el.classList.add('picked'); }
 }
 
-// 걸림 판정은 화면에서도 결정적이다 — 고른 신호와 카드 신호의 교집합 수.
-function showJudgments(){
+// 판정: 규칙 영역은 **서버의 결정론 엔진 한 곳**이 한다 (평가기를 화면에
+// 복제하면 언젠가 갈라지고, 갈라진 쪽이 안전 구멍이 된다).
+async function showJudgments(){
+  if(DOM.ruled){ return evaluateRuled(); }
+  browseJudgments();
+}
+
+async function evaluateRuled(){
+  const out = document.getElementById('out');
+  out.innerHTML = '<p class="quiet">…</p>'; stage(3);
+  try{
+    const r = await fetch('/api/protocol/' + encodeURIComponent(P.expert) + '/evaluate?lang=' + LANG,
+      {method:'POST', headers:{'Content-Type':'application/json'},
+       body: JSON.stringify({domain: DOM.domain, answers: ANSWERS})});
+    const d = await r.json();
+    const byId = {}; DOM.cards.forEach(c => byId[c.id] = c);
+    let html = '';
+    if(d.open){
+      html += `<div class="card alarm"><p class="c">${esc(L['proto.v.open'])}
+        <a href="/alter/${encodeURIComponent(P.expert)}?lang=${LANG}">${esc(L['proto.ask'])}</a></p></div>`;
+    } else {
+      const t = d.top, c = byId[t.card_id] || {};
+      html += `<div class="card" style="border-left:4px solid ${t.state==='escalate'?'var(--amber)':'var(--danger)'}">
+        <p class="quiet">${esc(t.state==='escalate' ? L['proto.v.escalate'] : L['proto.v.applies'])}</p>
+        <p class="topv">${esc(c.judgment || t.title)}</p>
+        ${t.unknowns && t.unknowns.length ? `<div class="branch" style="border-color:var(--amber);background:var(--amber-soft)">
+           <b>${esc(L['proto.v.blockers'])}</b><ul style="margin:6px 0 0;padding-left:18px">${t.unknowns.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>` : ''}
+        ${c.action && c.action.length ? `<ol class="steps">${c.action.map(a=>'<li><span>'+esc(a)+'</span></li>').join('')}</ol>` : ''}
+        <p class="basis">${esc(L['proto.basis'])}: [#${esc(t.card_id)}]</p>
+      </div>`;
+    }
+    // 나머지 카드의 상태 — 무엇이 배제됐고 왜인지가 감사 가능해야 한다.
+    html += d.verdicts.filter(v => !d.top || v.card_id !== d.top.card_id).map(v => `
+      <div class="card" style="opacity:.75;margin-top:10px">
+        <p class="t">${esc(v.title)}</p>
+        <p class="quiet">${esc(L['proto.v.' + (v.state==='untriaged'?'insufficient':v.state)] || v.state)}
+          ${v.refuted_by && v.refuted_by.length ? ' — ' + esc(L['proto.v.refutedby']) + ': ' + v.refuted_by.map(esc).join(', ') : ''}
+          ${v.state!=='refuted' && v.unknowns && v.unknowns.length ? ' — ' + esc(L['proto.v.blockers']) + ' ' + v.unknowns.map(esc).join(', ') : ''}</p>
+      </div>`).join('');
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = '<p class="quiet">' + esc(String(e)) + '</p>'; }
+}
+
+// 열람 모드 — 규칙 없는 카드. 판정하지 않고 게이트와 함께 보여만 준다.
+function browseJudgments(){
   const ranked = DOM.cards
     .map(c => ({ c, hit: c.cues.filter(x => picked.has(x)).length }))
     .filter(r => picked.size === 0 ? true : r.hit > 0)

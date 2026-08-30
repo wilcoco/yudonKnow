@@ -139,6 +139,11 @@ class CardRow(Base):
     #: 숨은 검색 보조 토큰(화면·인용에 안 나감). 판정은 여전히 키워드
     #: 겹침의 결정적 문턱이고, 필드만 넓어진다.
     aliases: Mapped[str] = mapped_column(Text, default="")
+    #: 규칙 칸 — 전문가 승인분만. 비면 판정 대상이 아니다 (열람만).
+    rule_all: Mapped[str] = mapped_column(Text, default="")
+    rule_none: Mapped[str] = mapped_column(Text, default="")
+    rule_priority: Mapped[int] = mapped_column(Integer, default=0)
+    rule_unknown: Mapped[str] = mapped_column(String(16), default="escalate")
 
     status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
     tacitness: Mapped[str] = mapped_column(String(16), default="partial")
