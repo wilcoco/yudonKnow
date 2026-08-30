@@ -530,7 +530,8 @@ def answer_turn(
     card = row_to_card(card_row)
     question = interview.next_question(
         get_llm(), instrument=sess.instrument, card=target_card,
-        history=history, last_rung=turn.rung, last_slot=last_slot, lang=lang,
+        history=history, last_rung=turn.rung, last_slot=last_slot,
+        skipped_last=bool(turn.skipped), lang=lang,
     )
     next_turn = db.Turn(
         id=_uid("t"), session_id=sess.id, question=question.text, rung=question.rung,
@@ -1771,7 +1772,10 @@ def expert_home(
     summary = legacy.summarize(
         expert,
         entries,
-        cards_alive=len(live),
+        # 초안은 아직 판단이 아니다 — 명세서·보람의 근거가 되는 수에
+        # 초안이 섞이면 계수 자체가 못 미더워진다 (QA 실측: 대시보드 3,
+        # 서가 ⏳ 포함 3, 후배 화면 2 로 갈렸다).
+        cards_alive=sum(1 for c in live if c.status is not CardStatus.DRAFT),
         cards_verified=sum(1 for c in live if c.status is CardStatus.ANCHORED),
         citations=sum(c.citations for c in live),
         answers=int(answers),

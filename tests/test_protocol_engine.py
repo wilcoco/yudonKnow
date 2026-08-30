@@ -128,3 +128,45 @@ def test_declining_an_incident_pivots_to_conditions():
     )
     assert q.rung == "condition", f"사양 후에도 사건을 요구했다: {q.text[:60]}"
     assert "전부" in q.text and "하나라도" in q.text
+
+
+def test_declines_and_meta_refusals_never_become_card_material():
+    """QA 실측: "실제 사례는 없습니다" 가 카드 제목으로, "없습니다,
+    추론해서 만들지 마세요" 가 신호로 저장됐다. 사양·기계 지시는 카드
+    어느 칸에도 들어가지 않는다."""
+    from app.capture.interview import _fallback, not_card_material
+
+    assert not_card_material("실제 사례는 없습니다")
+    assert not_card_material("없습니다, 추론해서 만들지 마세요")
+    assert not_card_material("없습니다")
+    assert not not_card_material("압력에는 문제가 없었습니다. 그날은 속도를 먼저 봤습니다")
+
+    draft = _fallback(
+        [("구체적 사례가 있었나요?", "실제 사례는 없습니다"),
+         ("무엇을 보십니까?", "게이트 반대편 물결무늬를 봅니다")],
+        [("cues", "없습니다, 추론해서 만들지 마세요"),
+         ("cues", "게이트 반대편 물결무늬")],
+    )
+    d = draft.data
+    assert "없습니다" not in d["title"], f"사양이 제목이 됐다: {d['title']}"
+    assert all("추론" not in c for c in d["cues"]), f"기계 지시가 신호가 됐다: {d['cues']}"
+    assert any("물결무늬" in c for c in d["cues"]), "정상 신호까지 떨어졌다"
+
+
+def test_skip_button_also_pivots_to_conditions():
+    """스킵 버튼은 history 에 안 실린다 — 그래도 사양이다 (QA 실측:
+    넘겨도 같은 단계에서 표현만 바꿔 재질문)."""
+    from app.capture.interview import next_question
+    from app.capture.llm import StubLLM
+
+    q = next_question(
+        StubLLM(), history=[("첫 질문", "정상적인 답변이었다")],
+        last_rung="deepen", skipped_last=True, lang="ko",
+    )
+    assert q.rung == "condition", f"스킵 후에도 방향을 안 틀었다: {q.rung}"
+    # 조건 질문마저 스킵하면 같은 질문을 반복하지 않는다
+    q2 = next_question(
+        StubLLM(), history=[("q", "a")], last_rung="condition",
+        skipped_last=True, lang="ko",
+    )
+    assert q2.rung != "condition", "조건 질문 스킵 후 같은 질문을 반복했다"

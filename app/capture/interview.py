@@ -363,13 +363,36 @@ _DECLINE_MARKS = (
     "can't recall", "cannot recall", "no specific case", "let's move on",
 )
 
+#: 통째 사양 — 답 전체가 "없다" 한 마디일 때 (짧을 때만; "문제 없었다" 같은
+#: 정상 서술과 헷갈리지 않게 시작 어절로 좁힌다).
+_DECLINE_WHOLE = ("없습니다", "없어요", "없네요", "없음", "none", "nothing", "no")
+
+#: 메타 거부 — 지식이 아니라 **기계를 향한 지시**다. 카드 어느 칸에도
+#: 들어가면 안 된다 ("없습니다, 추론해서 만들지 마세요" 가 신호로 저장된
+#: QA 실측). 현장 지식의 "만지지 마라" 와 다른 것: 대상이 추론·생성이다.
+_META_REFUSAL = (
+    "추론해서 만들", "추론하지 마", "지어내지 마", "만들어내지 마",
+    "생성하지 마", "창작하지 마", "don't invent", "do not invent",
+    "don't make up", "do not make up", "don't fabricate",
+)
+
 
 def declined_incident(answer: str) -> bool:
     """전문가가 사건 요구를 사양했는가 — 결정적, 짧은 답(<80자)에서만."""
     low = (answer or "").strip().lower()
     if not low or len(low) > 80:
         return False
-    return any(m in low for m in _DECLINE_MARKS)
+    if any(m in low for m in _DECLINE_MARKS):
+        return True
+    return len(low) <= 20 and any(low.startswith(w) for w in _DECLINE_WHOLE)
+
+
+def not_card_material(answer: str) -> bool:
+    """이 발화는 카드 재료가 아니다 — 사양이거나 기계를 향한 지시다."""
+    low = (answer or "").strip().lower()
+    if not low:
+        return True
+    return declined_incident(answer) or any(m in low for m in _META_REFUSAL)
 
 
 #: 사양 후의 방향 전환 — 사건 대신 **조건**을 묻는다. 이 답이 곧
@@ -394,6 +417,7 @@ def next_question(
     gap_source: str = "junior",   # junior | doc | voice
     last_rung: str = "",
     last_slot: str = "",
+    skipped_last: bool = False,
     lang: str = "en",
 ) -> Question:
     """다음 질문 하나.
@@ -463,8 +487,10 @@ def next_question(
     # 실측). 그래서 이 수는 LLM 을 거치지 않는다: 사양이 감지되면 사건
     # 요구를 멈추고 **조건 질문**(성립 요건·뒤집는 신호)으로 결정적으로
     # 방향을 튼다 — 규칙 칸의 재료가 되는 질문이기도 하다.
+    # 스킵 버튼도 사양이다 — 스킵된 턴은 history 에 안 실려 텍스트 가드가
+    # 볼 수 없다 (QA 실측: 넘겨도 같은 단계에서 표현만 바꿔 재질문).
     last0 = history[-1][1] if history else ""
-    if declined_incident(last0):
+    if (skipped_last or declined_incident(last0)) and last_rung != "condition":
         return Question(
             text=_CONDITION_Q.get(lang, _CONDITION_Q["en"]),
             rung="condition", instrument=instrument, targets="exceptions",
@@ -900,6 +926,8 @@ Hard rules:
 - **Invent nothing the expert did not say.** Leave empty fields empty —
   an empty field drives the next question; pretending it is filled is worst.
 - Keep the expert's shop-floor wording. Do not normalise it.
+- Declines and meta-instructions ("no such case", "let's move on", "don't
+  invent") are not knowledge — they go in no field, ever.
 - 'cues' (what tells you) is the heart of the card. Only signals the expert
   actually named — each cue must be an OBSERVABLE sign ("no urine passing",
   "belly tight like a drum"), never an explanation, a story fragment, or a
@@ -920,6 +948,8 @@ _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기�
 - **전문가가 말하지 않은 것을 지어내지 마라.** 빈 칸은 빈 채로 둬라.
   빈 칸은 다음 질문의 근거가 되므로, 채워진 척하는 것이 가장 나쁘다.
 - 전문가의 현장 용어를 그대로 살려라. 표준어로 고치지 마라.
+- "사례가 없다"·"넘어가자"·"지어내지 마라" 같은 사양·지시 발화는 지식이
+  아니다 — 어떤 칸에도 넣지 마라.
 - 'cues'(무엇을 보고 아는가)가 이 카드의 핵심이다. 전문가가 실제로 든 신호만,
   **관찰 가능한 형태로** 적어라("소변이 안 나온다", "배가 북처럼 팽팽하다").
   설명문·이야기 조각·방법론 언급은 신호가 아니다. 한 관찰에 한 줄,
@@ -1043,7 +1073,8 @@ def _fallback(
     겨냥한 칸을 모르는 답은 어디에도 넣지 않는다 — 비어 있어야 다음 질문이
     나오기 때문이다.
     """
-    answers = [a for _, a in history if a.strip()]
+    answers = [a for _, a in history
+               if a.strip() and not not_card_material(a)]
     body = "\n".join(answers)
     first = next(iter(_SENTENCE.split(body)), body)[:200] if body else ""
     data: dict[str, Any] = {
@@ -1063,6 +1094,8 @@ def _fallback(
         answer = answer.strip()
         if not slot or not answer or slot not in data:
             continue
+        if not_card_material(answer):
+            continue   # "없습니다, 지어내지 마세요" 는 신호가 아니다
         if is_hedge(answer):
             # "그냥 감" 은 신호가 아니다 — 인용 게이트를 통과하는 쓰레기 카드를
             # 만드는 대신, 담기지 않았다는 사실 자체를 도제 항목으로 남긴다

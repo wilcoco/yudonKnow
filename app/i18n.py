@@ -270,6 +270,20 @@ CATALOG: dict[str, dict[str, str]] = {
               "결정론 실행이고, '모름'은 절대 하향되지 않습니다.",
     },
     "proto.browse3": {"en": "③ Read the judgments", "ko": "③ 판단 열람"},
+    "proto.gate.fold": {
+        "en": "⛔ {} signs unconfirmed — confirm them, then open the judgment",
+        "ko": "⛔ 미확인 신호 {}개 — 확인한 뒤 판단을 펼치세요",
+    },
+    "proto.triage.locked": {
+        "en": "🚦 Structured triage opens when the expert approves rules on "
+              "their cards (one click on the approval screen — a draft is "
+              "pre-filled). Until then this page is reading only: it shows "
+              "judgments, it does not make them.",
+        "ko": "🚦 판정 문진은 전문가가 카드에 규칙을 승인하면 열립니다 "
+              "(승인 화면에서 저장 한 번 — 초안이 미리 채워져 있습니다). "
+              "그 전까지 이 화면은 열람 전용입니다: 판단을 보여줄 뿐, "
+              "대신 내리지 않습니다.",
+    },
     "proto.tri.yes": {"en": "Yes", "ko": "예"},
     "proto.tri.no": {"en": "No", "ko": "아니오"},
     "proto.tri.unk": {"en": "Don't know", "ko": "모름"},
