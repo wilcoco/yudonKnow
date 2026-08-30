@@ -601,10 +601,12 @@ CATALOG: dict[str, dict[str, str]] = {
               "지어내는 대신, 목록으로 남깁니다.",
     },
     "memoir.epilogue": {
-        "en": "These judgments were cited {cited} times and reported to have "
-              "helped {helped} times — they keep working.",
-        "ko": "이 판단들은 {cited}번 인용되었고, {helped}번 현장에서 도움이 "
-              "되었다고 보고되었습니다 — 지금도 일하고 있습니다.",
+        "en": "These judgments led {cited} answers, stood as evidence {ccit} "
+              "times, and were reported to have helped {helped} times — "
+              "they keep working.",
+        "ko": "이 판단들은 {cited}번의 답을 이끌었고, {ccit}번 근거로 섰으며, "
+              "{helped}번 현장에서 도움이 되었다고 보고되었습니다 — 지금도 "
+              "일하고 있습니다.",
     },
     "memoir.colophon": {
         "en": "Compiled by yudonKnow from what its author dug out · {}",

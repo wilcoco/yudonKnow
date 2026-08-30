@@ -96,7 +96,7 @@
   {% endif %}
 
   <div class="epilogue">
-    <p class="big">{{ L['memoir.epilogue'].replace('{cited}', m.totals.cited|string).replace('{helped}', m.totals.helped|string) }}</p>
+    <p class="big">{{ L['memoir.epilogue'].replace('{cited}', m.totals.cited|string).replace('{ccit}', (m.totals.card_citations if m.totals.card_citations is defined else m.totals.cited)|string).replace('{helped}', m.totals.helped|string) }}</p>
     <p>{{ L['memoir.colophon'].replace('{}', m.date) }}</p>
   </div>
 

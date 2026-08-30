@@ -466,6 +466,9 @@ async function digStep(step){
     $('s_rung').textContent = '';
     $('s_progress').textContent = `${s2.index} / ${s2.target}`;
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    // 세션 시작 직후에는 카드가 아직 없다 — '이대로 남기기' 는 신호가
+    // 생겨야 열린다 (답변 후 렌더에만 걸려 있어 시작 직후 활성이던 QA 실측).
+    const cb0 = $('s_confirm_btn'); if(cb0) cb0.disabled = true;
     $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
     show('session');
     autoUi(); if(AUTO) askCycle();
@@ -695,6 +698,9 @@ async function startGap(gapId){
     $('s_rung').textContent = s2.from_gap ? L['sess.from_gap'] : '';
     $('s_progress').textContent = `${s2.index} / ${s2.target}`;
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    // 세션 시작 직후에는 카드가 아직 없다 — '이대로 남기기' 는 신호가
+    // 생겨야 열린다 (답변 후 렌더에만 걸려 있어 시작 직후 활성이던 QA 실측).
+    const cb0 = $('s_confirm_btn'); if(cb0) cb0.disabled = true;
     $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
     show('session');
     autoUi(); if(AUTO) askCycle();
@@ -712,6 +718,9 @@ async function startReview(step){
     $('s_rung').textContent = '';
     $('s_progress').textContent = '';
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    // 세션 시작 직후에는 카드가 아직 없다 — '이대로 남기기' 는 신호가
+    // 생겨야 열린다 (답변 후 렌더에만 걸려 있어 시작 직후 활성이던 QA 실측).
+    const cb0 = $('s_confirm_btn'); if(cb0) cb0.disabled = true;
     $('s_blocker').textContent = ''; $('s_warn').textContent = ''; $('s_wrong').innerHTML = '';
     show('session');
     autoUi(); if(AUTO) askCycle();
@@ -1110,6 +1119,9 @@ async function startSession(instrument){
     $('s_rung').textContent = s.from_gap ? L['sess.from_gap'] : '';
     $('s_progress').textContent = `${s.index} / ${s.target}`;
     $('s_answer').value = ''; $('s_slots').innerHTML = ''; $('s_title').textContent = '—';
+    // 세션 시작 직후에는 카드가 아직 없다 — '이대로 남기기' 는 신호가
+    // 생겨야 열린다 (답변 후 렌더에만 걸려 있어 시작 직후 활성이던 QA 실측).
+    const cb0 = $('s_confirm_btn'); if(cb0) cb0.disabled = true;
     $('s_blocker').textContent = ''; $('s_warn').textContent = '';
     $('s_wrong').innerHTML = '';
     if(instrument === 'wrong') loadWrongAnswer();
