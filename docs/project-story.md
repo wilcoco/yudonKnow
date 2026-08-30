@@ -197,7 +197,18 @@ bug — it is the failure mode that kills the product. Partial matching is now
 Korean-only, and `test_unrelated_english_question_is_always_a_gap` keeps it
 that way.
 
-**6. The gap goes back to the expert, and that closes the loop.**
+**6. Approved rules run deterministically — the compiler's execution layer.**
+On the approval screen the AI pre-drafts decision rules from the card
+(all-of / none-of / priority, tagged with canonical signal IDs so the same
+clinical sign is asked exactly once) — and nothing runs until the expert
+reviews and saves. Juniors then walk a structured triage: yes/no/unknown per
+sign, evaluated by a pure Python engine. One urgent sign escalates; a
+reassuring verdict needs its whole gate confirmed; unknowns never downgrade;
+on conflict the urgent judgment executes and the milder one is explicitly
+held. Same answers, same verdict, every time — the LLM discovers protocols,
+it never executes them.
+
+**7. The gap goes back to the expert, and that closes the loop.**
 Unanswered questions queue up on the expert's home screen, ranked by how many
 juniors asked and how soon the expert leaves. **The next excavation topic is
 set by real demand, not by a consultant.** And when a junior reports back that
@@ -261,9 +272,15 @@ exposed the keyword-retrieval ceiling → search aliases generated at approval.
 Another caught the memoir inventing a self-blame sentence the cards never
 recorded ("missing that extra sign was my failure") → a deterministic
 blame-vocabulary censor, author approval gating, and a public/owner split of
-the memoir. Every fix landed as a regression test first — 84 automated checks
-now hold the line, including "the gap decision never calls the LLM" and
-"a card without cues is never citable."
+the memoir. Ten external QA rounds in three days took the build from a 72-point
+"idea demo" through two No-Go verdicts to "winning-tier demo": the memoir
+fabricating a failure the expert never had → a deterministic blame censor
+plus author approval; a reassuring verdict firing off a single sign → the
+whole-gate rule engine; the same clinical sign phrased two ways → canonical
+signal IDs. Every fix landed as a regression test first — 101 automated
+checks now hold the line, including "the gap decision never calls the LLM",
+"a card without cues is never citable", and "one urgent sign never silently
+drops".
 
 ## What I learned
 
@@ -432,17 +449,21 @@ sqlite · docker · html · css · javascript · pytest
 
 | 라벨 | 값 |
 |---|---|
-| Live demo (Cloud Run) | `https://…run.app` ← **배포 후 채운다** |
+| Live demo (Cloud Run) | `https://yudonknow-530548975242.us-central1.run.app` |
 | Source code | `https://github.com/wilcoco/yudonKnow` |
 | Design summary | (설계 요약 페이지 URL) |
 
 ## 이미지 갤러리 (3:2, 최대 15장)
 
-1. 전문가 홈 — 보람 블록 + 공백 큐 + 도구함
-2. 발굴 3단 화면 — 왼쪽 질문 / 가운데 답 / 오른쪽 카드가 채워지는 중
-3. ⚖️ 오답 채점기 화면
-4. 후배 화면 — 답 + 근거 카드(예외·실패담 펼쳐진 상태)
-5. **분신이 "모른다"고 말하는 화면** ← 이게 제일 중요하다
+1. 랜딩 — 두 개의 문 + How it works
+2. 발굴 3단 화면 — 질문 / 음성 답 / 카드가 채워지는 중
+3. 승인 화면 — AI 규칙 초안(all_of/none_of/ID 태그)이 미리 채워진 모습
+4. 🚦 판정 문진 — 위급 신호 1개 → 상향 + 미확인 목록
+5. 판정 충돌 — "판단 2건 동시 성립, 우선순위 10 실행·보류" 배너
+6. 후배 화면 — 인용 답 + 근거 카드(예외·실패담 펼쳐진 상태)
+7. **분신이 "모른다"고 말하는 화면** ← 이게 제일 중요하다
+8. 회고록 — 초안 배지 → 본인 승인 서술
+9. 사용 명세서 — 답변 채택/카드 인용 분리 + 사용 내역
 6. 관리자 승계 리스크 보드
 7. 아키텍처 다이어그램 — `docs/architecture.png` (2400×1600, 3:2 그대로 업로드)
 8. Cloud Run 콘솔 (배포 증빙)
