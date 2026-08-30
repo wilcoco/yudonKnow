@@ -252,6 +252,11 @@ question routes back to the expert's dig queue, and a "didn't hold" report
 demotes the card until the expert fixes it. A static protocol goes stale
 silently; this one has a pulse.
 
+Said with respect: that winner is a brilliant artifact — one expert, one
+week, one app. **yudonKnow is the platform that produces such artifacts**,
+from conversation alone, for every retiring expert who will never spend a
+week building one.
+
 We then tested the claim head-on (docs/vetriage-experiment.md): playing a
 veterinarian armed with veTriage's own clinical rules, we let yudonKnow
 interview us — 13 turns, two pathways (blocked male cat, GDV). The interview
