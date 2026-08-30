@@ -411,7 +411,9 @@ documented in `docs/reuse-map.md`:
 
 Everything else — the judgment-card domain model, the 5-rung elicitation
 ladder, the 12 self-excavation instruments, the gap queue, the Gemini
-integration, the ADK agent layer, and the Google Cloud deployment — was
+integration (Gemini 3.5 via the Google GenAI SDK on Vertex AI), and the
+Google Cloud deployment (Cloud Run, Cloud SQL, Secret Manager, Cloud
+Build) — was
 built during the Submission Period.
 ```
 
