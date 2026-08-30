@@ -745,7 +745,8 @@ async function openStatement(){
     $('stmt_title').textContent = fmt(L['statement.title'], {name: STMT.name, date: STMT.period_end});
     $('stmt_body').innerHTML =
       '<p>' + esc(fmt(L['statement.totals'],
-        {cited:t.cited, helped:t.helped, anchored:t.anchored, missed:t.missed})) + '</p>' +
+        {cited:t.cited, ccit:t.card_citations ?? t.cited, helped:t.helped,
+         anchored:t.anchored, missed:t.missed})) + '</p>' +
       STMT.cards.map(c => '<div class="msg"><b>' + esc(c.title) + '</b><br>' +
         esc(fmt(L['statement.card'],
           {cited:c.cited, helped:c.helped, anchored:c.anchored, missed:c.missed})) +
@@ -833,7 +834,8 @@ function renderHome(h){
   }
   $('h_stats').textContent = fmt(L['home.stats'], {
     alive: h.legacy.cards_alive, verified: h.legacy.cards_verified,
-    cited: h.legacy.citations, helped: h.legacy.helped, missed: h.legacy.missed,
+    used: h.legacy.answers, cited: h.legacy.citations,
+    helped: h.legacy.helped, missed: h.legacy.missed,
     gaps: h.legacy.gaps_open});
   $('h_recent').innerHTML = (h.legacy.recent||[]).slice(0,4)
     .map(e => `<div class="msg">${esc(e.sentence)}</div>`).join('');

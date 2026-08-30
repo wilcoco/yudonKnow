@@ -270,6 +270,26 @@ CATALOG: dict[str, dict[str, str]] = {
               "결정론 실행이고, '모름'은 절대 하향되지 않습니다.",
     },
     "proto.browse3": {"en": "③ Read the judgments", "ko": "③ 판단 열람"},
+    "proto.ruled_in_browse": {
+        "en": "🚦 This judgment runs only in Structured triage — it has "
+              "approved rules and is not shown as reading material.",
+        "ko": "🚦 이 판단은 판정 문진에서만 실행됩니다 — 승인된 규칙이 있어 "
+              "열람으로는 펼치지 않습니다.",
+    },
+    "proto.browse_fold": {
+        "en": "📖 Reading only — not a verdict. Open to read the card.",
+        "ko": "📖 열람 전용 — 판정이 아닙니다. 카드를 읽으려면 펼치세요.",
+    },
+    "proto.v.multi": {
+        "en": "⚠ {n} judgments stand at once — executing priority {p} "
+              "\u201c{t}\u201d; the rest are held.",
+        "ko": "⚠ 판단 {n}건 동시 성립 — 우선순위 {p} 「{t}」 실행, 나머지는 "
+              "보류합니다.",
+    },
+    "proto.v.held": {
+        "en": "Held — a more urgent judgment is executing",
+        "ko": "보류 — 더 위급한 판단이 실행됨",
+    },
     "proto.gate.fold": {
         "en": "⛔ {} signs unconfirmed — confirm them, then open the judgment",
         "ko": "⛔ 미확인 신호 {}개 — 확인한 뒤 판단을 펼치세요",
@@ -589,9 +609,14 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Usage statement — {name}, as of {date}",
         "ko": "지식 사용 명세서 — {name} · {date} 기준",
     },
+    # 두 수는 다른 것을 센다 — 답변 채택은 "분신의 답 하나에 쓰였다"(원장,
+    # 답 단위), 카드 인용은 "근거로 선 카드 수"(한 답이 두 카드를 인용하면
+    # 2). 같은 이름으로 두면 정산 근거의 신뢰가 깨진다 (QA 실측: 22 vs 12).
     "statement.totals": {
-        "en": "Cited {cited} · Helped {helped} · Field-verified {anchored} · Did not hold {missed}",
-        "ko": "인용 {cited}회 · 도움됨 {helped}건 · 현장 검증 {anchored}건 · 안 맞음 {missed}건",
+        "en": "Used in {cited} answers · card citations {ccit} · Helped {helped} · "
+              "Field-verified {anchored} · Did not hold {missed}",
+        "ko": "답변 채택 {cited}회 · 카드 인용 {ccit}건 · 도움됨 {helped}건 · "
+              "현장 검증 {anchored}건 · 안 맞음 {missed}건",
     },
     "statement.card": {
         "en": "cited {cited} · helped {helped} · verified {anchored} · did not hold {missed}",
@@ -619,10 +644,12 @@ CATALOG: dict[str, dict[str, str]] = {
     "home.staying": {"en": "still here", "ko": "재직 중"},
     "home.left": {"en": "{} days since leaving", "ko": "퇴직 후 {}일"},
     "home.stats": {
-        "en": "{alive} judgments live · {verified} field-verified · cited {cited} · "
-              "\"helped\" {helped} / \"didn't hold\" {missed} · unanswered {gaps}",
-        "ko": "살아있는 판단 {alive} · 현장 검증 {verified} · 인용 {cited}회 · "
-              "'도움됐다' {helped} / '안 맞았다' {missed} · 미응답 {gaps}",
+        "en": "{alive} judgments live · {verified} field-verified · used in "
+              "{used} answers · {cited} card citations · \"helped\" {helped} / "
+              "\"didn't hold\" {missed} · unanswered {gaps}",
+        "ko": "살아있는 판단 {alive} · 현장 검증 {verified} · 답변 채택 {used}회 · "
+              "카드 인용 {cited}건 · '도움됐다' {helped} / '안 맞았다' {missed} · "
+              "미응답 {gaps}",
     },
     "home.gaps.head": {
         "en": "🔴 Juniors asked these and I could not answer — {} of them",

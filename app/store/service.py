@@ -1711,6 +1711,12 @@ def usage_statement(
     billable = {"cited", "helped", "anchored"}
     by_card: dict[str, dict[str, Any]] = {}
     totals = {"cited": 0, "helped": 0, "anchored": 0, "missed": 0}
+    # 카드 인용 총계 — 답 단위(원장 cited)와 다른 수다: 한 답이 카드 둘을
+    # 인용하면 2. 정산 화면은 두 수를 **다른 이름으로** 함께 낸다.
+    totals["card_citations"] = int(session.scalar(
+        select(func.coalesce(func.sum(db.CardRow.citations), 0))
+        .where(db.CardRow.expert == expert)
+    ) or 0)
     for e in entries:
         if e.event not in billable and e.event != "missed":
             continue
