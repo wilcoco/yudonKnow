@@ -51,7 +51,15 @@ def evaluate_card(card: Card, answers: dict[str, str]) -> Verdict:
     if not ruled:
         return Verdict(card.id, card.title, "untriaged")
 
-    triggered = any(_answer(answers, c) == YES for c in card.cues) if card.cues else True
+    # 트리거는 두 갈래다: ① 신호(cues) 중 하나 '예' (any_of — 위급 카드의
+    # 관례), ② **rule_all 전부 '예'** — 전문가가 성립 조건을 all_of 로
+    # 정의했으면 그 충족이 곧 트리거다. ②가 없던 것이 QA P0 실측이다:
+    # RED 조건 3개를 all_of 에 넣고 전부 '예' 로 답했는데 옛 신호가
+    # 미답이라 "해당 신호 없음" 이 나왔다.
+    cue_hit = any(_answer(answers, c) == YES for c in card.cues)
+    all_ok = bool(card.rule_all) and all(
+        _answer(answers, s) == YES for s in card.rule_all)
+    triggered = cue_hit or all_ok or (not card.cues and not card.rule_all)
 
     refuted_by = [s for s in card.rule_all if _answer(answers, s) == NO]
     refuted_by += [s for s in card.rule_none if _answer(answers, s) == YES]

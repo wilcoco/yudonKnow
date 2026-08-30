@@ -1563,9 +1563,15 @@ def protocol_view(
         # 서로 다른 업무명으로 컴파일돼 충돌 검사가 무력화됐다).
         "triage": {
             "count": len(ruled_cards),
+            # 문진 항목은 **승인된 규칙 조건**이 우선이다. rule_all 을
+            # 정의한 카드는 그 조건 충족이 트리거이므로 (엔진 ②) 잡음
+            # 많은 옛 신호를 물을 이유가 없다 — 신호는 rule_all 없는
+            # 카드(신호 트리거 관례)만 낸다. (QA 실측: 규칙 18개면 될
+            # 문진이 신호까지 39문항으로 불었다)
             "signs": sorted({
                 s for c in ruled_cards
-                for s in (list(c.cues) + list(c.rule_all) + list(c.rule_none))
+                for s in ((list(c.cues) if not c.rule_all else [])
+                          + list(c.rule_all) + list(c.rule_none))
             }),
             "cards": [card_view(c) for c in ruled_cards],
         },

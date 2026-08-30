@@ -170,3 +170,26 @@ def test_skip_button_also_pivots_to_conditions():
         skipped_last=True, lang="ko",
     )
     assert q2.rung != "condition", "조건 질문 스킵 후 같은 질문을 반복했다"
+
+
+def test_all_of_satisfaction_is_itself_a_trigger():
+    """QA P0 실측: RED 조건 3개를 all_of 에 넣고 전부 '예' 로 답해도
+    "해당 신호 없음" — 옛 신호(cues)만 트리거로 인정했기 때문이다.
+    전문가가 all_of 로 정의한 성립 조건의 충족은 그 자체가 트리거다."""
+    red = red_card(
+        cues=["옛 신호 A", "옛 신호 B"],          # 문진에 안 나올 잡음
+        rule_all=["무산성 헛구역질", "복부 팽창", "심한 통증"],
+        rule_none=[], rule_priority=10,
+    )
+    v = evaluate_card(red, {
+        "무산성 헛구역질": YES, "복부 팽창": YES, "심한 통증": YES,
+    })
+    assert v.state == "applies", f"all_of 전부 예인데 {v.state}"
+    assert v.priority == 10
+
+    # 충돌: GREEN 도 완전 성립시켜도 우선순위 10 이 이긴다
+    out = evaluate([green_card(), red], {
+        "구토 1회": YES, "물을 마시고 유지한다": YES, "밝고 걷고 정상 반응": YES,
+        "무산성 헛구역질": YES, "복부 팽창": YES, "심한 통증": YES,
+    })
+    assert out["top"].card_id == "r1" and out["top"].priority == 10

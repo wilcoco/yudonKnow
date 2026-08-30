@@ -106,7 +106,12 @@ let DOM = null, picked = new Set();
 function esc(t){ const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
 function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.remove('on'));
   document.getElementById('st'+n).classList.add('on'); window.scrollTo(0,0); }
-function back(n){ if(n===1){ DOM=null; } picked.clear(); stage(n); }
+function back(n){
+  // n===2 는 "답을 고치러 돌아가기" 다 — 상태를 지우면 화면의 체크와
+  // 내부 picked 가 갈린다 (QA 실측: 다 체크돼 보이는데 첫 선택이 빠짐).
+  if(n === 1){ DOM = null; picked.clear(); ANSWERS = {}; }
+  stage(n);
+}
 
 let ANSWERS = {};
 function startTriage(){
