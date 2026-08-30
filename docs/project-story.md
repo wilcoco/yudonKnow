@@ -378,7 +378,7 @@ grade counted verifiably, no vanity proxies.
 
 ## Video closing (30 seconds, spoken or subtitled)
 
-> Yudon is my friend — a molding expert a few years from retirement. He asked
+> Yudon is a close friend of mine, a few years from retirement. He asked
 > me for this. I run a manufacturing company myself, and I was deep in
 > automation projects when it hit me: automation takes the procedures, but the
 > judgment walks out the door. My injection, painting, and assembly lines are

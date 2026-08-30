@@ -93,7 +93,7 @@ basis for paying retirees for knowledge that keeps working.
 
 ### 3:40–4:00 · 클로징 (CEO, 얼굴 또는 자막)
 **대사** (project-story.md 클로징 그대로, 자막):
-> Yudon is my friend — a molding expert a few years from retirement. He asked
+> Yudon is a close friend of mine, a few years from retirement. He asked
 > me for this. This is for the people who run my lines: a knowledge system
 > while they are here, a memoir when they leave, and a ledger that keeps
 > paying them for every verified use after.
