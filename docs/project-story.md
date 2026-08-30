@@ -422,7 +422,7 @@ built during the Submission Period.
 ## Built with (태그 — 최대 25개)
 
 ```
-gemini · gemini-enterprise-agent-platform · google-ai-studio · vertex-ai · google-adk · google-genai-sdk
+gemini · vertex-ai · google-genai-sdk
 google-cloud · cloud-run · cloud-sql · secret-manager · artifact-registry
 python · fastapi · sqlalchemy · pydantic · uvicorn · jinja2 · postgresql
 sqlite · docker · html · css · javascript · pytest
