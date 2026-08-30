@@ -116,6 +116,29 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     # 두 개의 문 — 역할은 자기분류가 아니라 행동에서 나온다.
     "door.expert.t": {"en": "🧑‍🏭 Enter as the senior", "ko": "🧑‍🏭 선배로 입장"},
+    # 문 안의 역할 설명 — 시작 화면이 곧 안내다: 이 문으로 들어가면
+    # 무엇을 하게 되는지 세 걸음으로.
+    "door.expert.steps": {
+        "en": "① The AI interviews you — you just talk (voice works)\n"
+              "② You review and approve each judgment card — and the rules "
+              "that may run\n"
+              "③ What stays: your alter for the juniors, a memoir, and a "
+              "usage statement that pays you back",
+        "ko": "① AI가 인터뷰합니다 — 당신은 말만 하면 됩니다 (음성 가능)\n"
+              "② 판단 카드와 실행 규칙을 검토·승인합니다\n"
+              "③ 남는 것: 후배를 위한 분신, 회고록, 그리고 쓰인 만큼 "
+              "돌아오는 사용 명세서",
+    },
+    "door.junior.steps": {
+        "en": "① Ask in your own words — or walk the structured triage\n"
+              "② Every answer cites the senior's card; open it and check\n"
+              "③ Report \"helped / didn't hold\" after you try it — that "
+              "earns the ✔ and pays the senior",
+        "ko": "① 내 말로 묻거나, 판정 문진을 밟습니다\n"
+              "② 모든 답에 선배의 근거 카드가 붙습니다 — 펴서 확인하세요\n"
+              "③ 현장에서 써보고 '도움됐다/안 맞았다'를 보고하세요 — 그게 "
+              "✔ 가 되고 선배에게 돌아갑니다",
+    },
     "door.expert.c": {
         "en": "The AI interviews you — one judgment card stays in 3 minutes.",
         "ko": "AI 가 인터뷰합니다 — 3분에 판단 카드 한 장이 남습니다.",

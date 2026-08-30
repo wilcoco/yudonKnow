@@ -25,11 +25,6 @@
   {# 기둥 서비스 — 지식공학 절차의 이식 — 를 메인 첫 줄에 세운다. #}
   <p class="quiet" style="margin:2px 0 18px">{{ L['landing.procedure'] }}</p>
 
-  <div class="card hero">
-    <p class="t">{{ L['landing.yours.title'] }}</p>
-    <div class="c">{{ L['landing.yours.body'] }}</div>
-  </div>
-
   {# 두 개의 문 — "나는 전문가인가 소비자인가" 라는 자기분류 질문 대신,
      들어가는 행동으로 역할이 정해진다. 심사위원도 같은 문을 쓴다 (로그인
      벽 없음 — 실배포 신원은 SSO, roadmap 거버넌스). #}
@@ -37,6 +32,7 @@
     <div class="card hero">
       <p class="t">{{ L['door.expert.t'] }}</p>
       <p class="c">{{ L['door.expert.c'] }}</p>
+      <p class="c" style="white-space:pre-line;margin-top:8px">{{ L['door.expert.steps'] }}</p>
       <div class="acts">
         <button class="amber" onclick="go('/expert')">{{ L['landing.expert.cta'] }}</button>
       </div>
@@ -44,10 +40,17 @@
     <div class="card hero">
       <p class="t">{{ L['door.junior.t'] }}</p>
       <p class="c">{{ L['door.junior.c'] }}</p>
+      <p class="c" style="white-space:pre-line;margin-top:8px">{{ L['door.junior.steps'] }}</p>
       <div class="acts">
         <button class="primary" onclick="document.getElementById('juniors').scrollIntoView({behavior:'smooth'});document.getElementById('pq').focus({preventScroll:true})">{{ L['landing.junior.cta'] }}</button>
       </div>
     </div>
+  </div>
+
+  {# 통제권 요약 — 문 아래로: 역할을 고른 다음에 읽을 내용이다. #}
+  <div class="card">
+    <p class="t">{{ L['landing.yours.title'] }}</p>
+    <div class="c">{{ L['landing.yours.body'] }}</div>
   </div>
   {# 실제 href — onclick 만 있으면 JS 한 줄 실패에 링크가 죽는다 (QA 실측).
      손님 아이디는 마지막 링크만 필요해 서버 템플릿 난수 없이 JS 로 보강. #}
