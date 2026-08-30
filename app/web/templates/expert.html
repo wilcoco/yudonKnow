@@ -10,9 +10,11 @@
 <header>
   <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
+    <span id="who_wrap">
     <span>{{ L['nav.me'] }}</span>
     <input type="text" id="me" placeholder="{{ L['nav.id'] }}" value="">
     <button onclick="loadHome()">{{ L['nav.open'] }}</button>
+    </span>
     <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
 </header>
@@ -26,7 +28,10 @@
     <h1>{{ L['ob.title'] }}</h1>
     <p class="lead">{{ L['ob.lede'] }}</p>
     <p class="quiet">{{ L['ob.preview'] }}</p>
-    <p class="quiet">{{ L['ob.returning'] }}</p>
+    {# 재방문자는 보조 링크로 — 초행 화면에 아이디·열기가 먼저 보이면
+       내부 관리 화면처럼 읽힌다 (QA 실측). #}
+    <p class="quiet">{{ L['ob.have_cards'] }}
+      <a href="#" onclick="revealWho();return false">{{ L['ob.open_mine'] }}</a></p>
 
     <div class="card">
       <p class="t">{{ L['ob.q0'] }}</p>
@@ -341,7 +346,18 @@ const $ = id => document.getElementById(id);
 let STATE = {turn:null, card:null, session:null, home:null};
 
 const me = () => $('me').value.trim();
-function show(id){ for(const s of ['onboard','home','session','afterglow','cardview','library','methods']) $(s).hidden = (s!==id); }
+function show(id){
+  for(const s of ['onboard','home','session','afterglow','cardview','library','methods']) $(s).hidden = (s!==id);
+  // 초행(온보딩)에는 헤더의 아이디·열기를 숨긴다 — 로그인처럼 읽힌다.
+  // "내 카드 열기" 보조 링크(revealWho)로만 연다.
+  const w = $('who_wrap');
+  if(w && !w.dataset.revealed) w.hidden = (id === 'onboard');
+}
+function revealWho(){
+  const w = $('who_wrap');
+  w.hidden = false; w.dataset.revealed = '1';
+  $('me').focus();
+}
 function err(msg){ $('err').textContent = msg || ''; }
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

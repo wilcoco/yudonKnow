@@ -444,6 +444,10 @@ CATALOG: dict[str, dict[str, str]] = {
               "카드를 검토·승인합니다 → ③ 공개 범위는 당신이 정합니다. "
               "끝까지 당신 것입니다.",
     },
+    "ob.have_cards": {
+        "en": "Already have cards here? →", "ko": "이미 만든 카드가 있나요? →",
+    },
+    "ob.open_mine": {"en": "Open my cards", "ko": "내 카드 열기"},
     "ob.returning": {
         "en": "Been here before? Type your name in the ID box at the top and "
               "press Open — this form is only for a first visit.",
@@ -1078,6 +1082,16 @@ CATALOG: dict[str, dict[str, str]] = {
               "보고하세요 — 그 보고가 ✔ 를 만듭니다.",
     },
     "alter.example": {"en": "e.g. {q}", "ko": "예: {q}"},
+    # 언어 벽의 정직한 안내 — "아무 언어나 됩니다" 는 거짓이다. 검색은
+    # 언어를 넘지 않는다(카드는 판 언어로 산다, 테스트 고정).
+    "alter.langwall": {
+        "en": "{who} recorded in {lang} — questions must be in {lang} to "
+              "reach the cards.",
+        "ko": "{who} 님은 {lang}로 기록했습니다 — 질문도 {lang}로 해야 "
+              "카드에 닿습니다.",
+    },
+    "alter.langwall.switch": {"en": "Switch view to {lang} →",
+                               "ko": "{lang} 화면으로 보기 →"},
     "alter.farewell.lang": {
         "en": "(left in {lang})", "ko": "({lang}로 남긴 인사입니다)",
     },

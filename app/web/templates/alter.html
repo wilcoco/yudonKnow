@@ -49,6 +49,12 @@
   </div>
   {# 초행의 지도 — 질문창 바로 옆에 한 바퀴를 미리 그려 준다 (QA 실측:
      근거 확인·보고 동선이 화면 어디에도 예고되지 않았다). #}
+  {% if expert_lang and expert_lang != lang %}
+  <p class="quiet" style="margin-top:8px;max-width:70ch;border-left:3px solid var(--amber);padding-left:10px">
+    {{ L['alter.langwall'].replace('{who}', expert_name).replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}
+    <a href="/alter/{{ expert_id }}?lang={{ expert_lang }}">{{ L['alter.langwall.switch'].replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}</a>
+  </p>
+  {% endif %}
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.steps'] }}</p>
   <p class="quiet" style="margin-top:4px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
   <div class="err" id="err" role="alert" aria-live="assertive"></div>
