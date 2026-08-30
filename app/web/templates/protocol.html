@@ -55,6 +55,14 @@
 
   {# ① 영역 — 과업 지도의 가지 하나를 고른다 #}
   <div class="stage on" id="st1">
+    {% if p.triage.count %}
+    {# 판정 문진 — 업무명과 무관하게 규칙 전부에 대한 한 문진. 위급 카드가
+       다른 업무명 뒤에 숨어 충돌 검사에서 빠지는 구멍(QA 실측)의 봉인. #}
+    <div class="card hero" style="cursor:pointer;margin-bottom:14px" onclick="startTriage()">
+      <p class="t">{{ L['proto.triage.t'] }}</p>
+      <p class="c">{{ L['proto.triage.c'] }}</p>
+    </div>
+    {% endif %}
     <h2 class="sec">{{ L['proto.step1'] }}</h2>
     <div class="grid g3">
       {% for d in p.domains %}
@@ -80,7 +88,7 @@
 
   {# ③ 판단 — 걸린 카드가 절차 화면으로 #}
   <div class="stage" id="st3">
-    <h2 class="sec">{{ L['proto.step3'] }}</h2>
+    <h2 class="sec" id="st3h">{{ L['proto.step3'] }}</h2>
     <div id="out"></div>
     <div class="acts"><button onclick="back(2)">←</button></div>
     <p class="quiet">{{ L['proto.verify'] }}</p>
@@ -98,8 +106,21 @@ function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.re
 function back(n){ if(n===1){ DOM=null; } picked.clear(); stage(n); }
 
 let ANSWERS = {};
+function startTriage(){
+  DOM = { ruled: true, domain: "", signs: P.triage.signs, cards: P.triage.cards };
+  picked.clear(); ANSWERS = {};
+  renderSigns();
+  stage(2);
+}
 function pickDomain(i){
-  DOM = P.domains[i]; picked.clear(); ANSWERS = {};
+  // 영역 카드는 **열람**이다 — 판정은 startTriage(전 규칙 카드)만 한다.
+  // 영역 안에서 3상 문진을 열면 위급 카드가 업무명 밖에 숨는 구멍이 돌아온다.
+  DOM = Object.assign({}, P.domains[i], { ruled: false });
+  picked.clear(); ANSWERS = {};
+  renderSigns();
+  stage(2);
+}
+function renderSigns(){
   const box = document.getElementById('cues');
   if(DOM.ruled){
     // 판정 모드 — 예/아니오/모름 3상. '모름' 이 기본이고 1급 시민이다:
@@ -117,9 +138,8 @@ function pickDomain(i){
     box.innerHTML = DOM.cues.map((c,j) =>
       `<label class="cue" id="cue${j}"><input type="checkbox" onchange="toggleCue(${j})"> <span>${esc(c)}</span></label>`
     ).join('');
-    document.getElementById('go3').textContent = L['proto.step3'] + ' →';
+    document.getElementById('go3').textContent = L['proto.browse3'] + ' →';
   }
-  stage(2);
 }
 function triSet(j, val){
   ANSWERS[DOM.signs[j]] = val;
@@ -143,6 +163,7 @@ async function showJudgments(){
 }
 
 async function evaluateRuled(){
+  document.getElementById('st3h').textContent = L['proto.step3'];
   const out = document.getElementById('out');
   out.innerHTML = '<p class="quiet">…</p>'; stage(3);
   try{
@@ -180,6 +201,7 @@ async function evaluateRuled(){
 
 // 열람 모드 — 규칙 없는 카드. 판정하지 않고 게이트와 함께 보여만 준다.
 function browseJudgments(){
+  document.getElementById('st3h').textContent = L['proto.browse3'];
   const ranked = DOM.cards
     .map(c => ({ c, hit: c.cues.filter(x => picked.has(x)).length }))
     .filter(r => picked.size === 0 ? true : r.hit > 0)

@@ -1550,10 +1550,24 @@ def protocol_view(
     domains: dict[str, list[Card]] = {}
     for c in cards:
         domains.setdefault(c.domain or "—", []).append(c)
+    ruled_cards = [c for c in cards
+                   if c.rule_all or c.rule_none or c.rule_priority]
     return {
         "expert": expert,
         "name": row.display_name or expert,
         "lang": row.lang or lang,
+        # 판정 문진 — **업무명과 무관하게** 규칙 있는 카드 전부가 한
+        # 문진에 선다. 영역이 갈리면 위급 카드가 비교 대상에서 빠져
+        # "위급 우선" 자체가 발동 못 한다 (QA 실측: GREEN 과 RED 가
+        # 서로 다른 업무명으로 컴파일돼 충돌 검사가 무력화됐다).
+        "triage": {
+            "count": len(ruled_cards),
+            "signs": sorted({
+                s for c in ruled_cards
+                for s in (list(c.cues) + list(c.rule_all) + list(c.rule_none))
+            }),
+            "cards": [card_view(c) for c in ruled_cards],
+        },
         "domains": [
             {
                 "domain": d,
@@ -1613,10 +1627,13 @@ def protocol_evaluate(
 
     get_expert(session, expert, lang=lang)
     owner = bool(viewer) and viewer == expert
+    # 영역으로 거르지 않는다 — 충돌 검사는 이 전문가의 **전 카드**가
+    # 대상이다. 위급 카드가 다른 업무명 뒤에 숨으면 우선순위 로직이
+    # 발동할 무대 자체가 없다. (domain 인자는 하위 호환으로만 받는다.)
+    del domain
     cards = [
         c for c in cards_of(session, expert)
         if c.citable() and (owner or c.visible_to(viewer))
-        and (c.domain or "—") == domain
     ]
     out = evaluate(cards, {str(k): str(v) for k, v in answers.items()})
     def vd(v):

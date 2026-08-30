@@ -260,6 +260,16 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "alter.protocol": {"en": "📋 Step-by-step protocol", "ko": "📋 절차로 밟기"},
     # 판정 모드 — 예/아니오/모름 3상 문진. '모름' 이 1급 시민이다.
+    "proto.triage.t": {"en": "🚦 Structured triage", "ko": "🚦 판정 문진"},
+    "proto.triage.c": {
+        "en": "One questionnaire across ALL approved rules — no task picking, "
+              "so an urgent judgment can never hide behind a different task "
+              "name. Deterministic; unknowns never downgrade.",
+        "ko": "승인된 규칙 전부를 **업무 구분 없이** 한 문진으로 충돌 "
+              "검사합니다 — 위급 판단이 다른 업무명 뒤에 숨을 수 없습니다. "
+              "결정론 실행이고, '모름'은 절대 하향되지 않습니다.",
+    },
+    "proto.browse3": {"en": "③ Read the judgments", "ko": "③ 판단 열람"},
     "proto.tri.yes": {"en": "Yes", "ko": "예"},
     "proto.tri.no": {"en": "No", "ko": "아니오"},
     "proto.tri.unk": {"en": "Don't know", "ko": "모름"},

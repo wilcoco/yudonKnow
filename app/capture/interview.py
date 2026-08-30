@@ -354,6 +354,36 @@ class Question:
     fallback: bool = False
 
 
+#: 사례 사양(없음·건너뛰기) 표현 — 짧은 답에서만 판정한다. "문제 없었다"
+#: 같은 정상 서술을 오인하지 않도록, 사례·기억을 부정하는 꼴로 좁힌다.
+_DECLINE_MARKS = (
+    "사례는 없", "사례가 없", "그런 적은 없", "그런 적 없", "기억이 없",
+    "기억나는 게 없", "떠오르는 게 없", "넘길게", "넘어가", "건너뛰",
+    "생략할게", "없습니다만 넘어", "skip", "no such case", "none i recall",
+    "can't recall", "cannot recall", "no specific case", "let's move on",
+)
+
+
+def declined_incident(answer: str) -> bool:
+    """전문가가 사건 요구를 사양했는가 — 결정적, 짧은 답(<80자)에서만."""
+    low = (answer or "").strip().lower()
+    if not low or len(low) > 80:
+        return False
+    return any(m in low for m in _DECLINE_MARKS)
+
+
+#: 사양 후의 방향 전환 — 사건 대신 **조건**을 묻는다. 이 답이 곧
+#: 규칙 초안(all_of/none_of)의 재료다.
+_CONDITION_Q = {
+    "ko": "사례 없이도 충분합니다. 그럼 조건으로 여쭙겠습니다 — 그 판단이 "
+          "성립하려면 무엇이 **전부** 확인되어야 하고, 반대로 무엇이 하나라도 "
+          "보이면 그 판단을 접으십니까?",
+    "en": "No example needed — let me ask it as conditions instead. What must "
+          "ALL be true for that judgment to stand, and what single sign, if "
+          "present, makes you drop it?",
+}
+
+
 def next_question(
     llm: BaseLLM,
     *,
@@ -427,6 +457,18 @@ def next_question(
 
     if not history:
         return Question(text=ladder[0][1], rung="recall", instrument=instrument)
+
+    # 사례 사양(辭讓) 가드 — "그런 사례는 없다/넘어가자" 는 답이다.
+    # 프롬프트로 부탁했더니 같은 단계에서 표현만 바꿔 계속 물었다(QA 2회
+    # 실측). 그래서 이 수는 LLM 을 거치지 않는다: 사양이 감지되면 사건
+    # 요구를 멈추고 **조건 질문**(성립 요건·뒤집는 신호)으로 결정적으로
+    # 방향을 튼다 — 규칙 칸의 재료가 되는 질문이기도 하다.
+    last0 = history[-1][1] if history else ""
+    if declined_incident(last0):
+        return Question(
+            text=_CONDITION_Q.get(lang, _CONDITION_Q["en"]),
+            rung="condition", instrument=instrument, targets="exceptions",
+        )
 
     # 얼버무림 규칙 — "그때그때 다르다" 는 답이 아니라 신호다.
     # 1회차: 같은 칸을 **사건 하나**로 다시 판다 (LLM 을 거치지 않는다 —

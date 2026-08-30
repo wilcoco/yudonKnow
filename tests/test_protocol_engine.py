@@ -96,3 +96,35 @@ def test_engine_is_deterministic():
     a = evaluate([green_card(), red_card()], answers)
     b = evaluate([green_card(), red_card()], answers)
     assert [v.state for v in a["verdicts"]] == [v.state for v in b["verdicts"]]
+
+
+def test_conflict_check_ignores_domain_walls(session=None):
+    """QA 실측 구멍: GREEN 과 RED 가 다른 업무명으로 컴파일되면 충돌 검사가
+    무력화됐다. 판정은 업무명과 무관하게 전 카드가 무대다."""
+    g = green_card(domain="동물병원 접수 및 트리아지")
+    r = red_card(domain="반려동물 응급 접수")
+    out = evaluate([g, r], {
+        "구토 1회": YES, "물을 마시고 유지한다": YES, "밝고 걷고 정상 반응": YES,
+        "무산성 헛구역질": YES, "복부 팽창": YES,
+    })
+    assert out["top"].card_id == "r1", "업무명이 갈렸다고 RED 가 무대에서 빠졌다"
+
+
+def test_declining_an_incident_pivots_to_conditions():
+    """사례 사양 가드 — 프롬프트 부탁으로 안 됐던 것(QA 2회 실측)을
+    결정적으로: '그런 사례는 없다' 다음 질문은 사건 요구가 아니라 조건이다."""
+    from app.capture.interview import declined_incident, next_question
+    from app.capture.llm import StubLLM
+
+    assert declined_incident("그런 사례는 없습니다")
+    assert declined_incident("기억이 없네요, 넘어가죠")
+    assert declined_incident("No such case comes to mind, let's move on")
+    assert not declined_incident("문제 없이 잘 끝났습니다. 그날은 압력을 먼저 봤고 …"
+                                  "그 뒤로 30분을 지켜봤습니다")
+
+    q = next_question(
+        StubLLM(), history=[("구체적으로 언제였나요?", "그런 사례는 없습니다")],
+        lang="ko",
+    )
+    assert q.rung == "condition", f"사양 후에도 사건을 요구했다: {q.text[:60]}"
+    assert "전부" in q.text and "하나라도" in q.text
