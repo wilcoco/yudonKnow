@@ -17,6 +17,9 @@
 
 <main class="wide">
   <h1>{{ L['admin.title'] }}</h1>
+  {# 공개 데모의 정직성 — 이 보드는 전시 전문가의 합성 데이터다. 실배포는
+     SSO 뒤 (roadmap 거버넌스). #}
+  <p class="quiet">{{ L['demo.synthetic'] }}</p>
   <p class="lead">{{ L['admin.lede'] }}</p>
   <div id="board"></div>
   <p class="quiet" style="margin-top:24px">{{ L['admin.caveat'] | safe }}</p>
