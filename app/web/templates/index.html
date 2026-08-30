@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="/">yudon<span>Know</span></a>
+  <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
     <a href="#how">{{ L['nav.how'] }}</a>
     {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>{{ L['stub.mode'] }}</span>{% endif %}

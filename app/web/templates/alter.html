@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="/">yudon<span>Know</span></a>
+  <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
     <span>{{ L['nav.me'] }}</span>
     <input type="text" id="asker" placeholder="{{ L['nav.id'] }}">
@@ -35,8 +35,8 @@
     <span class="b" id="days"></span>
     {# 소개로서의 회고록 — 후배는 카드만이 아니라 사람을 물려받는다.
        공개 판: 공개 카드 + 본인이 승인한 서술만 제본된다. #}
-    <a class="b" href="/protocol/{{ expert_id }}?lang={{ lang }}">{{ L['alter.protocol'] }}</a>
-    <a class="b" href="/memoir/{{ expert_id }}?lang={{ lang }}">{{ L['alter.memoir'].replace('{}', expert_name) }}</a>
+    <a class="b" data-keep-as href="/protocol/{{ expert_id }}?lang={{ lang }}">{{ L['alter.protocol'] }}</a>
+    <a class="b" data-keep-as href="/memoir/{{ expert_id }}?lang={{ lang }}">{{ L['alter.memoir'].replace('{}', expert_name) }}</a>
   </div>
   <p class="quiet" style="margin-top:0">{{ L['alter.disclaimer'] }}</p>
 
@@ -86,6 +86,15 @@ async function api(path, opts){
     if(asId){ localStorage.setItem('ydk_me', asId); }
   }catch(e){}
   $('asker').value = localStorage.getItem('ydk_me') || '';
+  // 신원은 링크로 흐른다 — 화면을 오가는 사이 ?as 가 떨어지면 지목 카드
+  // 접근이 다른 사람으로 바뀐다 (QA P0 실측). 저장소는 보조일 뿐,
+  // 나가는 링크마다 현재 신원을 명시적으로 싣는다.
+  try{
+    const keep = $('asker').value.trim();
+    if(keep) document.querySelectorAll('a[data-keep-as]').forEach(a => {
+      a.href += (a.href.includes('?') ? '&' : '?') + 'as=' + encodeURIComponent(keep);
+    });
+  }catch(e){}
   $('label').textContent = L['alter.of'].replace('{}', EXPERT);
   try{
     const l = await api('/api/experts');

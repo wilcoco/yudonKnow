@@ -41,8 +41,33 @@ class Verdict:
     refuted_by: list[str] = field(default_factory=list)
 
 
+def sign_key(line: str) -> tuple[str, str]:
+    """규칙 줄 → (canonical ID, 표시 문구).
+
+    같은 임상 신호가 카드마다 다른 문장으로 적히면 문진에 두 번 서고,
+    한쪽 '예' / 한쪽 '아니오' 라는 모순 입력이 가능해진다 (QA P0 실측:
+    같은 헛구역질이 문구에 따라 상향/판정없음으로 갈렸다). 전문가가 규칙
+    줄에 `dry_heaving :: 반복적으로 토하려 하지만 아무것도 안 나옴` 처럼
+    ID 를 달면, **같은 ID 는 하나의 질문이고 답 하나가 그 ID 를 쓰는
+    모든 카드에 동시에 적용된다.** 태그 없는 줄은 문장 자체가 ID 다
+    (하위 호환). ID 부여도 전문가 승인 화면의 몫 — 기계가 문장 유사도로
+    동치를 추측하지 않는다.
+    """
+    if "::" in line:
+        left, right = line.split("::", 1)
+        key, label = left.strip(), right.strip()
+        return (key or label), (label or key)
+    t = line.strip()
+    return t, t
+
+
 def _answer(answers: dict[str, str], sign: str) -> str:
-    return answers.get(sign, UNKNOWN)
+    key, _ = sign_key(sign)
+    return answers.get(key, UNKNOWN)
+
+
+def _labels(lines: list[str], answers: dict[str, str], want: str) -> list[str]:
+    return [sign_key(s)[1] for s in lines if _answer(answers, s) == want]
 
 
 def evaluate_card(card: Card, answers: dict[str, str]) -> Verdict:
@@ -65,14 +90,14 @@ def evaluate_card(card: Card, answers: dict[str, str]) -> Verdict:
     any_hit = any(_answer(answers, s) == YES for s in card.rule_all)
     triggered = cue_hit or any_hit or (not card.cues and not card.rule_all)
 
-    refuted_by = [s for s in card.rule_all if _answer(answers, s) == NO]
-    refuted_by += [s for s in card.rule_none if _answer(answers, s) == YES]
+    refuted_by = _labels(card.rule_all, answers, NO)
+    refuted_by += _labels(card.rule_none, answers, YES)
     if refuted_by:
         return Verdict(card.id, card.title, "refuted",
                        priority=card.rule_priority, refuted_by=refuted_by)
 
-    unknowns = [s for s in card.rule_all if _answer(answers, s) == UNKNOWN]
-    unknowns += [s for s in card.rule_none if _answer(answers, s) == UNKNOWN]
+    unknowns = _labels(card.rule_all, answers, UNKNOWN)
+    unknowns += _labels(card.rule_none, answers, UNKNOWN)
 
     if not triggered:
         # 신호가 하나도 '예' 가 아니면 이 카드는 아직 무대에 없다.

@@ -41,9 +41,9 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="/">yudon<span>Know</span></a>
+  <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
-    <a href="/alter/{{ p.expert }}?lang={{ lang }}">💬 {{ L['proto.ask'] }}</a>
+    <a data-keep-as href="/alter/{{ p.expert }}?lang={{ lang }}">💬 {{ L['proto.ask'] }}</a>
     <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
 </header>
@@ -86,7 +86,7 @@
       <button onclick="back(1)">←</button>
     </div>
     <p class="quiet" style="margin-top:14px">{{ L['proto.none'] }}
-      <a id="askgap" href="/alter/{{ p.expert }}?lang={{ lang }}">{{ L['proto.ask'] }}</a></p>
+      <a id="askgap" data-keep-as href="/alter/{{ p.expert }}?lang={{ lang }}">{{ L['proto.ask'] }}</a></p>
   </div>
 
   {# ③ 판단 — 걸린 카드가 절차 화면으로 #}
@@ -100,11 +100,15 @@
 
 <script>
 const P = {{ p | tojson }};
+// 신원 보존 — 이 화면에 온 ?as 를 되돌아가는 모든 링크에 싣는다.
+const AS = new URLSearchParams(location.search).get('as') || '';
+const ASQ = AS ? '&as=' + encodeURIComponent(AS) : '';
 const L = {{ L | tojson }};
 const LANG = {{ lang | tojson }};
 let DOM = null, picked = new Set();
 function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
 function esc(t){ const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
+document.querySelectorAll('a[data-keep-as]').forEach(a => { if(AS) a.href += ASQ; });
 function stage(n){ document.querySelectorAll('.stage').forEach(s=>s.classList.remove('on'));
   document.getElementById('st'+n).classList.add('on'); window.scrollTo(0,0); }
 function back(n){
@@ -134,14 +138,15 @@ function renderSigns(){
   if(DOM.ruled){
     // 판정 모드 — 예/아니오/모름 3상. '모름' 이 기본이고 1급 시민이다:
     // 결정론 엔진에서 모름은 절대 하향의 근거가 되지 않는다.
+    // signs: [{key, label}] — 같은 canonical ID 는 여기 한 번만 온다.
     box.innerHTML = '<p class="quiet">' + esc(L['proto.engine_note']) + '</p>' +
-      DOM.signs.map((c,j) => `
-      <div class="sign" id="sign${j}"><span>${esc(c)}</span>
-        <span class="tri" role="group" aria-label="${esc(c)}">
-          <button aria-label="${esc(c)} — ${esc(L['proto.tri.yes'])}" onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
-          <button aria-label="${esc(c)} — ${esc(L['proto.tri.no'])}" onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
-          <button class="on-unk" aria-label="${esc(c)} — ${esc(L['proto.tri.unk'])}" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
-        </span></div>`).join('');
+      DOM.signs.map((c,j) => { const lbl = c.label || c; return `
+      <div class="sign" id="sign${j}"><span>${esc(lbl)}</span>
+        <span class="tri" role="group" aria-label="${esc(lbl)}">
+          <button aria-label="${esc(lbl)} — ${esc(L['proto.tri.yes'])}" onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
+          <button aria-label="${esc(lbl)} — ${esc(L['proto.tri.no'])}" onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
+          <button class="on-unk" aria-label="${esc(lbl)} — ${esc(L['proto.tri.unk'])}" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
+        </span></div>`; }).join('');
     document.getElementById('go3').textContent = L['proto.evaluate'];
   } else {
     box.innerHTML = DOM.cues.map((c,j) =>
@@ -151,7 +156,8 @@ function renderSigns(){
   }
 }
 function triSet(j, val){
-  ANSWERS[DOM.signs[j]] = val;
+  const sig = DOM.signs[j];
+  ANSWERS[sig.key || sig] = val;
   const row = document.getElementById('sign'+j);
   row.querySelectorAll('.tri button').forEach((b,k) => {
     b.className = (k===0&&val==='yes')?'on-yes':(k===1&&val==='no')?'on-no':(k===2&&val==='unknown')?'on-unk':'';
@@ -191,7 +197,7 @@ async function evaluateRuled(){
     }
     if(d.open){
       html += `<div class="card alarm"><p class="c">${esc(L['proto.v.open'])}
-        <a href="/alter/${encodeURIComponent(P.expert)}?lang=${LANG}">${esc(L['proto.ask'])}</a></p></div>`;
+        <a href="/alter/${encodeURIComponent(P.expert)}?lang=${LANG}${ASQ}">${esc(L['proto.ask'])}</a></p></div>`;
     } else {
       const t = d.top, c = byId[t.card_id] || {};
       html += `<div class="card" style="border-left:4px solid ${t.state==='escalate'?'var(--amber)':'var(--danger)'}">
@@ -226,7 +232,7 @@ function browseJudgments(){
   const out = document.getElementById('out');
   if(!ranked.length){
     out.innerHTML = '<div class="card alarm"><p class="c">' + esc(L['proto.none']) +
-      ' <a href="/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + '">' +
+      ' <a href="/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + ASQ + '">' +
       esc(L['proto.ask']) + '</a></p></div>';
   } else {
     // 충돌 배너 — 판단 여러 개가 같이 걸리면 위급한 쪽 우선을 사람에게 상기.
@@ -280,7 +286,7 @@ function browseJudgments(){
   // 분신으로 넘어갈 때 고른 신호를 질문으로 들려 보낸다
   const q = Array.from(picked).join(', ');
   document.getElementById('askgap').href =
-    '/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + (q ? '&q=' + encodeURIComponent(q) : '');
+    '/alter/' + encodeURIComponent(P.expert) + '?lang=' + LANG + ASQ + (q ? '&q=' + encodeURIComponent(q) : '');
   stage(3);
 }
 </script>

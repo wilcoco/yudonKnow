@@ -213,3 +213,29 @@ def test_one_urgent_sign_escalates_never_silently_drops():
     v = evaluate_card(red, {"무산성 헛구역질": YES, "복부 팽창": YES,
                             "심한 통증": YES})
     assert v.state == "applies"
+
+
+def test_canonical_ids_merge_the_same_signal_across_cards():
+    """QA P0 실측: 같은 헛구역질이 카드마다 다른 문장이라 별도 문항으로
+    서고, 한쪽 '예'/한쪽 '아니오' 모순 입력이 가능했다. `id :: 문구`
+    태그가 있으면 같은 ID 는 하나의 질문이고, 답 하나가 전 카드에 적용."""
+    green = green_card(rule_none=[
+        "dry_heaving :: 반복적으로 토하려 하지만 아무것도 나오지 않음",
+        "복부 팽창"])
+    red = red_card(cues=[], rule_priority=10, rule_none=[], rule_all=[
+        "dry_heaving :: 10~20분 사이 여러 차례 토하려 하지만 아무것도 안 나옴",
+        "tight_belly :: 배가 눈에 띄게 불렀거나 단단함"])
+
+    # 답은 canonical ID 로 한 번 — 두 카드가 동시에 반응한다
+    out = evaluate([green, red], {"dry_heaving": YES})
+    assert out["top"].card_id == "r1" and out["top"].state == "escalate"
+    g = next(v for v in out["verdicts"] if v.card_id == "g1")
+    assert g.state == "refuted", "같은 신호 '예' 가 GREEN 의 none_of 에 안 닿았다"
+    # 표시 라벨은 문구 (ID 노출 아님)
+    assert "배가 눈에 띄게" in out["top"].unknowns[0]
+
+    # 문진에는 같은 ID 가 한 번만 선다
+    from app.store.service import _triage_signs
+    signs = _triage_signs([green, red])
+    keys = [x["key"] for x in signs]
+    assert keys.count("dry_heaving") == 1

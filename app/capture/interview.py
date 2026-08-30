@@ -801,6 +801,10 @@ def draft_rules(
     if lang == "ko":
         prompt = (
             "아래 판단 카드를 결정론 판정 규칙 초안으로 바꿔라.\n"
+            "- 각 줄은 `신호id :: 관찰 문구` 꼴로 써라. 신호id 는 짧은 "
+            "snake_case 로, **같은 임상 신호는 언제나 같은 id** 를 쓴다 "
+            "(예: dry_heaving :: 반복적으로 토하려 하지만 아무것도 안 나옴). "
+            "이 id 가 카드 사이에서 같은 질문을 하나로 묶는다.\n"
             "- rule_all: 이 판단이 성립하려면 **전부 '예'** 여야 하는 관찰 조건.\n"
             "- rule_none: **전부 '아니오'** 여야 하는 위험 신호 (예외 칸의 "
             "'~면 통하지 않는다' 가 주 재료).\n"
@@ -814,6 +818,10 @@ def draft_rules(
     else:
         prompt = (
             "Turn the judgment card below into DRAFT deterministic rules.\n"
+            "- Write each line as `signal_id :: observable phrase`. Use short "
+            "snake_case ids and ALWAYS the same id for the same clinical "
+            "signal (e.g. dry_heaving :: retching repeatedly, nothing comes "
+            "up). The id merges the same question across cards.\n"
             "- rule_all: observable conditions that must ALL be 'yes' for this "
             "judgment to stand.\n"
             "- rule_none: danger signs that must ALL be 'no' (the exceptions "

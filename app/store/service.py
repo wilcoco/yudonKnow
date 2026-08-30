@@ -1572,11 +1572,10 @@ def protocol_view(
             # 많은 옛 신호를 물을 이유가 없다 — 신호는 rule_all 없는
             # 카드(신호 트리거 관례)만 낸다. (QA 실측: 규칙 18개면 될
             # 문진이 신호까지 39문항으로 불었다)
-            "signs": sorted({
-                s for c in ruled_cards
-                for s in ((list(c.cues) if not c.rule_all else [])
-                          + list(c.rule_all) + list(c.rule_none))
-            }),
+            # canonical ID 로 중복을 접는다 — 같은 ID 는 한 번만 묻고,
+            # 답 하나가 그 ID 를 쓰는 모든 카드에 적용된다 (QA P0: 같은
+            # 헛구역질이 문구 따라 두 번 서서 모순 입력이 가능했다).
+            "signs": _triage_signs(ruled_cards),
             "cards": [card_view(c) for c in ruled_cards],
         },
         "domains": [
@@ -1597,6 +1596,26 @@ def protocol_view(
             for d, cs in sorted(domains.items())
         ],
     }
+
+
+def _triage_signs(ruled_cards: list[Card]) -> list[dict[str, str]]:
+    """문진 항목 — canonical ID(`id :: 문구` 태그)로 중복을 접는다.
+
+    같은 ID 는 한 번만 묻고 라벨은 처음 만난 문구다. rule_all 없는
+    카드는 신호가 트리거이므로 신호도 문진에 선다 (v0.3.4 결정 유지).
+    ID 부여는 승인 화면에서 전문가의 손 — 기계가 문장 유사도로 동치를
+    추측하지 않는다.
+    """
+    from app.core.protocol import sign_key
+
+    seen: dict[str, str] = {}
+    for c in ruled_cards:
+        lines = ((list(c.cues) if not c.rule_all else [])
+                 + list(c.rule_all) + list(c.rule_none))
+        for line in lines:
+            k, lbl = sign_key(line)
+            seen.setdefault(k, lbl)
+    return [{"key": k, "label": lbl} for k, lbl in sorted(seen.items())]
 
 
 def rules_draft(

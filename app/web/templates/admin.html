@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="/">yudon<span>Know</span></a>
+  <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
     <span>{{ L['nav.admin'] }}</span>
     <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
@@ -55,7 +55,7 @@ function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? '');
         hands: Math.round(b.hands_ratio*100),
         weak: b.weakest || '—'}))}</p>
       <div class="acts">
-        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}'+${JSON.stringify(qs)}">${esc(L['admin.ask'])}</button>
+        <button onclick="location.href='/alter/${encodeURIComponent(b.expert)}${qs}'">${esc(L['admin.ask'])}</button>
       </div>
     </div>`).join('');
 })();
