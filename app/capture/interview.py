@@ -1138,8 +1138,9 @@ _ACKS = {"yes", "yes.", "no", "no.", "ok", "okay", "sure", "right",
 #: 말의 목차다. 신호 칸에 들어가 카드를 흐리던 실측(기획·개발·디자인
 #: 직군 시뮬레이션 공통).
 _ENUM_OPENER = re.compile(
-    r"^\s*((two|three|four|five)\s+(things|reasons|signs)\b[^a-z]*"
-    r"|(두|세|네|다섯)\s*가지(요|입니다|예요|다)?\s*[.!,]?\s*)$",
+    r"^\s*((two|three|four|five)\s+(things|reasons|signs)"
+    r"(,?\s*in order)?\s*[.!:]?"
+    r"|(두|세|네|다섯)\s*가지(요|입니다|예요|다)?\s*[.!,]?)\s*$",
     re.IGNORECASE,
 )
 
