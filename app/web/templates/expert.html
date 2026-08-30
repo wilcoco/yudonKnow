@@ -250,7 +250,7 @@
           </div>
 
           <div class="acts">
-            <button class="amber" onclick="confirmCard()">{{ L['sess.confirm'] }}</button>
+            <button class="amber" id="s_confirm_btn" onclick="confirmCard()">{{ L['sess.confirm'] }}</button>
           </div>
           <p class="quiet" id="s_warn"></p>
         </div>
@@ -302,6 +302,9 @@
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.rationale'] }}</p><textarea id="cv_rationale" style="min-height:60px"></textarea>
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.exceptions'] }}</p><textarea id="cv_exceptions" style="min-height:60px"></textarea>
         <p class="quiet" style="margin-top:8px">{{ L['cv.f.failure'] }}</p><textarea id="cv_failure" style="min-height:60px"></textarea>
+        {# 옛 프롬프트가 지어낸 '글로 못 담은 것' 을 본인이 지울 수 있는
+           칸 — 기계는 승인된 카드를 안 고치므로, 정리 경로는 본인 손이다. #}
+        <p class="quiet" style="margin-top:8px">{{ L['cv.f.unspeakable'] }}</p><textarea id="cv_unspeakable" style="min-height:44px"></textarea>
         {# 규칙 칸 — 여기서 승인한 것만 결정론 판정에 쓰인다. LLM 은 이
            칸을 채우지 않는다: 채우는 손이 곧 승인이다. #}
         <p class="quiet" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px">{{ L['cv.f.rule_note'] }}</p>
@@ -574,6 +577,7 @@ async function openCard(id){
     $('cv_rationale').value = c.rationale || '';
     $('cv_exceptions').value = (c.exceptions||[]).join('\n');
     $('cv_failure').value = c.failure || '';
+    $('cv_unspeakable').value = (c.unspeakable || []).join('\n');
     $('cv_rule_all').value = (c.rule_all || []).join('\n');
     $('cv_rule_none').value = (c.rule_none || []).join('\n');
     $('cv_rule_priority').value = c.rule_priority || 0;
@@ -618,6 +622,7 @@ async function saveCard(){
         rationale: $('cv_rationale').value.trim(),
         exceptions: lines($('cv_exceptions').value),
         failure: $('cv_failure').value.trim(),
+        unspeakable: lines($('cv_unspeakable').value),
         rule_all: lines($('cv_rule_all').value),
         rule_none: lines($('cv_rule_none').value),
         rule_priority: parseInt($('cv_rule_priority').value || '0', 10),
@@ -749,7 +754,8 @@ async function openStatement(){
          anchored:t.anchored, missed:t.missed})) + '</p>' +
       STMT.cards.map(c => '<div class="msg"><b>' + esc(c.title) + '</b><br>' +
         esc(fmt(L['statement.card'],
-          {cited:c.cited, helped:c.helped, anchored:c.anchored, missed:c.missed})) +
+          {cited:c.cited, ccit:c.citations ?? c.cited, helped:c.helped,
+           anchored:c.anchored, missed:c.missed})) +
         '</div>').join('');
     $('stmt').hidden = false;
     $('stmt').scrollIntoView({behavior:'smooth'});
@@ -1204,6 +1210,10 @@ async function sendAnswer(skip){
     $('s_title').textContent = r.card.title || '—';
     $('s_slots').innerHTML = r.report.slots
       .map(s => `<span class="slot ${s.filled?'on':''}">${esc(s.label)}</span>`).join('');
+    // 신호 없는 카드는 서버가 어차피 거부한다 — 버튼도 그 사실을 미리
+    // 말한다 (활성인 채 눌러 오류 받는 UX 를 없앤다).
+    const btn = $('s_confirm_btn');
+    if(btn){ btn.disabled = !(r.card.cues || []).length; }
     $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
     $('s_wrong').innerHTML = '';
     if(AUTO) askCycle();

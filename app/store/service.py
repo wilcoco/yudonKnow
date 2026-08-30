@@ -1733,6 +1733,11 @@ def usage_statement(
     for cid, card in by_card.items():
         row_c = session.get(db.CardRow, cid)
         card["title"] = row_c.title if row_c else cid
+        # 원장의 cited 는 답 하나당 **대표 카드 한 장**에만 적힌다(답변
+        # 채택). 근거로 선 횟수는 카드 계수(citations)가 진실이다 —
+        # 정산 줄에는 두 수를 다른 이름으로 낸다 (QA 실측: 라벨 하나로
+        # 합쳐 보이면 22 vs 12 가 오류로 읽힌다).
+        card["citations"] = row_c.citations if row_c else 0
 
     return {
         "expert": expert,

@@ -42,6 +42,8 @@
 
   <div class="row" style="margin:16px 0 6px">
     <input type="text" id="q" placeholder="{{ L['alter.ask.ph'] }}" onkeydown="if(event.key==='Enter')ask()">
+    {# 후배도 현장 인력이다 — 묻는 쪽에도 음성이 있어야 한다 (QA 지적). #}
+    <button id="qmic" onclick="alterMic(this)">🎙 {{ L['sess.mic'] }}</button>
     <button class="primary" onclick="ask()">{{ L['alter.ask.cta'] }}</button>
   </div>
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
@@ -100,6 +102,37 @@ async function api(path, opts){
   const preq = new URLSearchParams(location.search).get('q');
   if(preq){ const el = document.getElementById('q'); el.value = preq; el.focus(); }
 })();
+
+let MIC = null;
+async function alterMic(btn){
+  if(MIC){ MIC.stop(); return; }
+  if(!navigator.mediaDevices?.getUserMedia){ $('err').textContent = L['sess.mic.unsupported']; return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ $('err').textContent = L['sess.mic.denied']; return; }
+  const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+  const rec = new MediaRecorder(stream, {mimeType: mime});
+  const chunks = []; const label = btn.textContent;
+  rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    MIC = null; stream.getTracks().forEach(t => t.stop());
+    btn.textContent = label; btn.disabled = true;
+    try{
+      const blob = new Blob(chunks, {type: mime});
+      const b64 = await new Promise((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result.split(',')[1]); r.onerror = no;
+        r.readAsDataURL(blob);
+      });
+      const out = await api('/api/transcribe', {method:'POST',
+        body: JSON.stringify({audio_b64: b64, mime})});
+      if(out.text){ $('q').value = out.text; $('q').focus(); }
+    }catch(e){ $('err').textContent = e.message; }
+    finally{ btn.disabled = false; }
+  };
+  rec.start(); MIC = rec;
+  btn.textContent = '⏹ ' + L['sess.mic.stop'];
+}
 
 async function ask(){
   const q = $('q').value.trim();

@@ -343,6 +343,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "✍ 이 카드의 신호·예외에서 AI가 제안한 초안입니다 — 검토·수정 후 "
               "저장하세요. 저장 전에는 아무것도 실행되지 않습니다.",
     },
+    "cv.f.unspeakable": {
+        "en": "Not in words (delete lines the machine invented — this is your "
+              "record, and only you edit it)",
+        "ko": "글로 못 담은 것 (기계가 지어낸 줄은 지우세요 — 당신의 기록이고, "
+              "고치는 손도 당신뿐입니다)",
+    },
     "cv.f.rule_note": {
         "en": "Rules you approve here run deterministically on the protocol "
               "screen. Unknown answers never downgrade — they escalate.",
@@ -619,8 +625,10 @@ CATALOG: dict[str, dict[str, str]] = {
               "현장 검증 {anchored}건 · 안 맞음 {missed}건",
     },
     "statement.card": {
-        "en": "cited {cited} · helped {helped} · verified {anchored} · did not hold {missed}",
-        "ko": "인용 {cited} · 도움됨 {helped} · 검증 {anchored} · 안 맞음 {missed}",
+        "en": "lead in {cited} answers · cited as basis {ccit} · helped {helped} · "
+              "verified {anchored} · did not hold {missed}",
+        "ko": "대표 답변 {cited}회 · 근거 인용 {ccit}건 · 도움됨 {helped} · "
+              "검증 {anchored} · 안 맞음 {missed}",
     },
     "statement.note": {
         "en": "This statement is yours to hand to HR — a bill you present, not a "
