@@ -1134,15 +1134,27 @@ _ACKS = {"yes", "yes.", "no", "no.", "ok", "okay", "sure", "right",
          "맞습니다", "아니요", "아니오"}
 
 
+#: 열거 서두 — "두 가지요.", "Three things, in order." 는 지식이 아니라
+#: 말의 목차다. 신호 칸에 들어가 카드를 흐리던 실측(기획·개발·디자인
+#: 직군 시뮬레이션 공통).
+_ENUM_OPENER = re.compile(
+    r"^\s*((two|three|four|five)\s+(things|reasons|signs)\b[^a-z]*"
+    r"|(두|세|네|다섯)\s*가지(요|입니다|예요|다)?\s*[.!,]?\s*)$",
+    re.IGNORECASE,
+)
+
+
 def _dedupe_lines(items: list[str]) -> list[str]:
     """정규화 동치 + 포함 관계 중복 제거 — 먼저 온 줄이 산다.
-    맞장구 한 마디("Yes.")는 칸에 넣지 않는다."""
+    맞장구("Yes.")와 열거 서두("두 가지요.")는 칸에 넣지 않는다."""
     kept: list[str] = []
     for it in items:
         n = _norm_line(it)
         if not n:
             continue
         if str(it).strip().lower().rstrip('.!') in _ACKS or len(n) < 3:
+            continue
+        if _ENUM_OPENER.match(str(it).strip()):
             continue
         if any(n == _norm_line(k) or n in _norm_line(k) or _norm_line(k) in n
                or _covers(it, k) for k in kept):

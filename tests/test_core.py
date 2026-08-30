@@ -509,3 +509,16 @@ def test_semantic_duplicate_cues_are_folded():
     other = "belly looks swollen or tight"
     assert _covers(raw, refined, loose=True), "정제본이 담은 원문이 다시 들어온다"
     assert not _covers(other, refined, loose=True), "무관한 신호까지 접었다"
+
+
+def test_enumeration_openers_never_become_cues():
+    """직군 시뮬레이션 실측: "두 가지요.", "Three things, in order." 가
+    신호 칸에 남았다 — 말의 목차는 지식이 아니다."""
+    from app.capture.interview import _dedupe_lines
+
+    out = _dedupe_lines([
+        "두 가지요.",
+        "Three things, in order.",
+        "왜냐고 두 번 물었을 때 답이 요청서 문장을 반복한다",
+    ])
+    assert out == ["왜냐고 두 번 물었을 때 답이 요청서 문장을 반복한다"], out
