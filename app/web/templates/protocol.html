@@ -137,10 +137,10 @@ function renderSigns(){
     box.innerHTML = '<p class="quiet">' + esc(L['proto.engine_note']) + '</p>' +
       DOM.signs.map((c,j) => `
       <div class="sign" id="sign${j}"><span>${esc(c)}</span>
-        <span class="tri">
-          <button onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
-          <button onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
-          <button class="on-unk" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
+        <span class="tri" role="group" aria-label="${esc(c)}">
+          <button aria-label="${esc(c)} — ${esc(L['proto.tri.yes'])}" onclick="triSet(${j},'yes')">${esc(L['proto.tri.yes'])}</button>
+          <button aria-label="${esc(c)} — ${esc(L['proto.tri.no'])}" onclick="triSet(${j},'no')">${esc(L['proto.tri.no'])}</button>
+          <button class="on-unk" aria-label="${esc(c)} — ${esc(L['proto.tri.unk'])}" onclick="triSet(${j},'unknown')">${esc(L['proto.tri.unk'])}</button>
         </span></div>`).join('');
     document.getElementById('go3').textContent = L['proto.evaluate'];
   } else {

@@ -604,6 +604,9 @@ async function openCard(id){
     }
     $('cv_warn').textContent = c.status === 'anchored' ? L['cv.warn.anchored'] : '';
     $('cv_edit_wrap').open = (c.status === 'contested');
+    // 구경 모드 — 편집 폼 자체를 숨긴다 (서버도 거부하지만, 활성 버튼이
+    // 보이는 것만으로 소유권 주장이 흔들린다 — QA P0 실측).
+    $('cv_edit_wrap').hidden = !!(STATE.home && STATE.home.readonly);
     $('cv_actions').innerHTML = c.status === 'draft'
       ? `<button class="primary" onclick="resumeDig('${c.id}')">${esc(L['cv.resume'])}</button>` : '';
     show('cardview');

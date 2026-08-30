@@ -193,3 +193,23 @@ def test_all_of_satisfaction_is_itself_a_trigger():
         "무산성 헛구역질": YES, "복부 팽창": YES, "심한 통증": YES,
     })
     assert out["top"].card_id == "r1" and out["top"].priority == 10
+
+
+def test_one_urgent_sign_escalates_never_silently_drops():
+    """QA P0 실측: RED 의 all_of 조건 하나만 '예' 로 답하자 "성립하는 승인
+    판단이 없습니다". 위급 신호 하나는 무대에 올라야 한다 — 전부 확인
+    전에는 성립이 아니라 **상향**으로."""
+    red = red_card(
+        cues=[], rule_all=["무산성 헛구역질", "복부 팽창", "심한 통증"],
+        rule_none=[], rule_priority=10,
+    )
+    out = evaluate([green_card(), red], {"무산성 헛구역질": YES})
+    assert out["open"] is False, "위급 신호 하나가 판정 없음으로 사라졌다"
+    assert out["top"].card_id == "r1"
+    assert out["top"].state == "escalate", "전부 미확인인데 성립으로 나갔다"
+    assert set(out["top"].unknowns) == {"복부 팽창", "심한 통증"}
+
+    # 성립의 문은 그대로: 전부 '예' 여야 applies
+    v = evaluate_card(red, {"무산성 헛구역질": YES, "복부 팽창": YES,
+                            "심한 통증": YES})
+    assert v.state == "applies"

@@ -57,9 +57,13 @@ def evaluate_card(card: Card, answers: dict[str, str]) -> Verdict:
     # RED 조건 3개를 all_of 에 넣고 전부 '예' 로 답했는데 옛 신호가
     # 미답이라 "해당 신호 없음" 이 나왔다.
     cue_hit = any(_answer(answers, c) == YES for c in card.cues)
-    all_ok = bool(card.rule_all) and all(
-        _answer(answers, s) == YES for s in card.rule_all)
-    triggered = cue_hit or all_ok or (not card.cues and not card.rule_all)
+    # rule_all 은 성립의 문이지 입장의 문이 아니다 — 조건 **하나라도**
+    # '예' 면 카드는 무대에 오른다. 안 그러면 위급 신호 하나를 본 심사자가
+    # "성립하는 판단이 없습니다" 를 받는다 (QA P0 실측: 무산성 헛구역질
+    # 하나 '예' → 판정 없음). 하나 '예' + 나머지 모름은 applies 가 아니라
+    # **escalate** 로 나간다 — 성립의 문(전부 '예')은 그대로 닫혀 있다.
+    any_hit = any(_answer(answers, s) == YES for s in card.rule_all)
+    triggered = cue_hit or any_hit or (not card.cues and not card.rule_all)
 
     refuted_by = [s for s in card.rule_all if _answer(answers, s) == NO]
     refuted_by += [s for s in card.rule_none if _answer(answers, s) == YES]

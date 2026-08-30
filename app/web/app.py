@@ -202,7 +202,8 @@ def protocol(request: Request, expert_id: str) -> HTMLResponse:
     finally:
         session.close()
     ctx = _ctx(request)
-    ctx["L"] = bundle(data["lang"])
+    # 신호·판단은 판 언어로 살지만 화면 어휘(단계·버튼)는 보는 사람의
+    # 언어를 따른다 — ?lang=en 인데 껍데기까지 한국어면 고장으로 읽힌다.
     return TEMPLATES.TemplateResponse(request, "protocol.html", ctx | {"p": data})
 
 

@@ -1392,6 +1392,10 @@ def memoir(
     row = get_expert(session, expert, lang=lang)
     lang = row.lang or lang        # 회고록은 그 사람의 언어로 산다
 
+    # 전시 전문가는 ?as= 행세(soft 신원)로도 편집·초안이 열리면 안 된다 —
+    # 서버 가드(_guard_demo)와 화면을 일치시킨다 (QA P0 실측).
+    if expert in settings.featured:
+        viewer = ""
     owner = bool(viewer) and viewer == expert
     # 통제권은 회고록에서도 산다 — 봉인·비공개·지목 카드는 본인 판에만
     # 실린다. URL 은 누구나 열 수 있으므로(데모 신원은 soft, SSO 는 P1)
@@ -1951,6 +1955,11 @@ def backfill_aliases(session: Session, *, lang: str = LANG_DEFAULT) -> dict[str,
 def admin_board(session: OrmSession, *, lang: str = LANG_DEFAULT) -> dict[str, Any]:
     """승계 리스크 보드. **정렬 순서가 곧 개입 순서다.**"""
     rows = session.scalars(select(db.Expert)).all()
+    # 공개 데모의 안전핀 — 랜딩 명부와 같은 기준으로 전시 전문가만 보드에
+    # 선다. 손님·테스트 계정의 이름·D-day·공백이 인증 없는 화면에 노출되는
+    # 것을 막는다 (QA P0 실측). SSO 뒤의 전체 보드는 P1.
+    if settings.featured:
+        rows = [r for r in rows if r.id in settings.featured]
     board = []
     for row in rows:
         cards = cards_of(session, row.id)

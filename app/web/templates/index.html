@@ -49,10 +49,12 @@
       </div>
     </div>
   </div>
+  {# 실제 href — onclick 만 있으면 JS 한 줄 실패에 링크가 죽는다 (QA 실측).
+     손님 아이디는 마지막 링크만 필요해 서버 템플릿 난수 없이 JS 로 보강. #}
   <p class="quiet" style="margin:8px 0 18px">{{ L['door.judge'] }}
-    <a href="#" onclick="enterAs('junior','dale');return false">{{ L['landing.judge.ask'] }}</a> ·
-    <a href="#" onclick="enterAs('expert','dale');return false">{{ L['landing.judge.watch'] }}</a> ·
-    <a href="#" onclick="enterAs('mine','');return false">{{ L['door.judge.mine'] }}</a>
+    <a href="/alter/dale?as=judge&lang={{ lang }}">{{ L['landing.judge.ask'] }}</a> ·
+    <a href="/expert?as=dale&lang={{ lang }}">{{ L['landing.judge.watch'] }}</a> ·
+    <a id="jmine" href="/expert?as=judge&lang={{ lang }}">{{ L['door.judge.mine'] }}</a>
   </p>
 
   {# 첫 화면은 역할 선택이 아니라 **남겨진 분신들**이다.
@@ -169,6 +171,10 @@ function openAlter(id){
   location.href = '/alter/' + encodeURIComponent(id) + q + sep + 'q=' + encodeURIComponent(question);
 }
 function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// '내가 전문가' 링크의 손님 아이디를 난수화 — 심사자끼리 같은 계정에
+// 겹치지 않게. JS 가 죽어도 href 기본값(judge)으로는 동작한다.
+(function(){ const a = document.getElementById('jmine');
+  if(a) a.href = '/expert?as=judge-' + Math.random().toString(36).slice(2,6) + '&lang=' + LANG; })();
 </script>
 </body>
 </html>
