@@ -23,6 +23,9 @@ say, when it must refuse — follows from taking that seriously.
 Built for the **All Things Agentic Hackathon** · category **Collaborative
 Partner** · [한국어 README](README.ko.md)
 
+**Live** (Cloud Run): <https://yudonknow-530548975242.us-central1.run.app> ·
+101 automated tests · Gemini 3.5 Flash via the Google GenAI SDK on Vertex AI
+
 ---
 
 ## The gap this exists for
@@ -85,7 +88,7 @@ as an **audit-grade settlement basis**: because it refuses vanity metrics
 can pull a usage statement and bill the company under a knowledge-royalty
 policy. Pride first, fee second, same numbers.
 
-### Six things that make it different
+### Seven things that make it different
 
 1. **The agent interviews; the expert never picks a method.** The expert types
    one thing that happened. From there the agent asks, reflects back what it
@@ -110,7 +113,16 @@ policy. Pride first, fee second, same numbers.
    computed in plain Python from retrieval scores; below the floor the **LLM is
    never called at all**. Asking a model to "say you don't know if you don't
    know" is a design that fails.
-6. **The gap goes back to the expert.** Unanswered questions queue on their home
+6. **Approved rules run deterministically — the compiler's execution layer.**
+   On the approval screen the AI pre-drafts decision rules from the card
+   (all-of / none-of / priority, tagged with canonical signal IDs so the same
+   sign is asked exactly once) and **nothing runs until the expert saves**.
+   Juniors then walk a structured triage (`/protocol/{expert}`): yes/no/unknown
+   per sign, evaluated by a pure-Python engine — one urgent sign escalates, a
+   reassuring verdict needs its whole gate, unknowns never downgrade, and on
+   conflict the urgent judgment executes while the milder one is explicitly
+   held. The LLM discovers protocols; it never executes them.
+7. **The gap goes back to the expert.** Unanswered questions queue on their home
    screen, ranked by how many juniors asked and how soon they leave.
 
 ---
@@ -181,7 +193,7 @@ fails the build if anyone changes that.
 |---|---|
 | **Gemini 3.5+** via Gemini API or Vertex AI | `app/capture/llm.py::GeminiLLM` — Vertex by default in Cloud Run, no API key needed |
 | **A Google agent framework** | **Google GenAI SDK** (`google-genai`), used for both generation and schema-forced extraction |
-| **A Google Cloud infrastructure service** | **Cloud Run** (serving) + **Cloud SQL** (Postgres persistence) |
+| **A Google Cloud infrastructure service** | **Cloud Run** (serving) + **Cloud SQL** (Postgres) + Secret Manager + Cloud Build/Artifact Registry |
 
 ---
 
@@ -191,6 +203,9 @@ fails the build if anyone changes that.
 **Dale's alter** about brown foam, weir stringing, or a rising pH. Watch it
 answer in his voice with the source card beside it — then ask about UV bank
 calibration and watch it *refuse* ("this is not an area Dale left behind").
+Try **📋 Step-by-step protocol** on the alter page: answer yes/no/unknown and
+watch the deterministic engine escalate on one urgent sign, hold a reassuring
+verdict until its whole gate is confirmed, and resolve conflicts by priority.
 Then open Dale's expert page: a shelf of judgment cards in every state
 (✔ field-verified, ⚠ contested with the junior's actual report, ⏳ half-dug),
 and a document shelf where his SOP is organized **by what it does not say** —
