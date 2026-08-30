@@ -932,6 +932,11 @@ def _other_experts(
     rows = session.scalars(
         select(db.Expert).where(db.Expert.id != expert)
     ).all()
+    # 공개 안내문에 서는 이름도 전시 전문가뿐 — 손님·테스트 계정 이름이
+    # 공백 메시지로 새는 것은 관리자 보드 유출과 같은 부류다 (실측:
+    # "비슷한 영역을 남긴 사람: codex-qa-2…").
+    if settings.featured:
+        rows = [r for r in rows if r.id in settings.featured]
     if lang:
         rows = [r for r in rows if r.lang == lang]
     return [r.display_name or r.id for r in rows][:3]

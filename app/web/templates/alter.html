@@ -21,7 +21,8 @@
   {# 분신에게 말을 걸기 전에 한 번은 사람의 말을 읽는다. 매번 펼치면 방해가
      되므로, 이 브라우저에서 한 번 본 뒤로는 줄 하나로 접힌다. #}
   <div class="card hero" id="fw" hidden>
-    <p class="t">{{ L['alter.farewell.title'].replace('{}', expert_name) }}</p>
+    <p class="t">{{ L['alter.farewell.title'].replace('{}', expert_name) }}
+      {% if expert_lang and expert_lang != lang %}<span class="quiet" style="font-weight:400">{{ L['alter.farewell.lang'].replace('{lang}', L['langname.' ~ expert_lang] if ('langname.' ~ expert_lang) in L else expert_lang) }}</span>{% endif %}</p>
     <div class="c" style="white-space:pre-wrap">{{ farewell }}</div>
     <div class="acts"><button onclick="hideFarewell()">{{ L['alter.farewell.close'] }}</button></div>
   </div>
@@ -41,12 +42,15 @@
   <p class="quiet" style="margin-top:0">{{ L['alter.disclaimer'] }}</p>
 
   <div class="row" style="margin:16px 0 6px">
-    <input type="text" id="q" placeholder="{{ L['alter.ask.ph'] }}" onkeydown="if(event.key==='Enter')ask()">
+    <input type="text" id="q" placeholder="{% if ask_example %}{{ L['alter.example'].replace('{q}', ask_example) }}{% else %}{{ L['alter.ask.ph'] }}{% endif %}" onkeydown="if(event.key==='Enter')ask()">
     {# 후배도 현장 인력이다 — 묻는 쪽에도 음성이 있어야 한다 (QA 지적). #}
     <button id="qmic" onclick="alterMic(this)">🎙 {{ L['sess.mic'] }}</button>
     <button class="primary" onclick="ask()">{{ L['alter.ask.cta'] }}</button>
   </div>
-  <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
+  {# 초행의 지도 — 질문창 바로 옆에 한 바퀴를 미리 그려 준다 (QA 실측:
+     근거 확인·보고 동선이 화면 어디에도 예고되지 않았다). #}
+  <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.steps'] }}</p>
+  <p class="quiet" style="margin-top:4px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
   <div class="err" id="err" role="alert" aria-live="assertive"></div>
   <div class="card" id="fu" hidden style="border-style:dashed">
     <p class="c" id="fu_body"></p>

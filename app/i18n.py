@@ -431,7 +431,25 @@ CATALOG: dict[str, dict[str, str]] = {
     },
 
     # ── 온보딩 ────────────────────────────────────────────────────────
-    "ob.title": {"en": "It's yours.", "ko": "당신 것입니다."},
+    "ob.title": {
+        "en": "Interview prep — one judgment card will stay behind",
+        "ko": "인터뷰 준비 — 판단 카드 한 장을 남깁니다",
+    },
+    # 시작하면 무엇이 이어지는지 예고 — 초행이 "눌러도 되나" 를 넘게 한다.
+    "ob.preview": {
+        "en": "What happens next: ① the AI interviews you (voice works) → "
+              "② you review the judgment card it builds → ③ you decide who "
+              "may see it. It stays yours.",
+        "ko": "시작하면: ① AI가 인터뷰합니다 (음성 가능) → ② 만들어진 판단 "
+              "카드를 검토·승인합니다 → ③ 공개 범위는 당신이 정합니다. "
+              "끝까지 당신 것입니다.",
+    },
+    "ob.returning": {
+        "en": "Been here before? Type your name in the ID box at the top and "
+              "press Open — this form is only for a first visit.",
+        "ko": "이미 파던 분이신가요? 상단 아이디 칸에 이름을 넣고 '열기'를 "
+              "누르세요 — 이 화면은 처음 오신 분용입니다.",
+    },
     "ob.lede": {
         "en": "Three questions. We will not ask you for a document.",
         "ko": "세 가지만 여쭙습니다. 문서는 요구하지 않습니다.",
@@ -452,7 +470,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ob.q2": {
         "en": "2. How you talk — your alter will speak like this",
-        "ko": "1. 당신의 말투 — 분신이 이걸로 말합니다",
+        "ko": "2. 당신의 말투 — 분신이 이걸로 말합니다",
     },
     "ob.q2.ph1": {
         "en": "Things you say often (one per line)\ne.g. It's not the temperature. "
@@ -467,18 +485,19 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ob.q3": {
         "en": "3. How long are you here?",
-        "ko": "2. 언제까지 계시나요?",
+        "ko": "3. 언제까지 계시나요?",
     },
     "ob.q3.note": {
         "en": "(optional — so we dig the urgent areas first)",
         "ko": "(선택 — 급한 곳부터 파기 위해서입니다)",
     },
-    "ob.start": {"en": "Start", "ko": "시작하기"},
+    "ob.start": {"en": "Start the AI interview (~3 min)",
+                   "ko": "AI 인터뷰 시작하기 (약 3분)"},
     #: 로그인이 없는 도구다. 이름은 화면 구석이 아니라 **첫 질문**으로 받는다 —
     #: 처음 온 사람은 상단 입력칸이 필수인 줄 모른다.
     "ob.q0": {
-        "en": "0. What should we call you?",
-        "ko": "0. 어떻게 불러드릴까요?",
+        "en": "1. What should we call you?",
+        "ko": "1. 어떻게 불러드릴까요?",
     },
     "ob.q0.ph": {
         "en": "your name or employee id — e.g. hong",
@@ -495,8 +514,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "성함이나 사번부터요 — 아래 0번 칸입니다.",
     },
     "ob.new_here": {
-        "en": "No one named '{id}' yet — three minutes below and there will be.",
-        "ko": "'{id}' 는 아직 없습니다 — 아래에서 3분이면 생깁니다.",
+        "en": "A fresh seat — pick what we should call you below and the "
+              "interview starts.",
+        "ko": "새 자리입니다 — 아래에서 부를 이름만 정하면 인터뷰가 "
+              "시작됩니다.",
     },
     "dl.done": {"en": "Downloaded ✓", "ko": "내려받았습니다 ✓"},
     "ob.need_id": {
@@ -1046,6 +1067,19 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.thanks.cta": {"en": "Send thanks", "ko": "전하기"},
     "alter.thanks.done": {
         "en": "Delivered — it will be on their ledger.", "ko": "전해졌습니다 — 선배의 원장에 오릅니다.",
+    },
+    "alter.steps": {
+        "en": "① Ask the way you'd ask the person at the next desk · "
+              "② open the basis card under the answer and check it · "
+              "③ after you try it on the floor, report \"helped\" or "
+              "\"didn't hold\" — that report is what earns the ✔.",
+        "ko": "① 옆자리에 묻듯 물어보세요 · ② 답 아래 근거 카드를 펴서 "
+              "확인하세요 · ③ 현장에서 써본 뒤 '도움됐다/안 맞았다'로 "
+              "보고하세요 — 그 보고가 ✔ 를 만듭니다.",
+    },
+    "alter.example": {"en": "e.g. {q}", "ko": "예: {q}"},
+    "alter.farewell.lang": {
+        "en": "(left in {lang})", "ko": "({lang}로 남긴 인사입니다)",
     },
     "alter.viewer.hint": {
         "en": "Change who you are and ask again — a card left for one named person "

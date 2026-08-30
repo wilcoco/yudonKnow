@@ -159,10 +159,21 @@ def alter(request: Request, expert_id: str) -> HTMLResponse:
     session = db.SessionLocal()
     try:
         row = session.get(db.Expert, expert_id)
+        # 질문 예시는 전역 문구가 아니라 **이 전문가의 카드 신호**에서 —
+        # 폐수처리 분신에 사출 예시가 떠 있으면 초행이 길을 잃는다 (QA 실측).
+        example = ""
+        if row is not None:
+            from app.store import service as svc
+            for c in svc.cards_of(session, expert_id):
+                if c.citable() and c.visible_to("") and c.cues:
+                    example = c.cues[0][:60]
+                    break
         extra = {
             "expert_id": expert_id,
             "farewell": row.farewell if row else "",
             "expert_name": (row.display_name or row.id) if row else expert_id,
+            "expert_lang": (row.lang if row else "") or "",
+            "ask_example": example,
         }
     finally:
         session.close()
