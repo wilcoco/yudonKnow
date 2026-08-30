@@ -73,7 +73,7 @@ def seed(session) -> bool:
     # ── yudon — 사출 성형 (한국어 원본) ──────────────────────────────
     service.ensure_expert(
         session, "yudon",
-        display_name="유돈",
+        display_name="김덕규",
         sayings="그거 온도 아니야, 속도부터 봐\n숫자 보기 전에 물건부터 봐",
         taboos="원인 모른 채 설정값 되돌리지 마라\n야간에 혼자 금형 열지 마라",
         leaving_on=today + timedelta(days=84),
