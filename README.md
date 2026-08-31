@@ -346,9 +346,12 @@ automated promotion gate (the verifier here is the field, not an algorithm),
 and vector search as the primary retrieval path — see
 [`docs/lineage.md`](docs/lineage.md) for why, and what it costs us.
 
-**Authentication is deliberately deferred, not missing.** The demo uses a
-lightweight identity switcher so judges can test the senior and junior roles
-immediately, on synthetic data. The production design is already fixed
+**Authentication is deliberately deferred, not missing.** This product has
+two roles, and the demo's whole point is that one judge, alone, can walk the
+full wheel in three minutes — ask as a junior, receive the question as the
+senior, answer it into a card, then watch the alter cite it back. An account
+system would cut that wheel in half. The identity switcher keeps it whole,
+on synthetic data that authentication would have nothing to protect. The production design is already fixed
 (`docs/roadmap.md`): corporate SSO — for a Microsoft 365 org, Entra ID OIDC
 with the immutable `oid` claim as the actor id. Permission checks are already
 centralised in two functions (`viewer == expert`, `visible_to()`), so the
