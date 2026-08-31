@@ -109,7 +109,9 @@
   </div>
 
   <p class="quiet" style="margin-top:18px">
-    <a href="/admin{{ '?lang=' + lang if lang != 'en' else '' }}">{{ L['landing.admin.link'] }}</a>
+    {# lang 은 항상 명시 — 생략하면 Accept-Language(ko)가 이겨 영어 화면에서
+       한국어 관리자 보드로 떨어진다 (사용자 실측). #}
+    <a href="/admin?lang={{ lang }}">{{ L['landing.admin.link'] }}</a>
   </p>
 
   {# 자기설명 — 처음 온 심사자가 외부 문서 없이 제품을 이해한다 (veTriage 의
