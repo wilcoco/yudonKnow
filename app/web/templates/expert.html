@@ -373,6 +373,13 @@ function revealWho(){
   $('me').focus();
 }
 function err(msg){ $('err').textContent = msg || ''; }
+// 새 질문 뒤 답변창이 화면 밖이면 "버튼이 사라졌다" 로 읽힌다 (모바일 QA P1).
+// focus() 는 키보드를 강제로 열어 오히려 불편 — 스크롤만 한다.
+function showAnswerBox(){
+  if(window.innerWidth >= 900) return;
+  const ta = $('s_answer');
+  if(ta) setTimeout(() => ta.scrollIntoView({behavior:'smooth', block:'center'}), 80);
+}
 function esc(s){ return String(s??'').replace(/[&<>"]/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmt(t, o){ return String(t).replace(/\{(\w+)\}/g, (_,k) => o[k] ?? ''); }
@@ -1300,6 +1307,7 @@ async function sendAnswer(skip){
     say('said', skip ? L['sess.skip'] : answer);
     say('echo', r.reflection);
     say('ask', r.question);
+    showAnswerBox();
     STATE.lastEcho = r.reflection || '';
     STATE.wrapUp = !!r.wrap_up;
     $('s_rung').textContent =
