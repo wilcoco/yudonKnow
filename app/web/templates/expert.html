@@ -454,6 +454,7 @@ function answerToday(){
   if(TODAY && TODAY.gap_id) startGap(TODAY.gap_id);
   else if(TODAY && TODAY.source === 'map') startSession('taskmap');
   else if(TODAY && TODAY.source === 'review') startReview(TODAY.step);
+  else if(TODAY && TODAY.source === 'flag' && TODAY.step) digStep(TODAY.step);
   else startSession('ladder');
 }
 function skipToday(){ TODAY_SKIP += 1; loadToday(); }

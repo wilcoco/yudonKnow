@@ -478,3 +478,29 @@ def test_taskmap_session_opens_with_the_map_question(session):
         "수주 검토, 협력사 관리, 야간 라인 정지 판단, 불량 원인 진단. "
         "야간 정지 판단은 감이 필요합니다.", lang="ko")
     assert r.get("map_built") is True
+
+
+def test_a_dig_aimed_at_a_map_step_lands_on_that_step(session):
+    """지도에서 짚은 단계 → 인터뷰 → 카드가 **그 단계에** 쌓인다 (심사 QA P0).
+
+    공백 큐에 질문이 있어도 전문가가 짚은 단계가 이기고, LLM 이 지은 영역명이
+    지도 단계명을 덮지 않는다."""
+    from app.store import db as _db
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    session.add(_db.Flag(expert="hong", domain="주축 정렬 진단", difficulty="hard",
+                         origin="taskmap"))
+    session.commit()
+    # 큐 오염 상황 재현 — 공백이 있어도 짚은 단계가 이겨야 한다
+    service.mark_unanswered(session, "hong", "납기 지연은 어떻게 다루나요?",
+                            asker="junior-q", lang="ko")
+    started = service.start_session(session, "hong", instrument="ladder",
+                                    step="주축 정렬 진단", lang="ko")
+    assert started.get("domain") == "주축 정렬 진단"
+    assert started.get("from_gap") is False
+    r = service.answer_turn(
+        session, started["turn_id"],
+        "주축이 틀어지면 가공면 줄무늬가 한쪽으로만 몰립니다. 그때는 엔코더부터 봅니다.",
+        lang="ko")
+    card_id = session.get(_db.Session, started["session_id"]).card_id
+    row = session.get(_db.CardRow, card_id)
+    assert row.domain == "주축 정렬 진단", "카드가 짚은 단계에 안 쌓이면 커버리지가 영영 0"

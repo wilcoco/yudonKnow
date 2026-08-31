@@ -282,7 +282,7 @@ def peek_next_question(
     for f in ordered:
         queue.append({
             "question": interview.flag_probe(f.domain, len(live), lang),
-            "source": "flag", "gap_id": "",
+            "source": "flag", "gap_id": "", "step": f.domain,
         })
 
     probes = [interview.entry_probe(len(live) + i, lang) for i in range(4)]
@@ -357,7 +357,10 @@ def start_session(
         picked = session.get(db.Gap, gap_id)
         if picked is not None and not picked.filled_card:
             gap = picked
-    if gap is None:
+    # 전문가가 지도에서 단계를 직접 짚었다면(step) 공백 큐가 가로채지
+    # 않는다 — 운전대는 전문가에게 (심사 QA P0: 고른 단계와 다른 질문이
+    # 열리고, 카드가 그 단계에 안 쌓였다).
+    if gap is None and not (instrument == LADDER and step):
         gap = _top_gap(session, expert)
 
     if gap is None and instrument == LADDER and step:
@@ -664,8 +667,11 @@ def _upsert_card(
         row = db.CardRow(id=card.id, expert=sess.expert, title=card.title)
         session.add(row)
         sess.card_id = card.id
-    if not card.domain and sess.domain:
-        card.domain = sess.domain   # 깃발에서 시작한 세션 — 영역을 물려받는다
+    if sess.domain:
+        # 겨냥한 단계에서 판 카드는 **그 단계에** 쌓인다. LLM 정련이 지어낸
+        # 영역명이 이기면 지도 커버리지가 영영 0 이다 (심사 QA P0 실측:
+        # 'Assembly line maintenance' 가 새로 생기고 6단계는 전부 0%).
+        card.domain = sess.domain
     write_card(row, card)
     row.instrument = sess.instrument
     row.source_turn = sess.id
@@ -872,6 +878,20 @@ def ask_alter(
             session.commit()
             return {"ask_id": ask.id, "persona": persona.label(lang),
                     **reply.as_dict(), "quarantined": True}
+        # 본인 질문과 **정지된 분신**의 질문은 큐에 넣지 않는다 — 큐는 후배
+        # 수요의 지도다 (심사 QA: 본인 시험 질문이 미응답 큐를 오염).
+        if asker == expert or not persona.active:
+            if asker == expert and persona.active:
+                # "전달했습니다" 라고 말하면 거짓이 된다 — 전달이 없었다.
+                # (정지 상태 문구는 그대로 둔다 — 멈춤 안내가 우선이다.)
+                reply.text = "\n\n".join([
+                    t("alter.msg.gap", lang,
+                      name=persona.display_name or expert),
+                    t("alter.msg.gap.notqueued", lang),
+                ])
+            session.commit()
+            return {"ask_id": ask.id, "persona": persona.label(lang),
+                    **reply.as_dict(), "queued": False}
         if owner_view is not None and not owner_view.is_gap:
             # 잠긴 카드의 실제 설정대로 말한다 — 비공개인데 "지정인 또는
             # 봉인" 이라고 하면 부정확하다 (심사 QA P1 실측). 섞여 있으면
@@ -1056,9 +1076,11 @@ def mark_unanswered(
     한다**: 답을 받은 후배가 가장 정확한 판정자다.
     (검색 정밀도 자체는 P1 하이브리드 — docs/roadmap.md)
     """
-    get_expert(session, expert, lang=lang)
+    row = get_expert(session, expert, lang=lang)
     if interview.hostile_question(question):
         return {"queued": False, "quarantined": True}
+    if asker == expert or not row.alter_active:
+        return {"queued": False}
     _record_gap(session, expert, question, asker=asker)
     session.commit()
     return {"queued": True}

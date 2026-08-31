@@ -1317,13 +1317,13 @@ def _fallback(
     answers = [a for _, a in history
                if a.strip() and not not_card_material(a)]
     body = "\n".join(answers)
-    first = next(iter(_SENTENCE.split(body)), body)[:200] if body else ""
+    first = _clip_sentence(next(iter(_SENTENCE.split(body)), body), 200) if body else ""
     data: dict[str, Any] = {
         # 빈 제목은 빈 채로 — 화면이 보는 사람의 언어로 채운다
         # (심사 QA: 영어 UI 에 '제목 없는 판단' 이 비쳤다).
         "title": first,
         "domain": "",
-        "situation": answers[0][:300] if answers else "",
+        "situation": _clip_sentence(answers[0], 300) if answers else "",
         "cues": [],
         "judgment": "",
         "action": [],
@@ -1354,6 +1354,22 @@ def _fallback(
         elif not data[slot]:
             data[slot] = answer[:300]
     return CardDraft(data=data, fallback=True)
+
+
+def _clip_sentence(text: str, limit: int) -> str:
+    """limit 안에서 **문장 경계**로 자른다 — 중간에서 끊긴 확인문("pointed to
+    the spindle encoder or")은 신뢰를 깎는다 (심사 QA 실측). 문장 끝이 없으면
+    마지막 공백에서, 그것도 없으면 그대로 자른다."""
+    t = (text or "").strip()
+    if len(t) <= limit:
+        return t
+    head = t[:limit]
+    for mark in (". ", "。", ".\n", "! ", "? ", "다. ", "요. "):
+        i = head.rfind(mark)
+        if i > limit // 4:
+            return head[: i + len(mark)].strip()
+    i = head.rfind(" ")
+    return (head[:i] if i > limit // 2 else head).strip()
 
 
 def reflect(card: Card, slot: str, lang: str = "en") -> str:

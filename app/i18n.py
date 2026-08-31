@@ -347,14 +347,15 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "⛔ 미확인 신호 {}개 — 확인한 뒤 판단을 펼치세요",
     },
     "proto.triage.locked": {
-        "en": "🚦 Structured triage opens when the expert approves rules on "
-              "their cards (one click on the approval screen — a draft is "
-              "pre-filled). Until then this page is reading only: it shows "
-              "judgments, it does not make them.",
-        "ko": "🚦 판정 문진은 전문가가 카드에 규칙을 승인하면 열립니다 "
-              "(승인 화면에서 저장 한 번 — 초안이 미리 채워져 있습니다). "
-              "그 전까지 이 화면은 열람 전용입니다: 판단을 보여줄 뿐, "
-              "대신 내리지 않습니다.",
+        "en": "🚦 Structured triage opens when a card has approved rules AND "
+              "its exceptions are covered by ask-able conditions — an exception "
+              "the questionnaire cannot ask about would be a misdiagnosis "
+              "waiting to happen. The approval screen pre-fills a draft and "
+              "warns about uncovered exceptions.",
+        "ko": "🚦 판정 문진은 카드에 승인된 규칙이 있고 **예외까지 문진으로 "
+              "물을 수 있게 덮였을 때** 열립니다 — 예외를 못 묻는 문진은 "
+              "오판이 되기 때문입니다. 승인 화면이 규칙 초안을 미리 채우고, "
+              "안 덮인 예외를 경고합니다.",
     },
     "proto.restricted.t": {
         "en": "This protocol is not open to you",
@@ -1300,6 +1301,14 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "{name}님은 이 영역에 판단을 남기셨습니다 — 다만 지정한 사람에게만, "
               "혹은 정한 날짜에 열리도록 잠가 두셨어요. 그건 본인의 권한입니다.\n"
               "필요하시면 직접 여쭤보세요.",
+    },
+    "alter.msg.gap.notqueued": {
+        "en": "▸ Not queued: your own questions (and questions to a paused "
+              "alter) do not enter the dig queue — that queue maps juniors' "
+              "demand. Dig it directly from your expert home.",
+        "ko": "▸ 큐에 넣지 않았습니다: 본인 질문(과 정지된 분신에 온 질문)은 "
+              "발굴 큐에 올라가지 않습니다 — 큐는 후배 수요의 지도입니다. "
+              "전문가 홈에서 바로 파세요.",
     },
     "alter.msg.quarantined": {
         "en": "This is not an area {name} left behind, and this question was "
