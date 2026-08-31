@@ -277,12 +277,12 @@ exposed the keyword-retrieval ceiling → search aliases generated at approval.
 Another caught the memoir inventing a self-blame sentence the cards never
 recorded ("missing that extra sign was my failure") → a deterministic
 blame-vocabulary censor, author approval gating, and a public/owner split of
-the memoir. Sixteen external QA rounds in five days took the build from a 72-point
+the memoir. Seventeen external QA rounds in five days took the build from a 72-point
 "idea demo" through two No-Go verdicts to "winning-tier demo" (94/100): the memoir
 fabricating a failure the expert never had → a deterministic blame censor
 plus author approval; a reassuring verdict firing off a single sign → the
 whole-gate rule engine; the same clinical sign phrased two ways → canonical
-signal IDs. Every fix landed as a regression test first — 119 automated
+signal IDs. Every fix landed as a regression test first — 120 automated
 checks now hold the line, including "the gap decision never calls the LLM",
 "a card without cues is never citable", and "one urgent sign never silently
 drops".

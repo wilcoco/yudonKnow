@@ -203,11 +203,11 @@ held back by recommending three, not by hiding).
 - **The wheel actually closes**, and a test proves it: a judgment the expert
   approved is cited in a junior's answer, the junior's report lands on the
   expert's ledger, and an unanswered question becomes the next interview.
-- **Sixteen external QA rounds in five days** (a ChatGPT-based adversarial
+- **Seventeen external QA rounds in five days** (a ChatGPT-based adversarial
   tester playing retiree, junior, HR/legal, security, AI-tech, UX, enterprise
   buyer, and hackathon judge) took the build from a 72-point "idea demo"
   through two No-Go verdicts to **94/100**, every fix landing as a regression
-  test first — **119 automated checks** now hold the line.
+  test first — **120 automated checks** now hold the line.
 - **Adversarial receipts, reproducible live**: prompt injection gets a
   refusal and never reaches the expert's queue; an all-"no" questionnaire
   yields no fabricated verdict; the dashboard and the usage statement

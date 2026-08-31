@@ -24,7 +24,7 @@ Built for the **All Things Agentic Hackathon** · category **Collaborative
 Partner** · [한국어 README](README.ko.md)
 
 **Live** (Cloud Run): <https://yudonknow-530548975242.us-central1.run.app> ·
-119 automated tests · Gemini 3.5 Flash via the Google GenAI SDK on Vertex AI
+120 automated tests · Gemini 3.5 Flash via the Google GenAI SDK on Vertex AI
 
 ---
 
@@ -230,7 +230,7 @@ git clone https://github.com/wilcoco/yudonKnow.git
 cd yudonKnow
 
 pip install -e ".[dev]"
-pytest                                          # 119 tests, all offline (stub LLM)
+pytest                                          # 120 tests, all offline (stub LLM)
 YDK_SEED=1 uvicorn app.web.app:app --reload     # http://127.0.0.1:8000
 ```
 
