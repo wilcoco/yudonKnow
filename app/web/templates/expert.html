@@ -222,6 +222,7 @@
         <div id="s_wrong"></div>
         <div class="card" style="margin-top:12px">
           <textarea id="s_answer" placeholder="{{ L['sess.answer.ph'] }}"></textarea>
+          <p class="quiet" style="margin:4px 0 0">{{ L['sess.privacy.hint'] }}</p>
           <div class="acts">
             <button class="primary" id="s_send_btn" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
             <button class="ghost" id="s_skip_btn" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>

@@ -127,6 +127,35 @@ def _guard_demo(expert_id: str, lang: str = LANG_DEFAULT) -> None:
         raise ServiceError(t("err.demo_readonly", lang))
 
 
+def _canon_id(s: str) -> str:
+    """공백·하이픈·밑줄·대소문자를 지운 비교용 형태. **권한 키가 아니다** —
+    등록된 전문가로의 **유일 일치 해석**에만 쓴다 (심사 QA: 같은 사람이
+    'Judge PM Tacit 053' 과 'Judge-PM-Tacit-053' 으로 갈라져 자기 비공개
+    카드를 거절당했다). 두 명 이상이 겹치면 해석하지 않는다."""
+    import re as _re
+    return _re.sub(r"[\s\-_]+", "", s or "").lower()
+
+
+def resolve_expert_id(session: OrmSession, raw: str) -> str:
+    """이름 변형 → 등록된 전문가의 정본 id. 못 찾으면 원문 그대로.
+
+    정확 일치가 최우선이고, 그다음에만 표기 변형(id·표시명)을 본다.
+    권한 판정은 언제나 이 함수가 돌려준 **정본 id 끼리의 정확 비교**다."""
+    if not raw:
+        return raw
+    if session.get(db.Expert, raw) is not None:
+        return raw
+    want = _canon_id(raw)
+    if not want:
+        return raw
+    hits = {
+        row.id
+        for row in session.scalars(select(db.Expert)).all()
+        if _canon_id(row.id) == want or _canon_id(row.display_name) == want
+    }
+    return hits.pop() if len(hits) == 1 else raw
+
+
 def get_expert(
     session: OrmSession, expert_id: str, *, lang: str = LANG_DEFAULT
 ) -> db.Expert:
@@ -1607,6 +1636,10 @@ def protocol_view(
         "expert": expert,
         "name": row.display_name or expert,
         "lang": row.lang or lang,
+        # 보이는 카드가 하나도 없으면 화면은 빈 무대가 아니라 **접근 제한**을
+        # 말해야 한다 (QA: 외부인이 비공개 프로토콜에서 '① Where are you?' 만
+        # 남은 백지를 봤다). 내용은 새지 않되, 이유는 말한다.
+        "visible": len(cards),
         # 판정 문진 — **업무명과 무관하게** 규칙 있는 카드 전부가 한
         # 문진에 선다. 영역이 갈리면 위급 카드가 비교 대상에서 빠져
         # "위급 우선" 자체가 발동 못 한다 (QA 실측: GREEN 과 RED 가

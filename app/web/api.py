@@ -28,6 +28,15 @@ def get_session() -> Generator[Session, None, None]:
         session.close()
 
 
+def canon_expert(
+    expert: str,
+    session: Session = Depends(get_session),
+) -> str:
+    """경로의 전문가 이름 변형을 정본 id 로 해석한다 — 권한 비교 전에.
+    (심사 QA P0: 공백/하이픈 표기가 다른 사람으로 갈라졌다.)"""
+    return service.resolve_expert_id(session, expert)
+
+
 def get_lang(
     lang: str | None = Query(default=None),
     accept_language: str | None = Header(default=None),
@@ -197,7 +206,7 @@ def list_experts(
 
 @router.get("/experts/{expert}/next")
 def peek_next(
-    expert: str,
+    expert: str = Depends(canon_expert),
     skip: int = 0,
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
@@ -208,7 +217,7 @@ def peek_next(
 
 @router.get("/experts/{expert}/home")
 def home(
-    expert: str,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
@@ -229,14 +238,16 @@ def toggle_alter(
 
 @router.get("/experts/{expert}/memoir/draft")
 def memoir_draft(
-    expert: str,
     domain: str,
+    expert: str = Depends(canon_expert),
     viewer: str = "",
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
     """장 서술 초안 — 회고록 화면이 비동기로 청한다 (첫 화면 백지 방지)."""
-    return service.memoir_draft(session, expert, domain, viewer=viewer, lang=lang)
+    return service.memoir_draft(
+        session, expert, domain,
+        viewer=service.resolve_expert_id(session, viewer), lang=lang)
 
 
 class MemoirApproveIn(BaseModel):
@@ -246,8 +257,8 @@ class MemoirApproveIn(BaseModel):
 
 @router.post("/experts/{expert}/memoir/approve")
 def memoir_approve(
-    expert: str,
     body: MemoirApproveIn,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
@@ -257,7 +268,7 @@ def memoir_approve(
 
 @router.get("/experts/{expert}/statement")
 def statement(
-    expert: str,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
@@ -278,7 +289,7 @@ def start_session(
     lang: str = Depends(get_lang),
 ) -> dict:
     return service.start_session(
-        session, body.expert, instrument=body.instrument,
+        session, service.resolve_expert_id(session, body.expert), instrument=body.instrument,
         gap_id=body.gap_id, step=body.step, lang=lang,
     )
 
@@ -338,20 +349,20 @@ class UnansweredIn(BaseModel):
 
 @router.post("/alter/{expert}/unanswered")
 def unanswered(
-    expert: str,
     body: UnansweredIn,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
     """"이건 답이 아니었어요" — 후배의 판정으로 질문을 공백 큐에 되돌린다."""
     return service.mark_unanswered(
-        session, expert, body.question, asker=body.asker, lang=lang
+        session, expert, body.question, asker=service.resolve_expert_id(session, body.asker), lang=lang
     )
 
 
 @router.get("/alter/{expert}/followup")
 def followup(
-    expert: str,
+    expert: str = Depends(canon_expert),
     asker: str = "",
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
@@ -383,15 +394,15 @@ def rules_draft(
 
 @router.post("/protocol/{expert}/evaluate")
 def protocol_evaluate(
-    expert: str,
     body: EvaluateIn,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
     """결정론 판정 — LLM 없음. 승인된 규칙(rule_*)만 실행된다."""
     return service.protocol_evaluate(
         session, expert, body.domain, body.answers,
-        viewer=body.viewer, lang=lang,
+        viewer=service.resolve_expert_id(session, body.viewer), lang=lang,
     )
 
 
@@ -403,19 +414,19 @@ def route(
 ) -> dict:
     """통합 질문창 — 질문에 판단을 남긴 전문가를 찾아 연결한다(답은 안 한다)."""
     return service.route_question(
-        session, body.question, asker=body.asker, lang=lang
+        session, body.question, asker=service.resolve_expert_id(session, body.asker), lang=lang
     )
 
 
 @router.post("/alter/{expert}/ask")
 def ask(
-    expert: str,
     body: AskIn,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
     return service.ask_alter(
-        session, expert, body.question, asker=body.asker, lang=lang
+        session, expert, body.question, asker=service.resolve_expert_id(session, body.asker), lang=lang
     )
 
 
@@ -449,13 +460,13 @@ def mine_monologue(
 ) -> dict:
     """혼잣말 → 질문 → 공백 큐. 문서와 같은 불변식 — 카드로 변환하지 않는다."""
     return service.mine_monologue(
-        session, body.expert, body.text, domain=body.domain, lang=lang
+        session, service.resolve_expert_id(session, body.expert), body.text, domain=body.domain, lang=lang
     )
 
 
 @router.get("/experts/{expert}/documents")
 def my_documents(
-    expert: str,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
@@ -474,7 +485,7 @@ def document_detail(
 
 @router.get("/experts/{expert}/cards")
 def my_cards(
-    expert: str,
+    expert: str = Depends(canon_expert),
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
@@ -518,7 +529,7 @@ def interrogate_document(
 ) -> dict:
     """문서 → 질문 → 공백 큐. **카드로 변환하지 않는다.**"""
     return service.interrogate_document(
-        session, body.expert, body.text, title=body.title,
+        session, service.resolve_expert_id(session, body.expert), body.text, title=body.title,
         domain=body.domain, lang=lang,
     )
 
@@ -529,9 +540,9 @@ def flag(
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
-    service._guard_demo(body.expert, lang)
+    service._guard_demo(service.resolve_expert_id(session, body.expert), lang)
     return service.flag_domain(
-        session, body.expert, body.domain, body.note, lang=lang
+        session, service.resolve_expert_id(session, body.expert), body.domain, body.note, lang=lang
     )
 
 
@@ -541,7 +552,7 @@ def grade(
     session: Session = Depends(get_session),
     lang: str = Depends(get_lang),
 ) -> dict:
-    return service.grade_prompt(session, body.expert, body.topic, lang=lang)
+    return service.grade_prompt(session, service.resolve_expert_id(session, body.expert), body.topic, lang=lang)
 
 
 @router.post("/thanks")
@@ -551,7 +562,7 @@ def thanks(
     lang: str = Depends(get_lang),
 ) -> dict:
     return service.thank(
-        session, body.expert, body.message, actor=body.actor, lang=lang
+        session, service.resolve_expert_id(session, body.expert), body.message, actor=service.resolve_expert_id(session, body.actor), lang=lang
     )
 
 

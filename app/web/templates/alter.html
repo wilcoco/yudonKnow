@@ -36,13 +36,16 @@
     <span class="b" id="days"></span>
     {# 소개로서의 회고록 — 후배는 카드만이 아니라 사람을 물려받는다.
        공개 판: 공개 카드 + 본인이 승인한 서술만 제본된다. #}
+    <span id="privlinks" {% if not has_open %}hidden{% endif %}>
     <a class="b" data-keep-as href="/protocol/{{ expert_id }}?lang={{ lang }}">{{ L['alter.protocol'] }}</a>
     <a class="b" data-keep-as href="/memoir/{{ expert_id }}?lang={{ lang }}">{{ L['alter.memoir'].replace('{}', expert_name) }}</a>
+    </span>
   </div>
   <p class="quiet" style="margin-top:0">{{ L['alter.disclaimer'] }}</p>
 
   <div class="row" style="margin:16px 0 6px">
     <input type="text" id="q" placeholder="{% if ask_example %}{{ L['alter.example'].replace('{q}', ask_example) }}{% else %}{{ L['alter.ask.ph'] }}{% endif %}" onkeydown="if(event.key==='Enter')ask()">
+    <p class="quiet" style="margin:4px 0 0">{{ L['alter.ask.notice'] }}</p>
     {# 후배도 현장 인력이다 — 묻는 쪽에도 음성이 있어야 한다 (QA 지적). #}
     <button id="qmic" onclick="alterMic(this)">🎙 {{ L['sess.mic'] }}</button>
     <button class="primary" onclick="ask()">{{ L['alter.ask.cta'] }}</button>
@@ -110,6 +113,14 @@ async function api(path, opts){
     if(keep) document.querySelectorAll('a[data-keep-as]').forEach(a => {
       a.href += (a.href.includes('?') ? '&' : '?') + 'as=' + encodeURIComponent(keep);
     });
+  }catch(e){}
+  // 본인이면 숨긴 프로토콜·회고록 링크를 다시 켠다 — 신원 비교는 서버가
+  // 정본 id 로 다시 하므로, 여기서는 화면 노출만 결정한다.
+  try{
+    const who = $('asker').value.trim().toLowerCase().replace(/[\s\-_]+/g,'');
+    const own = EXPERT.toLowerCase().replace(/[\s\-_]+/g,'');
+    const pl = document.getElementById('privlinks');
+    if(pl && who && who === own) pl.hidden = false;
   }catch(e){}
   $('label').textContent = L['alter.of'].replace('{}', EXPERT);
   try{

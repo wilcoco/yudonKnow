@@ -61,6 +61,16 @@
   <p class="quiet" style="max-width:70ch">{{ L['proto.sub'] }}</p>
   <p class="quiet" style="max-width:70ch;border-left:3px solid var(--amber);padding-left:10px">{{ L['proto.notengine'] }}</p>
 
+  {% if not p.visible %}
+  {# 접근 제한 — 빈 무대 대신 이유를 말한다. 내용은 새지 않는다 (QA P1). #}
+  <div class="card" style="border-left:3px solid var(--amber);max-width:70ch">
+    <p class="t">{{ L['proto.restricted.t'] }}</p>
+    <p class="c">{{ L['proto.restricted.c'].replace('{}', p.name) }}</p>
+    <div class="acts">
+      <a class="b" data-keep-as href="/alter/{{ p.expert }}?lang={{ lang }}">{{ L['proto.restricted.back'] }}</a>
+    </div>
+  </div>
+  {% else %}
   {# ① 영역 — 과업 지도의 가지 하나를 고른다 #}
   <div class="stage on" id="st1">
     {% if not p.triage.count %}
@@ -107,6 +117,7 @@
     <div class="acts"><button onclick="back(2)">←</button></div>
     <p class="quiet">{{ L['proto.verify'] }}</p>
   </div>
+  {% endif %}
 </main>
 
 <script>

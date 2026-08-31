@@ -583,8 +583,18 @@ def _build_probe_prompt(
             else "\nWrite exactly one question that digs into the next rung."
         )
     lines.append(
-        "질문 문장만 출력해라. 머리말·설명 금지." if ko
-        else "Output the question sentence only. No preamble, no explanation."
+        # 거짓 전제 금지 — 전문가가 말한 적 없는 사건·수치·상황을 기정사실처럼
+        # 깔고 묻으면, 전문가가 그 전제를 바로잡느라 발굴이 멈추거나 (더 나쁘게)
+        # 없는 사건이 카드에 스며든다 (심사 QA P0 실측).
+        ("전제 규칙: 전문가가 실제로 말한 것만 전제로 삼아라. 말한 적 없는 "
+         "사건·수치·고객·상황을 기정사실처럼 깔지 마라. 가정이 필요하면 "
+         "'만약 ~라면'으로 가정임을 드러내라.\n"
+         "질문 문장만 출력해라. 머리말·설명 금지.") if ko
+        else ("Premise rule: presuppose only what the expert actually said. "
+              "Never state an event, number, client, or situation the expert "
+              "did not mention as if it happened. If you need a hypothetical, "
+              "mark it openly as one ('suppose ...').\n"
+              "Output the question sentence only. No preamble, no explanation.")
     )
     return "\n".join(lines)
 
@@ -952,6 +962,10 @@ Hard rules:
   ONLY if the expert explicitly said it does not fit in words. Never invent
   an unspeakable item; an expert who excludes vague impressions must not be
   handed one. The fact that it does not fit is itself the record.
+- Never put a real person's name, a company name, or a client name into
+  the card — replace it with the role or the industry ("Mr. Kim, HR head" →
+  "the HR lead", "Acme Logistics Inc." → "a logistics firm"). The judgment
+  needs the role, not the name; the raw utterance is preserved elsewhere.
 - OUTPUT LANGUAGE — hard rule: write every field in the language the
   conversation below is held in. The output schema's field descriptions are
   in Korean; they are metadata for you, NOT a language cue. An English
@@ -977,6 +991,9 @@ _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기�
   **전문가가 그렇게 말했을 때만** 적어라. 지어낸 '못 담은 것'은 최악이다 —
   모호한 인상을 배제하는 전문가에게 그것을 쥐여주게 된다.
   담기지 않는다는 사실 자체가 기록이다.
+- 사람 실명·회사명·고객명은 카드에 적지 마라 — 역할·업종으로 바꿔라
+  ("김OO 부장" → "인사 책임자", "OO물류(주)" → "한 물류회사"). 판단에
+  필요한 것은 이름이 아니라 역할이다. 원본 발화는 어차피 따로 보존된다.
 
 [대화]
 {transcript}

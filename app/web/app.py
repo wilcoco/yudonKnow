@@ -158,22 +158,30 @@ def expert(request: Request) -> HTMLResponse:
 def alter(request: Request, expert_id: str) -> HTMLResponse:
     session = db.SessionLocal()
     try:
+        from app.store import service as _svc
+        expert_id = _svc.resolve_expert_id(session, expert_id)
         row = session.get(db.Expert, expert_id)
         # 질문 예시는 전역 문구가 아니라 **이 전문가의 카드 신호**에서 —
         # 폐수처리 분신에 사출 예시가 떠 있으면 초행이 길을 잃는다 (QA 실측).
         example = ""
+        has_open = False
         if row is not None:
             from app.store import service as svc
             for c in svc.cards_of(session, expert_id):
-                if c.citable() and c.visible_to("") and c.cues:
-                    example = c.cues[0][:60]
-                    break
+                if c.citable() and c.visible_to(""):
+                    has_open = True
+                    if c.cues:
+                        example = c.cues[0][:60]
+                        break
         extra = {
             "expert_id": expert_id,
             "farewell": row.farewell if row else "",
             "expert_name": (row.display_name or row.id) if row else expert_id,
             "expert_lang": (row.lang if row else "") or "",
             "ask_example": example,
+            # 공개된 카드가 없으면 프로토콜·회고록 링크를 손님에게 보이지
+            # 않는다 (QA P1). 본인(me==expert)은 JS 가 다시 켠다.
+            "has_open": has_open,
         }
     finally:
         session.close()
@@ -192,7 +200,9 @@ def memoir(request: Request, expert_id: str, viewer: str = "") -> HTMLResponse:
     session = db.SessionLocal()
     try:
         data = svc.memoir(
-            session, expert_id, viewer=request.query_params.get("as", ""))
+            session, svc.resolve_expert_id(session, expert_id),
+            viewer=svc.resolve_expert_id(
+                session, request.query_params.get("as", "")))
     finally:
         session.close()
     ctx = _ctx(request)
@@ -209,7 +219,9 @@ def protocol(request: Request, expert_id: str) -> HTMLResponse:
     session = db.SessionLocal()
     try:
         data = svc.protocol_view(
-            session, expert_id, viewer=request.query_params.get("as", ""))
+            session, svc.resolve_expert_id(session, expert_id),
+            viewer=svc.resolve_expert_id(
+                session, request.query_params.get("as", "")))
     finally:
         session.close()
     ctx = _ctx(request)

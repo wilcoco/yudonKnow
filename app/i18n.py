@@ -340,6 +340,21 @@ CATALOG: dict[str, dict[str, str]] = {
               "그 전까지 이 화면은 열람 전용입니다: 판단을 보여줄 뿐, "
               "대신 내리지 않습니다.",
     },
+    "proto.restricted.t": {
+        "en": "This protocol is not open to you",
+        "ko": "이 프로토콜은 열람 권한이 없습니다",
+    },
+    "proto.restricted.c": {
+        "en": "{} left these judgments private, for a named person, or sealed "
+              "until a date. Nothing is shown so nothing leaks. If this is your "
+              "own page, enter with the identity you created it under.",
+        "ko": "{} 님이 이 판단들을 비공개·지목·봉인으로 남겼습니다. 내용이 새지 "
+              "않도록 아무것도 표시하지 않습니다. 본인 페이지라면 만들 때의 "
+              "신원으로 들어와 주세요.",
+    },
+    "proto.restricted.back": {
+        "en": "Ask the alter instead", "ko": "분신에게 물어보기",
+    },
     "proto.step_n": {"en": "Question {i} of {n}", "ko": "질문 {i} / {n}"},
     "proto.tri.skip": {"en": "Don't know — skip", "ko": "모름 — 넘어가기"},
     "proto.early": {
@@ -1017,6 +1032,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Say it the way you'd say it out loud. No need to tidy it up.",
         "ko": "말하듯이 적어주세요. 정리하지 않으셔도 됩니다.",
     },
+    "sess.privacy.hint": {
+        "en": "No real names needed — say the role instead (\"the HR lead\", "
+              "\"a logistics client\"). Names you do say are kept out of the card.",
+        "ko": "실명·회사명은 안 적으셔도 됩니다 — 역할로 말씀해 주세요"
+              "(\"인사 책임자\", \"물류 고객사\"). 말씀하신 이름은 카드에는 담기지 않습니다.",
+    },
     "sess.next": {"en": "Next question", "ko": "다음 질문"},
     "sess.waiting": {"en": "Listening…", "ko": "듣는 중…"},
     "sess.skip": {"en": "I'll skip this one", "ko": "이건 넘길게요"},
@@ -1172,12 +1193,20 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "(left in {lang})", "ko": "({lang}로 남긴 인사입니다)",
     },
     "alter.viewer.hint": {
-        "en": "Change who you are and ask again — a card left for one named person "
-              "answers only them, and a sealed one answers no one until its date. "
-              "Demo has no sign-in; corporate SSO plugs in here.",
-        "ko": "위 '나' 칸을 바꿔서 같은 질문을 다시 해보세요 — 지목된 사람에게만 남긴 "
-              "판단은 그 사람에게만 답하고, 봉인한 판단은 정한 날까지 아무에게도 "
-              "답하지 않습니다. 데모에는 로그인이 없고, 실배포는 여기에 사내 SSO가 붙습니다.",
+        "en": "Cards obey their owner's setting: a private card answers only its "
+              "owner, a card left for one named person answers only them, and a "
+              "sealed one answers no one until its date. Change who you are above "
+              "and ask again. Demo has no sign-in; corporate SSO plugs in here.",
+        "ko": "카드는 남긴 사람의 설정을 따릅니다: 비공개 카드는 본인에게만, 지목된 "
+              "사람에게 남긴 판단은 그 사람에게만 답하고, 봉인한 판단은 정한 날까지 "
+              "아무에게도 답하지 않습니다. 위 '나' 칸을 바꿔 다시 물어보세요. "
+              "데모에는 로그인이 없고, 실배포는 여기에 사내 SSO가 붙습니다.",
+    },
+    "alter.ask.notice": {
+        "en": "Unanswered questions are saved to the senior's dig queue with "
+              "your id — that is how gaps get filled.",
+        "ko": "답 못한 질문은 질문자 아이디와 함께 선배의 발굴 큐에 저장됩니다 — "
+              "공백은 그렇게 채워집니다.",
     },
     "alter.gap.note": {
         "en": "Saying \"I don't know\" is a feature here, not a failure. It will not "
@@ -1254,8 +1283,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "▸ 같은 언어로 남긴 사람: {}",
     },
     "alter.msg.gap.sent": {
-        "en": "▸ Your question was passed on as-is",
-        "ko": "▸ 질문을 그대로 전달했습니다",
+        "en": "▸ Your question was recorded, word for word, in this senior's "
+              "dig queue — they see it (with your id) next time they excavate",
+        "ko": "▸ 질문이 선배의 발굴 큐에 그대로 기록됐습니다 — 다음 발굴 때 "
+              "선배가 (질문자 아이디와 함께) 봅니다",
     },
     "alter.msg.gap.dday": {"en": " (leaves in {} days)", "ko": " (재직 D-{})"},
     "alter.msg.gap.alt": {
