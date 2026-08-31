@@ -165,14 +165,16 @@ def alter(request: Request, expert_id: str) -> HTMLResponse:
         # 폐수처리 분신에 사출 예시가 떠 있으면 초행이 길을 잃는다 (QA 실측).
         example = ""
         has_open = False
+        named_for = ""
         if row is not None:
             from app.store import service as svc
             for c in svc.cards_of(session, expert_id):
+                if c.for_whom and not named_for:
+                    named_for = c.for_whom   # 지목 카드 데모용 원클릭 신원
                 if c.citable() and c.visible_to(""):
                     has_open = True
-                    if c.cues:
+                    if c.cues and not example:
                         example = c.cues[0][:60]
-                        break
         extra = {
             "expert_id": expert_id,
             "farewell": row.farewell if row else "",
@@ -182,6 +184,7 @@ def alter(request: Request, expert_id: str) -> HTMLResponse:
             # 공개된 카드가 없으면 프로토콜·회고록 링크를 손님에게 보이지
             # 않는다 (QA P1). 본인(me==expert)은 JS 가 다시 켠다.
             "has_open": has_open,
+            "named_for": named_for,
         }
     finally:
         session.close()

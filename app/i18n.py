@@ -1246,6 +1246,9 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.farewell.lang": {
         "en": "(left in {lang})", "ko": "({lang}로 남긴 인사입니다)",
     },
+    "alter.as.try": {"en": "Try as:", "ko": "이 신원으로 눌러보기:"},
+    "alter.as.visitor": {"en": "a visitor", "ko": "손님"},
+    "alter.as.named": {"en": "{} — the named successor", "ko": "{} — 지목된 후배"},
     "alter.viewer.hint": {
         "en": "Cards obey their owner's setting: a private card answers only its "
               "owner, a card left for one named person answers only them, and a "
