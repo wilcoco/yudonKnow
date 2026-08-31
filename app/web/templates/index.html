@@ -11,7 +11,7 @@
   <a class="brand" href="/?lang={{ lang }}">yudon<span>Know</span></a>
   <div class="who">
     <a href="#how">{{ L['nav.how'] }}</a>
-    {% if llm_enabled %}<span>LLM {{ llm }}</span>{% else %}<span>{{ L['stub.mode'] }}</span>{% endif %}
+    {% if not llm_enabled %}<span>{{ L['stub.mode'] }}</span>{% endif %}
     <a href="?lang={{ other_lang }}">{{ L['lang.switch'] }}</a>
   </div>
 </header>
@@ -126,6 +126,7 @@
   <div class="card" style="border-left:3px solid var(--amber)">
     <div class="c">{{ L['how.honesty'] }}</div>
   </div>
+  {% if llm_enabled %}<p class="quiet" style="margin-top:8px">LLM: {{ llm }} · Vertex AI</p>{% endif %}
 </main>
 <script>
 // 역할 입장 — 계정 없는 데모 세션. guest 신원은 브라우저에서 만든다.

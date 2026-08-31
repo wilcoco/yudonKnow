@@ -102,7 +102,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "landing.judge.watch": {"en": "Watch Dale's expert page", "ko": "Dale 전문가 화면 구경"},
     "landing.judge.ask": {"en": "Ask Dale's alter as a junior", "ko": "후배로 Dale 분신에 묻기"},
-    "landing.judge.mine": {"en": "Be the expert (3 min)", "ko": "내가 전문가 되기 (3분)"},
+    "landing.judge.mine": {"en": "Be the expert (5 min)", "ko": "내가 전문가 되기 (5분)"},
     "landing.judge.note": {
         "en": "Showcase experts are read-only; everything opens on the expert you create.",
         "ko": "전시 전문가는 구경 전용입니다. 직접 만든 전문가에서는 전부 열립니다.",
@@ -110,9 +110,9 @@ CATALOG: dict[str, dict[str, str]] = {
     "home.readonly": {
         "en": "👀 Viewing mode — this is a showcase expert. Browse the shelf, the "
               "memoir and the statement; digging and controls open on your own "
-              "expert (make one in 3 minutes from the landing page).",
+              "expert (make one in about 5 minutes from the landing page).",
         "ko": "👀 구경 모드 — 전시용 전문가입니다. 서가·회고록·명세서를 둘러보세요. "
-              "발굴과 제어는 본인 전문가에서 열립니다 (첫 화면에서 3분).",
+              "발굴과 제어는 본인 전문가에서 열립니다 (첫 화면에서 약 5분).",
     },
     # 두 개의 문 — 역할은 자기분류가 아니라 행동에서 나온다.
     "door.expert.t": {"en": "🧑‍🏭 Enter as the senior", "ko": "🧑‍🏭 선배로 입장"},
@@ -140,8 +140,10 @@ CATALOG: dict[str, dict[str, str]] = {
               "✔ 가 되고 선배에게 돌아갑니다",
     },
     "door.expert.c": {
-        "en": "The AI interviews you — one judgment card stays in 3 minutes.",
-        "ko": "AI 가 인터뷰합니다 — 3분에 판단 카드 한 장이 남습니다.",
+        "en": "The AI interviews you — 3 minutes leaves a draft, 7 leaves a "
+              "reviewed judgment card.",
+        "ko": "AI 가 인터뷰합니다 — 3분이면 초안, 7분이면 검토까지 마친 "
+              "판단 카드 한 장이 남습니다.",
     },
     "door.junior.t": {"en": "💬 Enter as the junior", "ko": "💬 후배로 입장"},
     "door.junior.c": {
@@ -210,9 +212,9 @@ CATALOG: dict[str, dict[str, str]] = {
     "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},
     "landing.mine.title": {"en": "Leave mine", "ko": "내 분신 만들기"},
     "landing.mine.body": {
-        "en": "Answer as I ask, and one judgment stays behind in three minutes. "
+        "en": "Answer as I ask — 3 minutes leaves a draft, 7 a reviewed card. "
               "It is yours — you set who may see it, and you can switch it off.",
-        "ko": "묻는 대로 답하시면 3분에 판단 하나가 남습니다. "
+        "ko": "묻는 대로 답하시면 3분에 초안, 7분에 검토된 카드가 남습니다. "
               "그건 당신 것입니다 — 공개 범위도, 끄는 것도 당신이 정합니다.",
     },
     "landing.admin.link": {
@@ -571,8 +573,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "(optional — so we dig the urgent areas first)",
         "ko": "(선택 — 급한 곳부터 파기 위해서입니다)",
     },
-    "ob.start": {"en": "Start the AI interview (~3 min)",
-                   "ko": "AI 인터뷰 시작하기 (약 3분)"},
+    "ob.start": {"en": "Start the AI interview (3 min for a draft, ~7 for a reviewed card)",
+                   "ko": "AI 인터뷰 시작하기 (3분이면 초안, 약 7분이면 검토된 카드)"},
     #: 로그인이 없는 도구다. 이름은 화면 구석이 아니라 **첫 질문**으로 받는다 —
     #: 처음 온 사람은 상단 입력칸이 필수인 줄 모른다.
     "ob.q0": {
@@ -1251,6 +1253,30 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "⚠ 생성된 답이 근거 검증을 통과하지 못해, 남기신 판단 카드를 "
               "그대로 보여드립니다 — 지어낸 것 없이.",
     },
+    "alter.msg.restricted.private": {
+        "en": "{name} did leave judgment in this area — but kept it private, "
+              "visible only to themselves. That is their call to make.\n"
+              "If you need it, ask them directly.",
+        "ko": "{name}님은 이 영역에 판단을 남기셨습니다 — 다만 본인만 보도록 "
+              "비공개로 두셨어요. 그건 본인의 권한입니다.\n"
+              "필요하시면 직접 여쭤보세요.",
+    },
+    "alter.msg.restricted.targeted": {
+        "en": "{name} did leave judgment in this area — but left it for one "
+              "named person, and it answers only them. That is their call to "
+              "make.\nIf you need it, ask them directly.",
+        "ko": "{name}님은 이 영역에 판단을 남기셨습니다 — 다만 지정한 사람에게만 "
+              "열리도록 남기셨어요. 그건 본인의 권한입니다.\n"
+              "필요하시면 직접 여쭤보세요.",
+    },
+    "alter.msg.restricted.sealed": {
+        "en": "{name} did leave judgment in this area — but sealed it until a "
+              "date they chose. That is their call to make.\n"
+              "If you need it, ask them directly.",
+        "ko": "{name}님은 이 영역에 판단을 남기셨습니다 — 다만 정한 날짜까지 "
+              "봉인해 두셨어요. 그건 본인의 권한입니다.\n"
+              "필요하시면 직접 여쭤보세요.",
+    },
     "alter.msg.restricted": {
         "en": "{name} did leave judgment in this area — but it is opened only to "
               "a named person or on a chosen date. That is their call to make.\n"
@@ -1372,10 +1398,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "err.demo_readonly": {
         "en": "This is a showcase expert — read-only during judging. Watch their "
               "shelf and memoir, ask their alter, send reports and thanks. To feel "
-              "the expert side, create your own in three minutes.",
+              "the expert side, create your own in about five minutes.",
         "ko": "전시용 전문가입니다 — 심사 기간에는 읽기 전용이에요. 서가와 "
               "회고록을 구경하고, 분신에게 묻고, 보고와 감사는 보낼 수 있습니다. "
-              "전문가 쪽을 느껴보시려면 3분이면 본인 것을 만들 수 있어요.",
+              "전문가 쪽을 느껴보시려면 5분이면 본인 것을 만들 수 있어요.",
     },
     "err.no_expert": {
         "en": "Could not find '{}'.", "ko": "'{}' 를 찾을 수 없습니다.",

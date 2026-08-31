@@ -246,6 +246,13 @@ _PIN_Q = {
     "ko": "방금 '{word}' 라고 하셨는데 — 몇부터입니까? 숫자나 기준 하나로 짚어주세요. 후배는 그 숫자가 없으면 못 씁니다.",
     "en": "You said '{word}' — from what number? Pin it to a figure or a threshold. A junior cannot use it without one.",
 }
+_CUE_PIVOT_Q = {
+    "ko": "감각이 아니었군요 — 그럼 무엇이 신호였습니까? 데이터의 분포, "
+          "관계의 변화, 시점의 어긋남, 평소와의 비교 — 그중 하나로 짚어주세요.",
+    "en": "Not a sensory signal, then — so what was the tell? A distribution "
+          "in the data, a shift in a relationship, a timing mismatch, a "
+          "comparison against normal — pin it to one of those.",
+}
 _SENSE_Q = {
     "ko": "그 감각을 채널로 나눠보죠 — 눈·귀·손·냄새 중 어디입니까? 그리고 정상일 때와 무엇이 다릅니까? 비유로 말씀하셔도 됩니다.",
     "en": "Let's split that sense into channels — eye, ear, hand, or smell? And how does it differ from normal? An analogy is fine.",
@@ -382,6 +389,11 @@ _META_REFUSAL = (
     "추론해서 만들", "추론하지 마", "지어내지 마", "만들어내지 마",
     "생성하지 마", "창작하지 마", "don't invent", "do not invent",
     "don't make up", "do not make up", "don't fabricate",
+    # 정정 지시 — "기록하지 마라" 는 기계를 향한 명령이지 신호가 아니다
+    # (심사 QA P0: "Do not record one" 이 현장 신호 체크박스로 떴다).
+    "기록하지 마", "적지 마", "빼 주", "빼주", "지워 주", "지워주",
+    "do not record", "don't record", "do not write", "don't write that",
+    "remove that", "delete that", "strike that",
 )
 
 
@@ -393,6 +405,52 @@ def declined_incident(answer: str) -> bool:
     if any(m in low for m in _DECLINE_MARKS):
         return True
     return len(low) <= 20 and any(low.startswith(w) for w in _DECLINE_WHOLE)
+
+
+_NEG_MARKS = ("no ", "not ", "none", "never", "wasn't", "was not",
+              "isn't", "is not", "없었", "없다", "없습니다", "없어요", "아니")
+
+
+def negates_senses(answer: str) -> bool:
+    """감각 채널의 **부재 선언**인가 — "소리도 냄새도 없었다" 는 감각 언급이
+    아니라 감각 축의 폐기다. 여기에 감각 질문을 다시 대면 취조가 되고, 그
+    문장이 신호 칸에 눌어붙는다 (심사 QA P0 실측)."""
+    low = (answer or "").lower()
+    if not any(w in low for w in _SENSORY):
+        return False
+    return any(m in low for m in _NEG_MARKS)
+
+
+def not_cue_material(line: str) -> bool:
+    """이 한 줄은 신호가 아니다 — 정정·부정·기계를 향한 명령.
+
+    신호 칸의 하드 필터: LLM 정련이 무엇을 내놓든, 컴파일 시점에 결정적으로
+    걸러진다. "There was no sound..." / "Do not record one" 이 프로토콜
+    체크박스가 되는 사고(심사 QA P0)의 봉인. 원본 발화는 턴에 그대로 남는다."""
+    low = " ".join(str(line or "").lower().split())
+    if not low:
+        return True
+    if any(m in low for m in _META_REFUSAL):
+        return True
+    if low.startswith(("do not ", "don't ", "never record", "~하지 마")):
+        return True
+    neg_lead = ("there was no ", "there were no ", "no sound", "no smell",
+                "no visual", "no sensory", "none of those", "none of these",
+                "that did not happen", "that didn't happen", "nothing to see",
+                "nothing to hear")
+    if any(low.startswith(m) or m in low for m in neg_lead):
+        return True
+    # "소리·냄새·감각 ... 없었다" 꼴 — 감각 축의 부재 선언
+    if any(w in low for w in _SENSORY) and any(
+            m in low for m in ("없었", "없다", "없습니다", "was no", "were no",
+                                "wasn't", "was not", "not reliable")):
+        return True
+    return False
+
+
+def scrub_cues(lines: list[str]) -> list[str]:
+    """신호 목록에서 정정·부정문을 걸러낸다 — 컴파일의 마지막 관문."""
+    return [x for x in lines if not not_cue_material(x)]
 
 
 def not_card_material(answer: str) -> bool:
@@ -525,12 +583,19 @@ def next_question(
     # 연속 두지 않는다 (last_rung 확인) — 짚었는데 또 짚으면 취조가 된다.
     # 기준은 "직전 답이 어느 칸을 향했는가"(last_slot) — 답이 이미 칸을 채워
     # 다음 target 이 넘어간 뒤에도, 모호함·감각은 그 칸에서 즉시 짚어야 한다.
-    if last and not is_hedge(last) and last_rung not in ("pin", "sense", "deepen"):
+    if last and not is_hedge(last) and last_rung not in ("pin", "sense", "deepen", "cue_pivot"):
         word = vague_word(last)
         if word and last_slot:
             return Question(
                 text=_PIN_Q.get(lang, _PIN_Q["en"]).format(word=word),
                 rung="pin", instrument=instrument, targets=last_slot,
+            )
+        if last_slot == "cues" and negates_senses(last):
+            # 감각 축의 부재 선언 — 같은 축을 다시 묻지 않고 (QA P0: 부정한
+            # 감각 질문이 채널 분해로 재등장), 신호의 다른 축으로 돈다.
+            return Question(
+                text=_CUE_PIVOT_Q.get(lang, _CUE_PIVOT_Q["en"]),
+                rung="cue_pivot", instrument=instrument, targets="cues",
             )
         if last_slot == "cues" and has_sense(last):
             return Question(
@@ -952,8 +1017,10 @@ Hard rules:
 - **Invent nothing the expert did not say.** Leave empty fields empty —
   an empty field drives the next question; pretending it is filled is worst.
 - Keep the expert's shop-floor wording. Do not normalise it.
-- Declines and meta-instructions ("no such case", "let's move on", "don't
-  invent") are not knowledge — they go in no field, ever.
+- Declines, meta-instructions, and corrections ("no such case", "let's
+  move on", "don't invent", "do not record that") are not knowledge — they
+  go in no field, ever. A statement of absence ("there was no sound or
+  smell") is not a cue either: the cues field holds only what WAS there.
 - 'cues' (what tells you) is the heart of the card. Only signals the expert
   actually named — each cue must be an OBSERVABLE sign ("no urine passing",
   "belly tight like a drum"), never an explanation, a story fragment, or a
@@ -981,8 +1048,9 @@ _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기�
 - **전문가가 말하지 않은 것을 지어내지 마라.** 빈 칸은 빈 채로 둬라.
   빈 칸은 다음 질문의 근거가 되므로, 채워진 척하는 것이 가장 나쁘다.
 - 전문가의 현장 용어를 그대로 살려라. 표준어로 고치지 마라.
-- "사례가 없다"·"넘어가자"·"지어내지 마라" 같은 사양·지시 발화는 지식이
-  아니다 — 어떤 칸에도 넣지 마라.
+- "사례가 없다"·"넘어가자"·"지어내지 마라"·"기록하지 마라" 같은 사양·지시·
+  정정 발화는 지식이 아니다 — 어떤 칸에도 넣지 마라. "소리도 냄새도 없었다"
+  같은 **부재 선언**도 신호가 아니다: 신호 칸에는 **있었던 것**만 적는다.
 - 'cues'(무엇을 보고 아는가)가 이 카드의 핵심이다. 전문가가 실제로 든 신호만,
   **관찰 가능한 형태로** 적어라("소변이 안 나온다", "배가 북처럼 팽팽하다").
   설명문·이야기 조각·방법론 언급은 신호가 아니다. 한 관찰에 한 줄,
@@ -1080,6 +1148,7 @@ def capture(
         log.warning("카드 구조화 실패, 규칙 기반 대체: %s", exc)
         raw = {}
     rule = _fallback(history, slots)
+    rule.data["cues"] = scrub_cues(list(rule.data.get("cues") or []))
     if not raw:
         return rule
     # 병합 불변식 — 정련은 다듬을 수 있어도 **잃을 수는 없다.**
@@ -1097,6 +1166,8 @@ def capture(
         # 정련이 거듭되며 요약본과 원문이 나란히 남는 중복(실측: 행동
         # 10개가 사실상 5+5)을 접는다 — 정규화 동치·포함 관계는 뒤가 진다.
         raw[key] = _dedupe_lines(have)
+    # 신호 칸 하드 필터 — 정정·부정문은 어떤 경로로 왔든 여기서 떨어진다.
+    raw["cues"] = scrub_cues([str(x) for x in (raw.get("cues") or [])])
     for key in ("situation", "judgment", "rationale", "failure", "title"):
         if not str(raw.get(key) or "").strip() and rule.data.get(key):
             raw[key] = rule.data[key]

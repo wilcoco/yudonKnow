@@ -690,6 +690,11 @@ def confirm_card(
         current = getattr(card, key)
         setattr(card, key, list(value) if isinstance(current, list) else value)
 
+    # 신호 칸 하드 필터 — 승인 화면이 기계 추출을 프리필하므로, 정정·부정문이
+    # 그대로 저장 버튼을 타고 들어올 수 있다 (심사 QA P0). 전문가가 직접 쓴
+    # 줄이라도 "기록하지 마라" 는 신호일 수 없다 — 컴파일 마지막 관문.
+    card.cues = interview.scrub_cues(list(card.cues))
+
     substantive = any(getattr(card, k) != before[k] for k in substance)
     if tacitness:
         card.tacitness = Tacitness(tacitness)
@@ -841,8 +846,15 @@ def ask_alter(
             confidence_floor=settings.confidence_floor,
         ) if persona.active else None   # 정지된 분신의 안내문은 덮지 않는다
         if owner_view is not None and not owner_view.is_gap:
-            reply.text = t("alter.msg.restricted", lang,
-                           name=persona.display_name or expert)
+            # 잠긴 카드의 실제 설정대로 말한다 — 비공개인데 "지정인 또는
+            # 봉인" 이라고 하면 부정확하다 (심사 QA P1 실측). 섞여 있으면
+            # 일반 문구로.
+            vis = {c.visibility.value for c in owner_view.cards}
+            key = ("alter.msg.restricted.private" if vis == {"private"}
+                   else "alter.msg.restricted.targeted" if vis == {"targeted"}
+                   else "alter.msg.restricted.sealed" if vis == {"sealed"}
+                   else "alter.msg.restricted")
+            reply.text = t(key, lang, name=persona.display_name or expert)
             ask.answered = False
             session.commit()
             return {"ask_id": ask.id, "persona": persona.label(lang),
