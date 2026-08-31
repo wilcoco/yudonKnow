@@ -914,6 +914,15 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "💬 Dig this judgment further (talk with the AI)",
         "ko": "💬 이 판단 더 파기 (AI와 대화)",
     },
+    "cv.dormant": {"en": "🗄 Put it to rest", "ko": "🗄 서랍에 넣기"},
+    "cv.dormant.sure": {"en": "Tap again to confirm — juniors stop seeing it; nothing is deleted",
+                        "ko": "한 번 더 누르면 확정 — 후배에게 안 보이게 됩니다. 지워지진 않습니다"},
+    "cv.dormant.done": {
+        "en": "Resting. Juniors no longer see this card; the original words are kept. "
+              "Edit and save to wake it.",
+        "ko": "잠복했습니다. 후배에게 더는 보이지 않고, 원본 발화는 보존됩니다. "
+              "수정 후 저장하면 다시 깨어납니다.",
+    },
     "sess.method": {
         "en": "Questions follow the cognitive-task-analysis playbook — ACTA "
               "knowledge audit & task diagram, CDM timeline, vague-word "

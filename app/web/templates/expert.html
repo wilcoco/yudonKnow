@@ -636,8 +636,31 @@ async function openCard(id){
     $('cv_actions').innerHTML = ro2 ? '' : (c.status === 'draft'
       ? `<button class="primary" onclick="resumeDig('${c.id}')">${esc(L['cv.resume'])}</button>`
       : (c.status === 'dormant' ? '' :
-         `<button onclick="resumeDig('${c.id}')">${esc(L['cv.talk'])}</button>`));
+         `<button onclick="resumeDig('${c.id}')">${esc(L['cv.talk'])}</button>
+          <button class="ghost" onclick="dormantCard(this,'${c.id}')">${esc(L['cv.dormant'])}</button>`));
     show('cardview');
+  }catch(e){ err(e.message); }
+}
+
+// 지우기가 아니라 잠복 — 후배에게서 사라지되 원본은 보존된다 (설계 결정:
+// 카드는 삭제하지 않는다). 실수 방지는 모달 대신 두 번 누르기.
+async function dormantCard(btn, id){
+  err('');
+  if(btn.dataset.armed !== '1'){
+    btn.dataset.armed = '1';
+    btn.textContent = L['cv.dormant.sure'];
+    setTimeout(() => { if(btn.isConnected){ btn.dataset.armed=''; btn.textContent = L['cv.dormant']; } }, 4000);
+    return;
+  }
+  try{
+    await api('/api/cards/' + encodeURIComponent(id) + '/dormant', {method:'POST'});
+    $('cv_actions').innerHTML = '';
+    $('err').textContent = '';
+    const note = document.createElement('p');
+    note.className = 'quiet';
+    note.textContent = L['cv.dormant.done'];
+    $('cv_actions').after(note);
+    loadHome && setTimeout(loadHome, 1600);
   }catch(e){ err(e.message); }
 }
 
