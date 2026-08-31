@@ -298,7 +298,10 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "alter.protocol": {"en": "📋 Step-by-step protocol", "ko": "📋 절차로 밟기"},
     # 판정 모드 — 예/아니오/모름 3상 문진. '모름' 이 1급 시민이다.
-    "proto.triage.t": {"en": "🚦 Structured triage", "ko": "🚦 판정 문진"},
+    "proto.triage.t": {
+        "en": "🚦 Structured triage — one question at a time",
+        "ko": "🚦 판정 문진 — 한 번에 한 질문",
+    },
     "proto.triage.c": {
         "en": "One questionnaire across ALL approved rules — no task picking, "
               "so an urgent judgment can never hide behind a different task "
@@ -306,6 +309,17 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "승인된 규칙 전부를 **업무 구분 없이** 한 문진으로 충돌 "
               "검사합니다 — 위급 판단이 다른 업무명 뒤에 숨을 수 없습니다. "
               "결정론 실행이고, '모름'은 절대 하향되지 않습니다.",
+    },
+    "proto.triage.hint": {
+        "en": "Answer one sign at a time; the verdict board updates after each "
+              "answer and stops early the moment an urgent judgment is "
+              "established.",
+        "ko": "신호를 하나씩 답하면 답할 때마다 판이 갱신되고, 위급 판단이 "
+              "성립하는 순간 조기 종료됩니다.",
+    },
+    "proto.browse.totriage": {
+        "en": "Need a verdict? → Structured triage (one question at a time)",
+        "ko": "판정이 필요하면 → 판정 문진 (한 번에 한 질문)",
     },
     "proto.browse3": {"en": "③ Read the judgments", "ko": "③ 판단 열람"},
     "proto.ruled_in_browse": {

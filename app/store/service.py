@@ -336,6 +336,22 @@ def start_session(
             "target": 1, "index": 1,
         }
 
+    if instrument == "taskmap":
+        # 과업 지도 세션의 첫 질문은 **지도 질문 그 자체**다. 여기서 공백 큐나
+        # 사다리 오프너("있었던 일 하나")로 떨어지면, 화면 안내는 직무를
+        # 묻는데 실제 질문은 사건을 묻는 어긋남이 된다 — 그 사건의 등장
+        # 요소가 직무 지도로 잘못 서는 원인 (심사 QA 미통과 #8 실측).
+        text_q = interview.TASKMAP_OPENER.get(lang, interview.TASKMAP_OPENER["en"])
+        turn = db.Turn(id=_uid("t"), session_id=row.id, question=text_q,
+                       rung="map", targets="")
+        session.add(turn)
+        session.commit()
+        return {
+            "session_id": row.id, "instrument": instrument,
+            "turn_id": turn.id, "question": text_q, "rung": "map",
+            "from_gap": False, "target": 1, "index": 1,
+        }
+
     gap = None
     if gap_id:
         picked = session.get(db.Gap, gap_id)

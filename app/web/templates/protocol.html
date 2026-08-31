@@ -83,6 +83,7 @@
          onclick="startTriage()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();startTriage()}">
       <p class="t">{{ L['proto.triage.t'] }}</p>
       <p class="c">{{ L['proto.triage.c'] }}</p>
+      <p class="c quiet">{{ L['proto.triage.hint'] }}</p>
     </div>
     {% endif %}
     <h2 class="sec">{{ L['proto.step1'] }}</h2>
@@ -101,6 +102,9 @@
   {# ② 신호 — "무엇이 보입니까" 체크. 여기 없으면 공백 경로. #}
   <div class="stage" id="st2">
     <h2 class="sec">{{ L['proto.step2'] }}</h2>
+    {% if p.triage.count %}
+    <p class="quiet" style="margin:0 0 10px"><a href="#" onclick="startTriage();return false">{{ L['proto.browse.totriage'] }}</a></p>
+    {% endif %}
     <div class="cuebox" id="cues"></div>
     <div class="acts">
       <button class="primary" id="go3" onclick="showJudgments()">{{ L['proto.step3'] }} →</button>

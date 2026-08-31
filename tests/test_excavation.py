@@ -456,3 +456,25 @@ def test_the_expert_can_drill_into_any_step_from_the_map(session):
     r = service.answer_turn(session, started["turn_id"],
                             "출하 직전에 라벨이 뒤집혀 나간 적이 있었다", lang="ko")
     assert r["card"]["domain"] == "출하", "드릴다운 카드가 영역을 물려받지 않았다"
+
+
+def test_taskmap_session_opens_with_the_map_question(session):
+    """직무 지도 세션의 첫 질문은 지도 질문이다 — 사건 오프너가 아니라.
+
+    공백 큐에 질문이 있어도 지도 세션을 가로채지 않는다 (심사 QA 미통과 #8:
+    화면 안내는 직무, 실제 질문은 사건 → 사건 요소가 직무로 잘못 추출).
+    """
+    service.ensure_expert(session, "hong", display_name="홍길동 수석", lang="ko")
+    # 큐에 공백이 있는 상태를 만들어 둔다 — 그래도 지도 질문이 이겨야 한다.
+    service.mark_unanswered(session, "hong", "야간 정지 기준이 뭐예요?",
+                            asker="junior-z", lang="ko")
+    started = service.start_session(session, "hong", instrument="taskmap", lang="ko")
+    assert started["rung"] == "map"
+    assert "직무" in started["question"]
+    assert "있었던 일" not in started["question"]
+    # 지도 답 → 깃발이 선다 (사건이 아니라 직무 단계로)
+    r = service.answer_turn(
+        session, started["turn_id"],
+        "수주 검토, 협력사 관리, 야간 라인 정지 판단, 불량 원인 진단. "
+        "야간 정지 판단은 감이 필요합니다.", lang="ko")
+    assert r.get("map_built") is True
