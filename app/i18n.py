@@ -1246,7 +1246,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "alter.farewell.lang": {
         "en": "(left in {lang})", "ko": "({lang}로 남긴 인사입니다)",
     },
-    "alter.as.try": {"en": "Try as:", "ko": "이 신원으로 눌러보기:"},
+    "alter.as.try": {
+        "en": "Shortcuts for the \u201cme\u201d box above \u2014 one tap fills it and reloads:",
+        "ko": "위 \u2018나\u2019 칸 단축키 \u2014 누르면 그 신원이 채워지고 다시 열립니다:",
+    },
     "alter.as.visitor": {"en": "a visitor", "ko": "손님"},
     "alter.as.named": {"en": "{} — the named successor", "ko": "{} — 지목된 후배"},
     "alter.viewer.hint": {
