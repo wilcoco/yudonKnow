@@ -253,7 +253,8 @@ def test_a_vague_quantity_is_pinned_to_a_number_once(session):
     r = service.answer_turn(session, r["turn_id"],
                             "압력이 적당히 높으면 그때 세워", lang="ko")
     assert r["rung"] == "pin", "모호 수치어를 짚지 않았다"
-    assert "몇부터" in r["question"]
+    # 숫자 강요가 아니라 숫자/관찰 가능한 상태 중 택일을 청한다 (심사 QA).
+    assert "숫자로 정해집니까" in r["question"]
 
     r = service.answer_turn(session, r["turn_id"], "그냥 적당히 보는 거지", lang="ko")
     assert r["rung"] != "pin", "같은 수를 두 번 뒀다 — 취조가 된다"

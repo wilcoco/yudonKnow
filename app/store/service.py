@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any
@@ -28,6 +29,8 @@ from app.core import coverage as cov
 from app.core import legacy
 from app.core.card import Card, CardStatus, Tacitness, Visibility
 from app.i18n import DEFAULT as LANG_DEFAULT
+
+log = logging.getLogger(__name__)
 from app.i18n import t
 from app.store import db, notify
 
@@ -845,6 +848,14 @@ def ask_alter(
             top_k=settings.retrieval_top_k, explore_quota=0.0,
             confidence_floor=settings.confidence_floor,
         ) if persona.active else None   # 정지된 분신의 안내문은 덮지 않는다
+        if interview.hostile_question(question):
+            # 격리 — 거절은 하되 "전달했다" 고 말하지 않는다. 전달이 없었다.
+            reply.text = t("alter.msg.quarantined", lang,
+                           name=persona.display_name or expert)
+            ask.answered = False
+            session.commit()
+            return {"ask_id": ask.id, "persona": persona.label(lang),
+                    **reply.as_dict(), "quarantined": True}
         if owner_view is not None and not owner_view.is_gap:
             # 잠긴 카드의 실제 설정대로 말한다 — 비공개인데 "지정인 또는
             # 봉인" 이라고 하면 부정확하다 (심사 QA P1 실측). 섞여 있으면
@@ -861,19 +872,24 @@ def ask_alter(
                     **reply.as_dict(), "restricted": True}
         _record_gap(session, expert, question, asker)
     else:
-        for card in reply.cards:
-            session.add(db.Citation(ask_id=ask.id, card_id=card.id))
-            row = session.get(db.CardRow, card.id)
-            if row is not None:
-                row.citations += 1
-        _log(
-            session,
-            expert,
-            legacy.LedgerEvent.CITED,
-            card_id=reply.cards[0].id,
-            actor=asker,
-            detail=question[:120],
-        )
+        # 자기거래 차단 — 소유자가 자기 분신에 물은 것은 답은 정상으로 주되
+        # **정산 지표(인용·원장)에는 넣지 않는다** (심사 QA P0: 본인 질문
+        # 1건으로 Used/Cited 가 올랐다). 미리보기는 기능이고, 청구는 아니다.
+        self_use = bool(asker) and asker == expert
+        if not self_use:
+            for card in reply.cards:
+                session.add(db.Citation(ask_id=ask.id, card_id=card.id))
+                row = session.get(db.CardRow, card.id)
+                if row is not None:
+                    row.citations += 1
+            _log(
+                session,
+                expert,
+                legacy.LedgerEvent.CITED,
+                card_id=reply.cards[0].id,
+                actor=asker,
+                detail=question[:120],
+            )
     session.commit()
     return {"ask_id": ask.id, "persona": persona.label(lang), **reply.as_dict()}
 
@@ -1025,6 +1041,8 @@ def mark_unanswered(
     (검색 정밀도 자체는 P1 하이브리드 — docs/roadmap.md)
     """
     get_expert(session, expert, lang=lang)
+    if interview.hostile_question(question):
+        return {"queued": False, "quarantined": True}
     _record_gap(session, expert, question, asker=asker)
     session.commit()
     return {"queued": True}
@@ -1035,6 +1053,11 @@ def _record_gap(
     source_doc: str = "",
 ) -> None:
     """같은 질문이 반복되면 카운트를 올린다 — 빈도가 곧 우선순위다."""
+    # 격리 관문 — 주입·유출 요구·괴롭힘은 지식 공백이 아니다. 큐에 올리지
+    # 않고, 문진 입력으로도 흐르지 않는다 (심사 QA P0: 저장형 주입).
+    if interview.hostile_question(question):
+        log.warning("공격성 질문 격리 (큐 미기록): %.80s", question)
+        return
     existing = session.scalars(
         select(db.Gap).where(db.Gap.expert == expert, db.Gap.filled_card == "")
     ).all()
@@ -1235,6 +1258,28 @@ def report_anchor(
     row = session.get(db.CardRow, card_id)
     if row is None:
         raise ServiceError(t("err.no_card", lang))
+
+    # 자기거래 차단 — 소유자가 자기 카드에 '도움 됨' 을 눌러 자기 보상
+    # 근거를 올릴 수 없다 (심사 QA P0 실측: Used 1 / Cited 1 / Helped 1 이
+    # 전부 본인 행동이었다). ✔ 배지의 출처는 **후배의** 적용 보고다.
+    if reporter and resolve_expert_id(session, reporter) == row.expert:
+        raise ServiceError(t("err.self_report", lang))
+
+    # 같은 보고자가 같은 카드에 이미 살아있는 같은 판정을 남겼으면 중복으로
+    # 세지 않는다 (QA P1: 반복 보고로 지표 부풀리기).
+    if reporter:
+        dup = session.scalar(
+            select(db.Anchor).where(
+                db.Anchor.card_id == card_id,
+                db.Anchor.reporter == reporter,
+                db.Anchor.verdict == verdict,
+                db.Anchor.stale.is_(False),
+            )
+        )
+        if dup is not None:
+            return {"card_id": card_id, "status": row.status,
+                    "helped": row.helped, "missed": row.missed,
+                    "duplicate": True}
 
     session.add(
         db.Anchor(

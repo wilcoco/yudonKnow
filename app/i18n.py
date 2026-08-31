@@ -1285,6 +1285,14 @@ CATALOG: dict[str, dict[str, str]] = {
               "혹은 정한 날짜에 열리도록 잠가 두셨어요. 그건 본인의 권한입니다.\n"
               "필요하시면 직접 여쭤보세요.",
     },
+    "alter.msg.quarantined": {
+        "en": "This is not an area {name} left behind, and this question was "
+              "not passed on to them.\nI will not make it up, and I do not "
+              "relay instructions aimed at the system.",
+        "ko": "이건 {name}님이 남기지 않은 영역이고, 이 질문은 선배에게 "
+              "전달하지 않았습니다.\n지어내지 않고, 시스템을 겨눈 지시는 "
+              "전달하지 않습니다.",
+    },
     "alter.msg.gap": {
         "en": "This is not an area {name} left behind.\nI will not make it up.",
         "ko": "이건 {name}님이 남기지 않은 영역입니다.\n지어내지 않겠습니다.",
@@ -1407,6 +1415,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Could not find '{}'.", "ko": "'{}' 를 찾을 수 없습니다.",
     },
     "err.no_card": {"en": "Could not find that card.", "ko": "그 카드를 찾을 수 없습니다."},
+    "err.self_report": {
+        "en": "This is your own card — a report on your own judgment does not "
+              "count toward the badge or the statement. It needs a junior's field report.",
+        "ko": "본인 카드입니다 — 본인 판단에 대한 보고는 배지·명세에 반영되지 "
+              "않습니다. 후배의 현장 보고가 필요합니다.",
+    },
     "err.no_turn": {
         "en": "Could not find that question.", "ko": "그 질문을 찾을 수 없습니다.",
     },
