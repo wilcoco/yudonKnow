@@ -78,11 +78,11 @@
     <h2 class="sec">{{ L['proto.step1'] }}</h2>
     <div class="grid g3">
       {% for d in p.domains %}
-      <div class="card" style="cursor:pointer" role="button" tabindex="0"
+      <div class="card" style="cursor:pointer;opacity:.85" role="button" tabindex="0"
            onclick="pickDomain({{ loop.index0 }})"
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickDomain({{ loop.index0 }})}">
         <p class="t">{{ d.domain }}</p>
-        <p class="c quiet">{{ L['proto.match'].replace('{}', d.cards|length|string) }}</p>
+        <p class="c quiet">{{ L['proto.match'].replace('{}', d.cards|length|string) }} · {{ L['proto.browse_note'] }}</p>
       </div>
       {% endfor %}
     </div>
@@ -222,7 +222,10 @@ async function stepAnswer(btn, val){
 }
 function showVerdict(prefix){
   stage(3);
-  renderVerdictBody(STAGE && STAGE.verdict, prefix || '');
+  const a = Object.keys(ANSWERS).length;
+  const skipped = Math.max(0, DOM.signs.length - a);
+  const counts = '<p class="quiet">' + esc(fmt(L['proto.counts'], {a: a, s: skipped})) + '</p>';
+  renderVerdictBody(STAGE && STAGE.verdict, (prefix || '') + counts);
 }
 
 function triSet(j, val){

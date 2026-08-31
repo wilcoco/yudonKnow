@@ -239,3 +239,26 @@ def test_canonical_ids_merge_the_same_signal_across_cards():
     signs = _triage_signs([green, red])
     keys = [x["key"] for x in signs]
     assert keys.count("dry_heaving") == 1
+
+
+def test_uncovered_exceptions_block_triage_eligibility():
+    """QA P0 실측: 카드에 "양조장 정기 세척일 수 있다" 예외가 있는데
+    규칙(none_of)에 없으면, 문진이 그것을 못 물어 위급 오판이 된다.
+    예외를 다 덮지 못한 카드는 판정 무대에 서지 못한다."""
+    from app.core.protocol import triage_eligible, uncovered_exceptions
+
+    leaky = red_card(
+        rule_all=["ph_rising :: influent pH climbing past 8.5"],
+        rule_none=[], rule_priority=3,
+        exceptions=["It may be the brewery's permitted first-Monday caustic clean."],
+    )
+    assert uncovered_exceptions(leaky), "안 덮인 예외를 못 찾았다"
+    assert not triage_eligible(leaky), "예외가 새는 카드가 판정 무대에 섰다"
+
+    sealed = red_card(
+        rule_all=["ph_rising :: influent pH climbing past 8.5"],
+        rule_none=["brewery_clean :: it is the brewery's permitted first-Monday caustic clean"],
+        rule_priority=3,
+        exceptions=["It may be the brewery's permitted first-Monday caustic clean."],
+    )
+    assert triage_eligible(sealed), "예외를 덮었는데도 무대에서 뺐다"

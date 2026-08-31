@@ -346,9 +346,13 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "An urgent judgment stands — questionnaire ends here.",
         "ko": "위급 판단이 성립했습니다 — 문진을 여기서 마칩니다.",
     },
-    "proto.strip.standing": {"en": "standing", "ko": "성립·상향"},
+    "proto.strip.standing": {"en": "still possible", "ko": "아직 가능"},
     "proto.strip.out": {"en": "ruled out", "ko": "배제"},
-    "proto.strip.waiting": {"en": "watching", "ko": "대기"},
+    "proto.strip.waiting": {"en": "not checked", "ko": "미확인"},
+    "proto.counts": {"en": "{a} answered · {s} not needed",
+                      "ko": "답한 질문 {a} · 불필요해진 질문 {s}"},
+    "proto.browse_note": {"en": "Browse cards by area — not a decision flow",
+                           "ko": "영역별 카드 열람 — 판정 흐름이 아닙니다"},
     "proto.showall": {"en": "See all questions at once", "ko": "질문 전체를 한 번에 보기"},
     "proto.tri.yes": {"en": "Yes", "ko": "예"},
     "proto.tri.no": {"en": "No", "ko": "아니오"},
@@ -383,6 +387,17 @@ CATALOG: dict[str, dict[str, str]] = {
     "cv.f.rule_none": {"en": "Rules — must ALL be absent", "ko": "규칙 — 전부 '아니오' 여야 성립"},
     "cv.f.rule_priority": {"en": "Priority on conflict (0 = reading, higher wins)",
                             "ko": "충돌 시 우선순위 (0 = 열람 전용 · 높을수록 우선)"},
+    "cv.rule_uncovered": {
+        "en": "⚠ {n} exception(s) on this card are not yet covered by the "
+              "rules — add each as a none_of condition. Until then this card "
+              "is reading-only in structured triage (a questionnaire that "
+              "cannot ask about an exception would misjudge).",
+        "ko": "⚠ 이 카드의 예외 {n}건이 아직 규칙에 반영되지 않았습니다 — "
+              "각 예외를 '없어야(none_of)' 조건으로 추가하세요. 그 전까지 이 "
+              "카드는 판정 문진에서 열람 전용입니다 (예외를 못 묻는 문진은 "
+              "오판합니다).",
+    },
+    # 상태명 정직화 — 필수 조건 하나 충족을 '성립' 처럼 읽히게 하지 않는다.
     "cv.rule_draft": {
         "en": "✍ AI-drafted from this card's cues and exceptions — review, fix, "
               "then save. Nothing runs until you save.",

@@ -661,6 +661,7 @@ async function saveCard(){
       }})});
     let msg = L['sess.saved'];
     if(r.verification_reset) msg += ' ' + L['cv.reset_done'];
+    if(r.rule_warning) msg += ' ' + r.rule_warning;
     $('cv_status').textContent = msg;
     openCard(CV.card.id);
   }catch(e){ err(e.message); }

@@ -61,6 +61,35 @@ def sign_key(line: str) -> tuple[str, str]:
     return t, t
 
 
+def uncovered_exceptions(card: Card) -> list[str]:
+    """규칙이 덮지 못한 예외 — 판정 실행 자격의 문지기.
+
+    카드에 "새 위어 플레이트는 첫 주에 실처럼 보일 수 있다" 는 예외가
+    적혀 있는데 승인 규칙(rule_none)에 그 조건이 없으면, 문진은 그것을
+    물을 수 없고 위급 판정이 오판이 된다 (QA P0 실측: 양조장 정기 세척일
+    을 묻지 않고 '투기' 확정). 예외마다 rule_none 어느 줄이 그 내용을
+    담는지 토큰 겹침으로 검사한다 — 하나라도 안 덮이면 그 카드는 판정
+    대상이 아니라 열람 대상이다.
+    """
+    if not (card.rule_all or card.rule_none or card.rule_priority):
+        return []          # 규칙 없는 카드는 애초에 판정 대상이 아니다
+    from app.capture.interview import _covers
+    out = []
+    for exc in card.exceptions:
+        if not any(_covers(exc, line.split("::")[-1], loose=True)
+                   or _covers(exc, line, loose=True)
+                   for line in card.rule_none):
+            out.append(exc)
+    return out
+
+
+def triage_eligible(card: Card) -> bool:
+    """판정 실행 자격 — 규칙이 있고, 예외가 전부 규칙에 덮여 있다."""
+    if not (card.rule_all or card.rule_none or card.rule_priority):
+        return False
+    return not uncovered_exceptions(card)
+
+
 def _answer(answers: dict[str, str], sign: str) -> str:
     key, _ = sign_key(sign)
     return answers.get(key, UNKNOWN)

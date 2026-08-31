@@ -725,7 +725,11 @@ def confirm_card(
     # 이 카드가 후배의 공백을 메웠는가 — 메웠으면 질문자에게 알릴 대상이 된다.
     filled = _match_gap(session, card)
     session.commit()
+    from app.core.protocol import uncovered_exceptions
+    uncov = uncovered_exceptions(card)
     return {
+        "rule_warning": (t("cv.rule_uncovered", lang, n=len(uncov))
+                         if uncov else ""),
         "card": card_view(card),
         "warning": t("warn.no_exceptions", lang) if not card.exceptions else "",
         "filled_gap": filled,
@@ -1593,8 +1597,12 @@ def protocol_view(
     domains: dict[str, list[Card]] = {}
     for c in cards:
         domains.setdefault(c.domain or "—", []).append(c)
-    ruled_cards = [c for c in cards
-                   if c.rule_all or c.rule_none or c.rule_priority]
+    from app.core.protocol import triage_eligible
+
+    # 규칙이 있어도 **예외를 다 덮지 못한** 카드는 판정 무대에 못 선다 —
+    # 문진이 그 예외를 물을 수 없어 오판이 되기 때문 (QA P0). 그런 카드는
+    # 열람으로 강등되고, 승인 화면이 무엇이 안 덮였는지 경고한다.
+    ruled_cards = [c for c in cards if triage_eligible(c)]
     return {
         "expert": expert,
         "name": row.display_name or expert,
@@ -1705,9 +1713,12 @@ def protocol_evaluate(
     # 대상이다. 위급 카드가 다른 업무명 뒤에 숨으면 우선순위 로직이
     # 발동할 무대 자체가 없다. (domain 인자는 하위 호환으로만 받는다.)
     del domain
+    from app.core.protocol import triage_eligible
+
     cards = [
         c for c in cards_of(session, expert)
         if c.citable() and (owner or c.visible_to(viewer))
+        and triage_eligible(c)
     ]
     out = evaluate(cards, {str(k): str(v) for k, v in answers.items()})
     def vd(v):
