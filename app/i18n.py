@@ -1508,6 +1508,12 @@ CATALOG: dict[str, dict[str, str]] = {
               "a junior.",
         "ko": "예외가 비어 있습니다. 예외 없는 판단은 후배에게 위험합니다.",
     },
+    "warn.thin_card": {
+        "en": "Live, but thin — empty: {fields}. The alter can cite the "
+              "judgment now; keep digging and juniors also get the steps.",
+        "ko": "인용은 시작되지만 아직 얇습니다 — 빈 칸: {fields}. 이어 파면 "
+              "후배가 행동 순서까지 받습니다.",
+    },
 }
 
 

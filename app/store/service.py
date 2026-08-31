@@ -806,13 +806,34 @@ def confirm_card(
         "rule_warning": (t("cv.rule_uncovered", lang, n=len(uncov))
                          if uncov else ""),
         "card": card_view(card),
-        "warning": t("warn.no_exceptions", lang) if not card.exceptions else "",
+        "warning": _thin_card_warning(card, lang),
         "filled_gap": filled,
         "verification_reset": verification_reset,
         # judgment 미완 → 초안으로만 저장됐음을 UI 가 정직하게 말한다
         "saved_as_draft": incomplete,
         "draft_reason": t("cv.draft_needs_judgment", lang) if incomplete else "",
     }
+
+
+def _thin_card_warning(card: Card, lang: str) -> str:
+    """승인 순간, 비어 있는 핵심 칸을 정직하게 알린다 — 게이트가 아니라 거울.
+
+    신호+판단이면 인용 자격은 있다 (설계: cues 는 하드 게이트, rationale 은
+    비워도 된다 — Nisbett & Wilson). 하지만 전문가가 **모르고** 얇게 남기는
+    것과 알고 남기는 것은 다르다 (심사 QA: 43% 카드가 조용히 live)."""
+    empty = []
+    if not card.action:
+        empty.append(t("slot.action", lang) if False else
+                     ("action steps" if lang != "ko" else "조치 순서"))
+    if not card.exceptions:
+        empty.append("exceptions" if lang != "ko" else "예외")
+    if not card.failure:
+        empty.append("a failure story" if lang != "ko" else "실패 사례")
+    if not empty:
+        return ""
+    if not card.exceptions and len(empty) == 1:
+        return t("warn.no_exceptions", lang)
+    return t("warn.thin_card", lang, fields=" · ".join(empty))
 
 
 def dormant_card(
