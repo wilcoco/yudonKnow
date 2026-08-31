@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Walks Out the Door — building yudonKnow</title>
+<style>
+  :root { --ink:#1d1a16; --quiet:#6b645c; --amber:#b4762a; --bg:#faf8f5; --line:#e6e0d8; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); font:17px/1.75 Georgia, 'Times New Roman', serif; }
+  main { max-width:44rem; margin:0 auto; padding:56px 20px 80px; }
+  h1 { font-size:34px; line-height:1.25; margin-bottom:8px; }
+  .sub { color:var(--quiet); font-style:italic; margin-bottom:6px; }
+  .meta { color:var(--quiet); font-size:14px; font-family:system-ui, sans-serif; margin-bottom:36px;
+          padding-bottom:20px; border-bottom:1px solid var(--line); }
+  h2 { font-size:23px; margin:44px 0 12px; }
+  p { margin:14px 0; }
+  blockquote { border-left:3px solid var(--amber); padding:4px 0 4px 18px; margin:18px 0;
+               color:var(--quiet); font-style:italic; }
+  code { font:14.5px/1.6 ui-monospace, Menlo, monospace; background:#f0ece6;
+         padding:1px 5px; border-radius:4px; }
+  a { color:var(--amber); }
+  .box { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px 22px; margin:22px 0; }
+  .box p { margin:8px 0; }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line);
+           color:var(--quiet); font-size:14px; font-family:system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<main>
+<h1>What Walks Out the Door</h1>
+<p class="sub">Five days building yudonKnow — an agent that interviews retiring experts —
+and what thirteen rounds of adversarial QA did to it.</p>
+<p class="meta">I created this post for the purposes of entering the
+<strong>All Things Agentic Hackathon</strong> (Devpost, August 2026). ·
+<a href="https://yudonknow-530548975242.us-central1.run.app">live demo</a> ·
+<a href="https://github.com/wilcoco/yudonKnow">source</a></p>
+
+<h2>The problem arrived as a friend</h2>
+<p>Yudon is a close friend of mine, a few years from retirement. He wants to leave
+what he knows to the people coming up behind him — the will is already there.
+I watched him try. He opens a blank document and stops at "what do I even
+write." Ask him how he knows a defect is a speed problem and not a temperature
+problem, and he says: <em>"you just see it."</em></p>
+<p>I run a manufacturing company myself, and I was deep in automation projects on
+my own lines when it clicked: <strong>automation takes the procedures — the judgment
+walks out the door.</strong> A robot can repeat every documented step. It cannot tell
+you why a flow mark on the far side of the gate means speed, not temperature,
+while the thermometer reads normal.</p>
+<p>He is not withholding anything. He does not know what he knows until someone
+asks him the right question. That is an <em>interviewing</em> problem, and interviewing
+has a literature — the Critical Decision Method, ACTA, three decades of
+cognitive task analysis. What kept that literature away from Yudon was never
+the method; it was that a trained knowledge engineer costs more than a mould
+shop can pay. An LLM removes the unit cost. So the agent takes the
+interviewer's seat, and the human stays the source.</p>
+
+<h2>The design rule that decided everything</h2>
+<p>One rule, set on day one: <strong>the model joins only at the output layer — text in,
+text out.</strong> Gap detection, citability, verification badges, triage verdicts:
+all decided by plain code and by people. There is a test literally named
+<code>test_gap_decision_never_calls_the_llm</code>. When the alter doesn't know, the
+refusal is not the model being polite — the model was never called.</p>
+<p>That rule earned its keep twice. Once when I swapped the base model from
+Anthropic to Gemini and exactly one file changed. And once for every
+adversarial test below, because a judgment that lives in code is a judgment
+you can write a regression test against.</p>
+
+<h2>Thirteen rounds of getting punched</h2>
+<p>From day two, an external tester ran adversarial QA against the live
+deployment — playing a retiring expert, a junior, HR and legal, a security
+reviewer, an enterprise buyer, and a deliberately grumpy hackathon judge.
+Thirteen rounds in four days, from a 72-point "idea demo" through two No-Go
+verdicts to 90/100. Every finding below shipped as a fix <em>plus a regression
+test</em>, the same day it was reported. Three favourites:</p>
+
+<div class="box">
+<p><strong>The expert's corrections tried to become knowledge.</strong> A tester answered a
+sensory question with "There was no sound, smell, or visual clue. Do not
+record one." The card compiler stored <em>Do not record one</em> as an observable
+cue — and it surfaced as a checkbox in the compiled protocol. The fix is
+deterministic, not prompted: statements of absence and meta-corrections are
+classified and blocked at capture, at merge, and at approval-save, and a
+sensory denial now pivots the interview to relational and timing cues instead
+of re-asking the channel question.</p>
+</div>
+
+<div class="box">
+<p><strong>Reward integrity broke the moment money was imaginable.</strong> The product
+pays retirees by verified use — citations and "it helped" field reports. A
+tester showed the card owner could ask their own alter and click "it helped,"
+inflating their own settlement basis. Now self-use answers normally but never
+counts: excluded from citations and the ledger at write time <em>and</em> read time,
+self-reports rejected outright, duplicates merged. The ledger stayed
+append-only; the statement just refuses to count you applauding yourself.</p>
+</div>
+
+<div class="box">
+<p><strong>The 20-second turns were not a quota problem.</strong> Judges felt 20–26s
+question latency and suggested buying a better tier. The logs showed zero
+rate-limit errors — schema-extraction calls were spending 16–19 seconds in
+model <em>thinking</em>. Turning thinking off for extraction (keeping it only where
+output feeds the decision engine) cut turns to 1–4 seconds. Money would not
+have fixed it; reading the logs did.</p>
+</div>
+
+<h2>The part I care about most</h2>
+<p>The alter refuses well. Ask it something the expert never left behind and it
+says so, plainly, and files your question — word for word — into the expert's
+dig queue, so the next interview digs where real demand is. Prompt-injection
+attempts get refused <em>and quarantined</em>: they never reach the expert's screen
+disguised as a junior's question. And the coverage number is capped at 0.95,
+because an early version reached 1.0 and it read as a lie — the fingertip
+knowledge was still in his hands. What could <em>not</em> be captured is reported
+next to what could, always.</p>
+<blockquote>He leaves. His judgment stays on the line — and every time it works,
+so does his name.</blockquote>
+
+<h2>If you want to poke it</h2>
+<p>The <a href="https://yudonknow-530548975242.us-central1.run.app">demo</a> needs no
+sign-in. Ask Dale's alter about clarifier weir stringing and open the card it
+cites; then ask it for salary advice and watch it refuse. The
+<a href="https://github.com/wilcoco/yudonKnow">repo</a>'s 113 tests run offline —
+no API key, no network — because every promise in this post is enforced by
+one of them.</p>
+
+<footer>
+Written by the builder of yudonKnow for the All Things Agentic Hackathon,
+August 2026. Built with Gemini 3.5 Flash on Vertex AI, Cloud Run, and Cloud
+SQL.
+</footer>
+</main>
+</body>
+</html>
