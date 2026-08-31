@@ -672,6 +672,16 @@ def _upsert_card(
         # 영역명이 이기면 지도 커버리지가 영영 0 이다 (심사 QA P0 실측:
         # 'Assembly line maintenance' 가 새로 생기고 6단계는 전부 0%).
         card.domain = sess.domain
+    else:
+        card.domain = row.domain or card.domain
+    # 전문가가 정한 **통제 값**은 재추출이 절대 덮지 않는다 — 새 Card 객체의
+    # 기본값(public 등)이 저장값을 밀어내면, private 로 둔 초안이 다음 답변
+    # 한 번에 public 으로 돌아간다 (심사 QA 재현: 재개 초기값만 고치고 턴
+    # 저장 경로가 남아 있었다).
+    card.visibility = Visibility(row.visibility or card.visibility.value)
+    card.for_whom = row.for_whom or card.for_whom
+    card.open_at = row.open_at or card.open_at
+    card.tacitness = Tacitness(row.tacitness or card.tacitness.value)
     write_card(row, card)
     row.instrument = sess.instrument
     row.source_turn = sess.id

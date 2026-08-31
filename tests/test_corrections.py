@@ -88,3 +88,27 @@ def test_identity_seeking_questions_are_demoted():
     assert not asks_identity(
         "What role did the shipping clerk play in verifying the count?")
     assert not asks_identity("Who signs off the final release checklist?")
+
+
+def test_redig_never_widens_visibility(session):
+    """재발굴 턴이 전문가가 정한 공개범위를 덮지 않는다 (심사 QA 재현:
+    private 초안 재개 후 다음 답변 제출 → public 으로 복귀)."""
+    from app.store import db as _db
+    service.ensure_expert(session, "vis-1", display_name="vis-1")
+    started = service.start_session(session, "vis-1", lang="en")
+    r = service.answer_turn(session, started["turn_id"],
+                            "A rising pH before rain means an upstream dump.",
+                            lang="en")
+    card_id = session.get(_db.Session, started["session_id"]).card_id
+    # 판단 없이 private 로 저장 → draft 유지 (발행 차단)
+    out = service.confirm_card(session, card_id, visibility="private", lang="en",
+                               edits={"cues": ["pH rising before rain"]})
+    assert out["saved_as_draft"] is True
+    assert session.get(_db.CardRow, card_id).visibility == "private"
+    # 재개 후 다음 답변 제출 — 공개범위가 살아남아야 한다
+    resumed = service.resume_session(session, card_id, lang="en")
+    service.answer_turn(session, resumed["turn_id"],
+                        "Flow stays normal, that rules out infiltration.",
+                        lang="en")
+    assert session.get(_db.CardRow, card_id).visibility == "private", (
+        "재발굴 턴이 private 를 public 으로 되돌리면 통제권 주장이 무너진다")
