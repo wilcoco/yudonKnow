@@ -35,6 +35,8 @@
   .print-btn{ position:fixed; top:14px; right:14px; font-family:sans-serif; padding:8px 14px;
     border:1px solid var(--line); background:#fff; border-radius:18px; cursor:pointer; }
   @media print{ .print-btn, .draft-edit{ display:none; } body{ background:#fff; } .page{ padding-top:0; } }
+  /* 모바일: 우상단 고정 버튼이 본문을 가린다 (심사 QA) — 일반 흐름 배치로 */
+  @media (max-width:700px){ .print-btn{ position:static; display:block; margin:10px auto 0; } }
 </style>
 </head>
 <body>
