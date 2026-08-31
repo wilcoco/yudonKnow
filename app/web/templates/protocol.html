@@ -217,6 +217,9 @@ function renderStep(){
      </div>` +
     `<div class="strip">${strip}</div>`;
   box.dataset.currentKey = sign.key;
+  // 모바일: 진행될수록 상태 칩이 자라 답 버튼이 화면 밖으로 밀린다 —
+  // 매 질문마다 문진 박스를 뷰포트 안으로 (심사 QA 모바일 실측).
+  box.scrollIntoView({block: 'start', behavior: 'auto'});
 }
 async function stepAnswer(btn, val){
   const key = document.getElementById('cues').dataset.currentKey;
