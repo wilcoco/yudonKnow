@@ -361,6 +361,7 @@ function show(id){
     ta.value = '';
   }
   for(const s of ['onboard','home','session','afterglow','cardview','library','methods']) $(s).hidden = (s!==id);
+  window.scrollTo(0, 0);   // 모바일: 이전 화면 스크롤이 새 화면 중간으로 이어지지 않게
   // 초행(온보딩)에는 헤더의 아이디·열기를 숨긴다 — 로그인처럼 읽힌다.
   // "내 카드 열기" 보조 링크(revealWho)로만 연다.
   const w = $('who_wrap');

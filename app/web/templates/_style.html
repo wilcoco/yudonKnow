@@ -53,9 +53,12 @@
   button.ghost{border-style:dashed;color:var(--muted)}
   button.block{width:100%;padding:13px;border-radius:12px;font-size:15px}
   .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-  input[type=text],textarea,select{width:100%;padding:12px 14px;border-radius:10px;
-    border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;
+  input[type=text],input[type=date],textarea,select{width:100%;padding:12px 14px;
+    border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font:inherit;
     font-size:16px /* iOS: 16px 미만이면 포커스 시 강제 줌 */}
+  input[type=date]{-webkit-appearance:none;appearance:none;min-height:48px}
+  input[type=date]::-webkit-date-and-time-value{text-align:left}
   textarea{min-height:120px;resize:vertical}
   input:focus,textarea:focus,select:focus{outline:2px solid var(--verify);outline-offset:1px}
   button:focus-visible,a:focus-visible{outline:2px solid var(--verify);outline-offset:2px;border-radius:6px}
