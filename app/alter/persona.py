@@ -317,12 +317,17 @@ def memoir_prose(
     return _honest_prose(text, cards)
 
 
+_HANGUL = re.compile(r"[가-힣]")
+_LATIN = re.compile(r"[A-Za-z]{2,}")
+
+
 def gap_message(
     persona: Persona,
     *,
     days_left: int | None,
     alternatives: list[str],
     lang: str = "en",
+    question_lang: str = "",
 ) -> str:
     """모른다고 말하는 화면. **이걸 잘 말하는 것이 이 제품의 기능이다.**
 
@@ -330,7 +335,11 @@ def gap_message(
     언어가 달라서 못 걸린 것을 "남기지 않은 영역" 이라고 하면, 설계 결정이
     제품 결함으로 읽힌다. 언어 경계에서는 막다른 길이 아니라 이정표를 준다.
     """
-    if persona.lang and persona.lang != lang and persona.card_count:
+    # 판별 기준은 UI 언어가 아니라 **질문의 언어**다 (심사 QA P1: 한국어
+    # 화면에서 영어로 물었더니 "남기지 않은 영역" 이라는 거짓말이 나왔다 —
+    # 카드는 있고, 못 찾은 이유는 언어인데).
+    asked_in = question_lang or lang
+    if persona.lang and persona.lang != asked_in and persona.card_count:
         lines = [
             t("alter.msg.lang_wall", lang,
               name=persona.display_name or persona.expert,
@@ -391,6 +400,10 @@ def respond(
             text=gap_message(
                 persona, days_left=days_left,
                 alternatives=alternatives or [], lang=lang,
+                question_lang=(
+                    "ko" if _HANGUL.search(question)
+                    else "en" if _LATIN.search(question) else ""
+                ),
             ),
             cards=[],
             confidence=result.confidence,

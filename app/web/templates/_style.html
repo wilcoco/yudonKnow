@@ -24,7 +24,9 @@
   .brand{font-weight:700;font-size:17px;letter-spacing:-.01em;text-decoration:none;color:var(--ink)}
   .brand span{color:var(--amber)}
   .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-  .who input{width:120px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);
+  /* [type=text] 를 명시해 아래 전역 input[type=text]{width:100%} 를 특이도로
+     이긴다 — 같은 특이도면 뒤 규칙이 이겨 헤더가 148px 로 부풀었다 (QA 실측) */
+  .who input[type=text]{width:120px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);
     background:var(--panel);color:var(--ink);font:inherit;font-size:13px}
   main{max-width:900px;margin:0 auto;padding:26px 20px 90px}
   .wide{max-width:1180px}
