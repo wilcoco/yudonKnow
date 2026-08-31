@@ -42,6 +42,10 @@
     </span>
   </div>
   <p class="quiet" style="margin-top:0">{{ L['alter.disclaimer'] }}</p>
+  <p class="quiet" style="margin:6px 0 0">{{ L['alter.as.try'] }}
+    <a class="b" href="#" onclick="enterAsId('judge-'+Math.random().toString(36).slice(2,6));return false">{{ L['alter.as.visitor'] }}</a>
+    {% if named_for %}<a class="b" href="#" onclick="enterAsId({{ named_for | tojson }});return false">{{ L['alter.as.named'].replace('{}', named_for) }}</a>{% endif %}
+  </p>
 
   <div class="row" style="margin:16px 0 6px">
     <input type="text" id="q" placeholder="{% if ask_example %}{{ L['alter.example'].replace('{q}', ask_example) }}{% else %}{{ L['alter.ask.ph'] }}{% endif %}" onkeydown="if(event.key==='Enter')ask()">
@@ -59,11 +63,7 @@
   </p>
   {% endif %}
   <p class="quiet" style="margin-top:8px;max-width:70ch">{{ L['alter.steps'] }}</p>
-  <p class="quiet" style="margin-top:4px;max-width:70ch">{{ L['alter.viewer.hint'] }}
-    <br>{{ L['alter.as.try'] }}
-    <a class="b" href="#" onclick="enterAsId('judge-'+Math.random().toString(36).slice(2,6));return false">{{ L['alter.as.visitor'] }}</a>
-    {% if named_for %}<a class="b" href="#" onclick="enterAsId({{ named_for | tojson }});return false">{{ L['alter.as.named'].replace('{}', named_for) }}</a>{% endif %}
-  </p>
+  <p class="quiet" style="margin-top:4px;max-width:70ch">{{ L['alter.viewer.hint'] }}</p>
   <div class="err" id="err" role="alert" aria-live="assertive"></div>
   <div class="card" id="fu" hidden style="border-style:dashed">
     <p class="c" id="fu_body"></p>
