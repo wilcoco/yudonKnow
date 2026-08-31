@@ -203,8 +203,19 @@ function render(q, r){
     html += `<div class="gap">${esc(r.text).replace(/\n/g,'<br>')}</div>
       <p class="quiet">${esc(L['alter.gap.note'])}</p>`;
   } else {
-    html += `<p class="t" style="font-size:16px">${esc(r.persona)}</p>
-             <div class="c" style="color:var(--ink);font-size:14.5px">${esc(r.text).replace(/\n/g,'<br>')}</div>`;
+    html += `<p class="t" style="font-size:16px">${esc(r.persona)}</p>`;
+    // 지금 할 일 — LLM 이 아니라 **인용 1순위 카드의 조치 순서**에서
+    // 결정적으로 뽑는다 (판정을 LLM 에 위임하지 않는다). 현장은 이 세 줄을
+    // 먼저 보고, 근거·예외는 아래에서 읽는다 (심사 QA 제안).
+    const top = (r.cards||[])[0];
+    if(top && (top.action||[]).length){
+      html += `<div class="card" style="margin:8px 0;border-left:3px solid var(--ok,#2e7d32)">
+        <p class="t">✅ ${esc(L['alter.donow'])}</p>
+        <ol class="c" style="margin:4px 0 4px 18px;padding:0">` +
+        top.action.slice(0,3).map(a => `<li>${esc(a)}</li>`).join('') +
+        `</ol><p class="quiet">${esc(L['alter.donow.src'].replace('{}', top.title))}</p></div>`;
+    }
+    html += `<div class="c" style="color:var(--ink);font-size:14.5px">${esc(r.text).replace(/\n/g,'<br>')}</div>`;
     if(r.apprentice_notice)
       html += `<div class="gap" style="margin-top:10px">🔴 ${esc(r.apprentice_notice)}</div>`;
     if(r.contested.length)

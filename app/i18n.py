@@ -1210,6 +1210,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "답 못한 질문은 질문자 아이디와 함께 선배의 발굴 큐에 저장됩니다 — "
               "공백은 그렇게 채워집니다.",
     },
+    "alter.donow": {"en": "Do now", "ko": "지금 할 일"},
+    "alter.donow.src": {"en": "from card: {}", "ko": "근거 카드: {}"},
     "alter.gap.note": {
         "en": "Saying \"I don't know\" is a feature here, not a failure. It will not "
               "make something up.",
