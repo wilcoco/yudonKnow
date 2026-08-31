@@ -346,6 +346,15 @@ automated promotion gate (the verifier here is the field, not an algorithm),
 and vector search as the primary retrieval path — see
 [`docs/lineage.md`](docs/lineage.md) for why, and what it costs us.
 
+**Authentication is deliberately deferred, not missing.** The demo uses a
+lightweight identity switcher so judges can test the senior and junior roles
+immediately, on synthetic data. The production design is already fixed
+(`docs/roadmap.md`): corporate SSO — for a Microsoft 365 org, Entra ID OIDC
+with the immutable `oid` claim as the actor id. Permission checks are already
+centralised in two functions (`viewer == expert`, `visible_to()`), so the
+swap is a days-scale integration, not a redesign — and it upgrades the
+compensation ledger to authenticated identities for free.
+
 ## Standing on
 
 Cognitive task analysis: **CDM** (Klein, Calderwood & MacGregor, 1989) and
