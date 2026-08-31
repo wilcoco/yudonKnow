@@ -103,6 +103,8 @@ explicit field reports are ever counted. No vanity metrics, so the same
 numbers that give the expert their pride can, under an HR policy, pay their
 royalty.
 
+**8. The same interview typesets a career memoir.** Every judgment card doubles as a chapter source: the AI drafts a first-person narrative for each duty area — what I watched for, the call I made, the day it fooled me — and **nothing enters the record until the author approves it**, chapter by chapter. Juniors don't just inherit a filing cabinet; they inherit a person: the memoir opens with the expert's own farewell letter, and print is a first-class citizen. One conversation, three assets — a working alter for the juniors, a usage ledger for the retiree, and a chronicle of a working life for the person who lived it.
+
 ## How we built it
 
 Python, FastAPI, SQLAlchemy, server-rendered Jinja — deployed on Google

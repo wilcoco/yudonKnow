@@ -28,6 +28,8 @@ The numbers say this gap is universal. APQC's survey of 1,000 organizations (*Na
 
 **7. The gap goes back to the expert, and that closes the loop.** Unanswered questions queue on the expert's home screen, ranked by how many juniors asked and how soon the expert leaves. The next excavation topic is set by real demand, not by a consultant. When a junior reports back that the advice worked, that lands in the expert's Legacy Ledger — and the ledger is audit-grade: the owner's own asks and self-reports are excluded from settlement by construction, duplicates are merged, and only citations and explicit field reports are ever counted. No vanity metrics, so the same numbers that give the expert their pride can, under an HR policy, pay their royalty.
 
+**8. The same interview typesets a career memoir.** Every judgment card doubles as a chapter source: the AI drafts a first-person narrative for each duty area — what I watched for, the call I made, the day it fooled me — and **nothing enters the record until the author approves it**, chapter by chapter. Juniors don't just inherit a filing cabinet; they inherit a person: the memoir opens with the expert's own farewell letter, and print is a first-class citizen. One conversation, three assets — a working alter for the juniors, a usage ledger for the retiree, and a chronicle of a working life for the person who lived it.
+
 ## How we built it
 
 Python, FastAPI, SQLAlchemy, server-rendered Jinja — deployed on Google Cloud Run + Cloud SQL, with Gemini 3.5 (Google GenAI SDK on Vertex AI) doing the interviewing and the alter's voice.
