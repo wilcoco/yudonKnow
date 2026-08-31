@@ -194,6 +194,18 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "langname.ko": {"en": "Korean", "ko": "한국어"},
     "langname.en": {"en": "English", "ko": "영어"},
+    "demo.identity": {
+        "en": "Demo identity — no authentication, by design: a lightweight "
+              "switcher lets judges test the senior and the junior roles "
+              "immediately, on synthetic data. In production, owner access, "
+              "visibility, and verified usage are bound to corporate SSO. This "
+              "demo focuses on the knowledge-extraction and reuse engine.",
+        "ko": "데모 신원 — 인증이 없는 것은 의도된 설계입니다: 가벼운 신원 "
+              "전환으로 심사자가 선배·후배 역할을 즉시 오가며 시험할 수 "
+              "있습니다(데이터는 합성). 실배포에서는 소유자 접근·공개범위·"
+              "검증 사용이 사내 SSO 에 묶입니다. 이 데모의 초점은 지식 "
+              "발굴·재사용 엔진입니다.",
+    },
     "landing.demo_scope": {
         "en": "Demo scope: card content honors your visibility settings; "
               "profile name and usage counts are visible in this demo. "
