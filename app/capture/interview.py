@@ -456,6 +456,28 @@ def hostile_question(text: str) -> bool:
     return any(m in low for m in _HOSTILE_MARKS)
 
 
+#: 신원 요구 질문 — 사람 이름·신원·사번을 묻는 생성 질문은 화면의
+#: "실명은 필요 없습니다" 약속과 모순된다 (심사 QA 우선순위 1:
+#: "Who was the shipping clerk you worked with?"). 걸리면 규칙 기반
+#: 질문으로 강등한다 — 판단에 필요한 것은 이름이 아니라 역할이다.
+_IDENTITY_ASK = (
+    "his name", "her name", "their name", "your name", "the name of",
+    "employee number", "employee id", "staff number",
+    "이름이 무엇", "이름은 무엇", "이름을 알려", "실명", "사번", "누구였습니까",
+    "누구였나요", "누구입니까", "누구인가요",
+)
+import re as _re_id
+_WHO_PERSON = _re_id.compile(
+    r"^\s*who\s+(was|is|were|did)\b.*\b(you|your)\b", _re_id.I)
+
+
+def asks_identity(question: str) -> bool:
+    low = " ".join(str(question or "").lower().split())
+    if any(m in low for m in _IDENTITY_ASK):
+        return True
+    return bool(_WHO_PERSON.search(low))
+
+
 _NEG_MARKS = ("no ", "not ", "none", "never", "wasn't", "was not",
               "isn't", "is not", "없었", "없다", "없습니다", "없어요", "아니")
 
@@ -659,7 +681,7 @@ def next_question(
     except Exception as exc:
         log.warning("질문 생성 실패, 규칙 기반 대체: %s", exc)
         text = ""
-    if not text or text.startswith("⚠"):
+    if not text or text.startswith("⚠") or asks_identity(text):
         return Question(
             text=fallback_text, rung=rung[0], instrument=instrument,
             targets=target, fallback=True,
@@ -703,11 +725,15 @@ def _build_probe_prompt(
         ("전제 규칙: 전문가가 실제로 말한 것만 전제로 삼아라. 말한 적 없는 "
          "사건·수치·고객·상황을 기정사실처럼 깔지 마라. 가정이 필요하면 "
          "'만약 ~라면'으로 가정임을 드러내라.\n"
+         "사람의 이름·신원·사번은 절대 묻지 마라 — 역할을 물어라 "
+         "('그 담당자는 어떤 역할이었습니까').\n"
          "질문 문장만 출력해라. 머리말·설명 금지.") if ko
         else ("Premise rule: presuppose only what the expert actually said. "
               "Never state an event, number, client, or situation the expert "
               "did not mention as if it happened. If you need a hypothetical, "
               "mark it openly as one ('suppose ...').\n"
+              "Never ask for a person's name, identity, or employee number — "
+              "ask for their ROLE instead ('what role did the clerk play').\n"
               "Output the question sentence only. No preamble, no explanation.")
     )
     return "\n".join(lines)
@@ -1078,6 +1104,9 @@ Hard rules:
   ONLY if the expert explicitly said it does not fit in words. Never invent
   an unspeakable item; an expert who excludes vague impressions must not be
   handed one. The fact that it does not fit is itself the record.
+- Write 'action' steps as present-tense imperatives — do not copy the
+  story's past tense ("hold the lane until the twelfth scan appears",
+  never "until the twelfth scan appeared").
 - Never put a real person's name, a company name, or a client name into
   the card — replace it with the role or the industry ("Mr. Kim, HR head" →
   "the HR lead", "Acme Logistics Inc." → "a logistics firm"). The judgment
@@ -1108,6 +1137,8 @@ _CAPTURE_PROMPT = """다음은 숙련 전문가와의 발굴 대화다. 여기�
   **전문가가 그렇게 말했을 때만** 적어라. 지어낸 '못 담은 것'은 최악이다 —
   모호한 인상을 배제하는 전문가에게 그것을 쥐여주게 된다.
   담기지 않는다는 사실 자체가 기록이다.
+- 'action'(조치 순서)은 **현재형 명령문**으로 적어라 — 사건 서술의 과거형을
+  그대로 옮기지 마라 ("12번째 스캔이 뜰 때까지 잡아라", not "떴을 때까지").
 - 사람 실명·회사명·고객명은 카드에 적지 마라 — 역할·업종으로 바꿔라
   ("김OO 부장" → "인사 책임자", "OO물류(주)" → "한 물류회사"). 판단에
   필요한 것은 이름이 아니라 역할이다. 원본 발화는 어차피 따로 보존된다.
@@ -1129,7 +1160,7 @@ class CardDraft:
         card = Card(
             id=id,
             expert=expert,
-            title=str(d.get("title", ""))[:200],
+            title=_clip_sentence(str(d.get("title", "")), 200),
             domain=str(d.get("domain", "")),
             situation=str(d.get("situation", "")),
             cues=[str(x) for x in d.get("cues", []) if str(x).strip()],
@@ -1343,8 +1374,9 @@ def _fallback(
             # "그냥 감" 은 신호가 아니다 — 인용 게이트를 통과하는 쓰레기 카드를
             # 만드는 대신, 담기지 않았다는 사실 자체를 도제 항목으로 남긴다
             # (elicitation-protocol §1-2). 억지로 언어화시키지 않는다.
-            if answer[:200] not in data["unspeakable"]:
-                data["unspeakable"].append(answer[:200])
+            clipped = _clip_sentence(answer, 200)
+            if clipped not in data["unspeakable"]:
+                data["unspeakable"].append(clipped)
             continue
         if slot in _LIST_SLOTS:
             parts = [p.strip() for p in _SENTENCE.split(answer) if p.strip()]
@@ -1352,7 +1384,7 @@ def _fallback(
                 if part not in data[slot]:
                     data[slot].append(part)
         elif not data[slot]:
-            data[slot] = answer[:300]
+            data[slot] = _clip_sentence(answer, 300)
     return CardDraft(data=data, fallback=True)
 
 
@@ -1368,8 +1400,10 @@ def _clip_sentence(text: str, limit: int) -> str:
         i = head.rfind(mark)
         if i > limit // 4:
             return head[: i + len(mark)].strip()
+    # 문장 끝을 못 찾았다 — 단어 경계에서 자르고 잘렸음을 표시한다
+    # (심사 QA: "inside the next Have I got that right?" 같은 무단 절단 금지).
     i = head.rfind(" ")
-    return (head[:i] if i > limit // 2 else head).strip()
+    return (head[:i] if i > limit // 2 else head).strip() + "…"
 
 
 def reflect(card: Card, slot: str, lang: str = "en") -> str:

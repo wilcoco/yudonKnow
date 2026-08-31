@@ -72,3 +72,19 @@ def test_confirm_scrubs_correction_lines(session):
                "judgment": "quarantine the lot"})
     cues = result["card"]["cues"]
     assert cues == ["warranty claims cluster on one lot code"]
+
+
+def test_identity_seeking_questions_are_demoted():
+    """이름·신원·사번을 묻는 생성 질문은 규칙 기반으로 강등된다 (심사 QA #1).
+
+    화면이 "실명은 필요 없습니다" 라고 약속하는데 질문이 이름을 물으면 모순이다.
+    """
+    from app.capture.interview import asks_identity
+    assert asks_identity(
+        "Who was the shipping clerk you worked with during that outage?")
+    assert asks_identity("그 담당자 이름이 무엇입니까?")
+    assert asks_identity("What is his name and employee number?")
+    # 역할·절차 질문은 통과
+    assert not asks_identity(
+        "What role did the shipping clerk play in verifying the count?")
+    assert not asks_identity("Who signs off the final release checklist?")

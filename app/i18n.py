@@ -772,12 +772,17 @@ CATALOG: dict[str, dict[str, str]] = {
     "home.staying": {"en": "still here", "ko": "재직 중"},
     "home.left": {"en": "{} days since leaving", "ko": "퇴직 후 {}일"},
     "home.stats": {
+        # 대시보드는 활동(본인 미리보기 포함), 명세서는 검증된 타인 사용만 —
+        # 두 수가 다른 것이 정상임을 화면이 직접 말한다 (심사 QA #3).
         "en": "{alive} judgments live · {verified} field-verified · used in "
               "{used} answers · {cited} card citations · \"helped\" {helped} / "
-              "\"didn't hold\" {missed} · unanswered {gaps}",
+              "\"didn't hold\" {missed} · unanswered {gaps} — dashboard "
+              "activity includes owner previews; the statement bills verified "
+              "third-party use only",
         "ko": "살아있는 판단 {alive} · 현장 검증 {verified} · 답변 채택 {used}회 · "
               "카드 인용 {cited}건 · '도움됐다' {helped} / '안 맞았다' {missed} · "
-              "미응답 {gaps}",
+              "미응답 {gaps} — 대시보드 활동(본인 미리보기 포함) 기준, "
+              "명세서는 검증된 타인 사용만 정산합니다",
     },
     "home.gaps.head": {
         "en": "🔴 Juniors asked these and I could not answer — {} of them",
