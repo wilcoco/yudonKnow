@@ -209,7 +209,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "landing.alters": {"en": "The alters left behind", "ko": "남겨진 분신들"},
     "landing.alter.cards": {"en": "{} judgment cards", "ko": "판단 카드 {}장"},
-    "landing.alter.days": {"en": "leaves in {} days", "ko": "재직 D-{}"},
+    "landing.alter.days": {"en": "retires in {} days", "ko": "은퇴까지 {}일"},
     "landing.mine.title": {"en": "Leave mine", "ko": "내 분신 만들기"},
     "landing.mine.body": {
         "en": "Answer as I ask — 3 minutes leaves a draft, 7 a reviewed card. "
@@ -1255,8 +1255,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "An alter never impersonates a person. When it doesn't know, it says so.",
         "ko": "분신은 사람을 사칭하지 않습니다. 모르면 모른다고 말합니다.",
     },
-    "alter.gone": {"en": "they have already left", "ko": "이미 떠나셨습니다"},
-    "alter.dday": {"en": "leaves in {} days", "ko": "재직 D-{}"},
+    "alter.gone": {"en": "already retired — the alter answers on", "ko": "이미 은퇴하셨습니다 — 분신이 대신 답합니다"},
+    "alter.dday": {"en": "retires in {} days — ask while they are here", "ko": "은퇴까지 {}일 — 계실 때 물어보세요"},
 
     # ── 분신이 내는 문장 (LLM 을 거치지 않는 것들) ────────────────────
     "alter.msg.stopped": {
@@ -1338,7 +1338,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "▸ 질문이 선배의 발굴 큐에 그대로 기록됐습니다 — 다음 발굴 때 "
               "선배가 (질문자 아이디와 함께) 봅니다",
     },
-    "alter.msg.gap.dday": {"en": " (leaves in {} days)", "ko": " (재직 D-{})"},
+    "alter.msg.gap.dday": {"en": " (they retire in {} days)", "ko": " (은퇴까지 {}일)"},
     "alter.msg.gap.alt": {
         "en": "▸ Others who left something in this area: {}",
         "ko": "▸ 비슷한 영역을 남긴 사람: {}",
