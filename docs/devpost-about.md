@@ -200,24 +200,41 @@ held back by recommending three, not by hiding).
 
 ## Accomplishments that we're proud of
 
-- **The wheel actually closes**, and a test proves it: a judgment the expert
-  approved is cited in a junior's answer, the junior's report lands on the
-  expert's ledger, and an unanswered question becomes the next interview.
-- **Seventeen external QA rounds in five days** (a ChatGPT-based adversarial
-  tester playing retiree, junior, HR/legal, security, AI-tech, UX, enterprise
-  buyer, and hackathon judge) took the build from a 72-point "idea demo"
-  through two No-Go verdicts to **94/100**, every fix landing as a regression
-  test first — **120 automated checks** now hold the line.
-- **Adversarial receipts, reproducible live**: prompt injection gets a
-  refusal and never reaches the expert's queue; an all-"no" questionnaire
-  yields no fabricated verdict; the dashboard and the usage statement
-  cross-verify.
-- **The veTriage reproduction experiment** above — same protocol structure
-  from interview alone, zero missed emergencies, zero fabrication on undug
-  pathways.
-- **A privacy model the expert actually controls**: private / named-person /
-  sealed-until-date per card, alter kill-switch, and access denials that say
-  exactly why without leaking what.
+- **We put the knowledge engineer's methodology into an agent's hands.**
+  Extracting tacit knowledge was a solved research problem (CDM, ACTA —
+  three decades in firefighting, aviation, medicine) with an unsolved unit
+  cost: a trained human interviewer per expert. yudonKnow operationalises
+  that methodology — task diagrams, incident probes, cue laddering, member
+  checking, twelve self-excavation instruments — as an agent that any
+  retiring expert can sit with today. The proof we ran: armed with the
+  veTriage winner's own clinical rules, we let yudonKnow interview us as
+  the veterinarian — 13 turns extracted the same front-desk triage
+  structure plus the failure story and trap vocabulary the hand-built app
+  doesn't carry. Ten synthetic cases: 0 missed emergencies, and on the
+  pathways we deliberately did not dig, the alter invented nothing.
+- **The extraction survives what real experts actually do.** Experts
+  correct the interviewer ("there was no smell — do not record one"),
+  deny premises, refuse cases, and speak in stories. Deterministic
+  compile-time guards keep corrections, negations, and narrative fragments
+  out of the cue fields; a sensory denial pivots the interview to
+  relational and timing cues instead of re-asking the channel.
+- **The wheel actually closes**, and a test proves it: a judgment the
+  expert approved is cited in a junior's answer, the junior's field report
+  lands on the expert's ledger, and an unanswered question becomes the
+  next interview topic — demand-ranked, not consultant-picked.
+- **It survived five days of adversarial QA — and every finding is now a
+  test.** An external tester attacked the live deployment daily as
+  retiree, junior, HR/legal, security, enterprise buyer, and a hostile
+  judge. Seventeen rounds, two No-Go verdicts, and findings we shipped
+  fixes for the same day: an owner inflating their own compensation
+  ledger, a prompt injection parked in the expert's queue. Each landed as
+  a regression test first — 120 automated checks hold the line; the
+  tester's verdict moved from "idea demo" to a 94-point product.
+- **Control the expert actually holds**: private / named-person /
+  sealed-until-date per card, publishing a minimum card requires explicit
+  confirmation of what's still empty, a rest drawer instead of deletion,
+  an alter kill-switch, and access denials that say exactly why without
+  leaking what.
 
 ## What we learned
 
