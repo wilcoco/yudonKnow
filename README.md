@@ -24,7 +24,7 @@ Built for the **All Things Agentic Hackathon** · category **Collaborative
 Partner** · [한국어 README](README.ko.md)
 
 **Live** (Cloud Run): <https://yudonknow-530548975242.us-central1.run.app> ·
-101 automated tests · Gemini 3.5 Flash via the Google GenAI SDK on Vertex AI
+113 automated tests · Gemini 3.5 Flash via the Google GenAI SDK on Vertex AI
 
 ---
 
@@ -169,7 +169,7 @@ badges and coverage are all decided by code and by people.
 
 That rule was tested for real. Moving the base model from Anthropic to Gemini
 changed **one file** — `app/capture/llm.py`. The elicitation ladder, the alter
-and every scoring rule in `app/core/` were untouched and all 40 tests passed.
+and every scoring rule in `app/core/` were untouched and every test passed.
 The Anthropic adapter is deliberately still in the tree: swappability is only
 proven while the alternative still compiles.
 
@@ -223,17 +223,21 @@ cognitive-task-analysis literature, not from a domain template.
 
 ---
 
-## Quick start (local)
+## Quick start & reproducible testing (local)
 
 ```bash
-git clone -b claude/expert-knowledge-preservation-tool-vtj127 \
-  https://github.com/wilcoco/yudonKnow.git
+git clone https://github.com/wilcoco/yudonKnow.git
 cd yudonKnow
 
 pip install -e ".[dev]"
-YDK_SEED=1 uvicorn app.web.app:app --reload    # http://127.0.0.1:8000
-pytest                                          # 40 tests
+pytest                                          # 113 tests, all offline (stub LLM)
+YDK_SEED=1 uvicorn app.web.app:app --reload     # http://127.0.0.1:8000
 ```
+
+The test suite needs **no API key, no network, and no database server** — it
+runs on a temp SQLite with the stub LLM, so `pytest` reproduces every design
+guarantee below on any machine. To exercise the live-model path instead, set
+`GOOGLE_CLOUD_PROJECT` (Vertex AI) or `GOOGLE_API_KEY` and rerun.
 
 **It runs with no API key at all.** Without one the LLM falls back to a stub
 that says it is a stub rather than inventing an answer — and the whole flow
