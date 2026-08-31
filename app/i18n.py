@@ -1508,6 +1508,21 @@ CATALOG: dict[str, dict[str, str]] = {
               "a junior.",
         "ko": "예외가 비어 있습니다. 예외 없는 판단은 후배에게 위험합니다.",
     },
+    "thin.title": {"en": "Minimum citation card", "ko": "최소 인용 카드"},
+    "thin.empty": {"en": "Empty: {fields}", "ko": "빈 칸: {fields}"},
+    "thin.note": {
+        "en": "The alter can cite the cues and the judgment now; the empty "
+              "fields simply won't appear until you dig them.",
+        "ko": "분신은 신호와 판단을 지금부터 인용할 수 있습니다. 빈 칸은 "
+              "파서 채우기 전까지 답에 나타나지 않을 뿐입니다.",
+    },
+    "thin.publish": {"en": "Publish the minimum card anyway",
+                     "ko": "최소 카드로 그대로 남기기"},
+    "thin.keep": {"en": "Keep digging", "ko": "이어서 파기"},
+    "thin.f.action": {"en": "Action", "ko": "행동"},
+    "thin.f.why": {"en": "Why", "ko": "이유"},
+    "thin.f.exceptions": {"en": "Exceptions", "ko": "예외"},
+    "thin.f.failure": {"en": "Failure story", "ko": "실패 사례"},
     "warn.thin_card": {
         "en": "Live, but thin — empty: {fields}. The alter can cite the "
               "judgment now; keep digging and juniors also get the steps.",

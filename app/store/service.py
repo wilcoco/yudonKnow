@@ -823,8 +823,9 @@ def _thin_card_warning(card: Card, lang: str) -> str:
     것과 알고 남기는 것은 다르다 (심사 QA: 43% 카드가 조용히 live)."""
     empty = []
     if not card.action:
-        empty.append(t("slot.action", lang) if False else
-                     ("action steps" if lang != "ko" else "조치 순서"))
+        empty.append("action steps" if lang != "ko" else "조치 순서")
+    if not str(card.rationale or "").strip():
+        empty.append("why it works" if lang != "ko" else "이유(왜 그런가)")
     if not card.exceptions:
         empty.append("exceptions" if lang != "ko" else "예외")
     if not card.failure:

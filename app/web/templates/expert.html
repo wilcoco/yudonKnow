@@ -263,6 +263,7 @@
           <div class="acts">
             <button class="amber" id="s_confirm_btn" onclick="confirmCard()">{{ L['sess.confirm'] }}</button>
           </div>
+          <div id="s_thin"></div>
           <p class="quiet" id="s_warn"></p>
         </div>
       </div>
@@ -1294,6 +1295,7 @@ async function sendAnswer(skip){
       return;
     }
     STATE.turn = r.turn_id; STATE.card = r.card;
+    THIN_OK = false; $('s_thin').innerHTML = '';
     say('said', skip ? L['sess.skip'] : answer);
     say('echo', r.reflection);
     say('ask', r.question);
@@ -1342,12 +1344,44 @@ function visChanged(){
   arg.value = '';
 }
 
+// 발행 전 명시적 확인 — 최소 카드(신호+판단)는 설계상 유효하지만,
+// **빈 칸을 알고 남기는 것**과 모르고 남기는 것은 다르다 (심사 QA:
+// 경고가 발행 후에 와서 Afterglow 에 가려졌다). API 호출 전에 묻는다.
+let THIN_OK = false;
+function thinEmptyFields(c){
+  const out = [];
+  if(!(c.action||[]).length) out.push(L['thin.f.action']);
+  if(!(c.rationale||'').trim()) out.push(L['thin.f.why']);
+  if(!(c.exceptions||[]).length) out.push(L['thin.f.exceptions']);
+  if(!(c.failure||'').trim()) out.push(L['thin.f.failure']);
+  return out;
+}
+function thinKeep(){
+  $('s_thin').innerHTML = '';
+  $('s_answer').focus();
+  if(AUTO) askCycle();
+}
 async function confirmCard(){
   err('');
   if(!STATE.card){ err(L['sess.no_card']); return; }
   // 서버는 신호 없는 카드를 어차피 거부한다 (err.no_cues) — 버튼이
   // 활성인 채 눌러서 오류를 받는 것보다, 같은 말을 먼저 하는 것이 낫다.
   if(!(STATE.card.cues||[]).length){ err(L['err.no_cues'] || ''); return; }
+  const emptyCore = thinEmptyFields(STATE.card);
+  const hasJudgment = !!(STATE.card.judgment && STATE.card.judgment.trim());
+  if(hasJudgment && emptyCore.length && !THIN_OK){
+    $('s_thin').innerHTML = `
+      <div class="card" style="border-left:3px solid var(--amber);margin-top:8px">
+        <p class="t">${esc(L['thin.title'])}</p>
+        <p class="c">${esc(fmt(L['thin.empty'], {fields: emptyCore.join(' · ')}))}</p>
+        <p class="quiet">${esc(L['thin.note'])}</p>
+        <div class="acts">
+          <button class="amber" onclick="THIN_OK=true;$('s_thin').innerHTML='';confirmCard()">${esc(L['thin.publish'])}</button>
+          <button class="primary" onclick="thinKeep()">${esc(L['thin.keep'])}</button>
+        </div>
+      </div>`;
+    return;
+  }
   // 승인은 별칭 생성(LLM) 때문에 5~10초 걸린다 — 침묵은 고장으로 읽힌다.
   const cbtn = $('s_confirm_btn'); const cbl = cbtn ? cbtn.textContent : '';
   if(cbtn){ cbtn.disabled = true; cbtn.textContent = L['sess.saving']; }
