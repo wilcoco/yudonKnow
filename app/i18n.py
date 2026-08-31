@@ -908,13 +908,19 @@ CATALOG: dict[str, dict[str, str]] = {
               "남긴 판단\" 만큼 강한 초대장은 없습니다.",
     },
     "invite.copy": {"en": "Copy", "ko": "복사"},
-    "cv.utter": {"en": "What you actually said (kept verbatim, never deleted)",
-                 "ko": "당신이 실제로 한 말 (원문 보존 — 지워지지 않습니다)"},
+    "cv.utter": {"en": "What you actually said — kept verbatim while this card lives",
+                 "ko": "당신이 실제로 한 말 — 이 카드가 살아 있는 동안 원문 그대로 보존"},
     "cv.talk": {
         "en": "💬 Dig this judgment further (talk with the AI)",
         "ko": "💬 이 판단 더 파기 (AI와 대화)",
     },
     "cv.dormant": {"en": "🗄 Put it to rest", "ko": "🗄 서랍에 넣기"},
+    "cv.draft_needs_judgment": {
+        "en": "Saved as a draft — a card needs a judgment (\"so what do you "
+              "do?\") before it can answer juniors. Keep digging to finish it.",
+        "ko": "초안으로 저장했습니다 — 카드가 후배에게 답하려면 판단(\"그래서 "
+              "어떻게 하나\")이 있어야 합니다. 이어서 파면 완성됩니다.",
+    },
     "cv.dormant.sure": {"en": "Tap again to confirm — juniors stop seeing it; nothing is deleted",
                         "ko": "한 번 더 누르면 확정 — 후배에게 안 보이게 됩니다. 지워지진 않습니다"},
     "cv.dormant.done": {
@@ -1059,6 +1065,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "sess.from_gap": {
         "en": "This is where a junior got stuck.", "ko": "후배가 막힌 곳입니다.",
     },
+    "sess.leave_unsaved": {
+        "en": "You have an answer you haven't sent yet. Leave without saving it?",
+        "ko": "아직 보내지 않은 답이 있습니다. 저장하지 않고 나가시겠어요?",
+    },
     "sess.answer.ph": {
         "en": "Say it the way you'd say it out loud. No need to tidy it up.",
         "ko": "말하듯이 적어주세요. 정리하지 않으셔도 됩니다.",
@@ -1076,6 +1086,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "sess.tacit.q": {"en": "🌡 Does this go into words?", "ko": "🌡 이건 읽어서 되나요?"},
     "sess.vis.q": {"en": "Who may see this?", "ko": "누가 볼 수 있나요?"},
     "sess.confirm": {"en": "Leave it like this", "ko": "이대로 남기기"},
+    "sess.savedraft": {"en": "Save draft & leave", "ko": "초안으로 저장하고 나가기"},
     "sess.saving": {"en": "Saving — drafting search aliases…",
                      "ko": "저장 중 — 검색 별칭을 뽑는 중…"},
     "sess.wrap_up": {

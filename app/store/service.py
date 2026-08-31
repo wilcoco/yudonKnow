@@ -768,7 +768,12 @@ def confirm_card(
         row.missed = 0
         verification_reset = True
 
-    card.status = CardStatus.CONFIRMED
+    # 판단(judgment)이 없으면 live 로 올리지 않는다 — 신호만 있는 카드는
+    # "그래서 어쩌라는" 이 없는 인터뷰 조각이고, 화면이 "은퇴 후에도 이
+    # 판단이 답한다" 고 주장하는 대상이 되면 안 된다 (심사 QA P0). 초안으로
+    # 남겨 다음 발굴을 부른다 — citable() 의 judgment 게이트와 층위를 맞춘다.
+    incomplete = not str(card.judgment or "").strip()
+    card.status = CardStatus.DRAFT if incomplete else CardStatus.CONFIRMED
     # 검색어 별칭 — 승인 순간이 "후배가 뭐라고 물을까" 를 뽑기 가장 좋은
     # 때다(내용 확정). 실질 수정 시에도 재생성. 실패는 무해(빈 목록).
     if substantive or not card.aliases:
@@ -779,7 +784,8 @@ def confirm_card(
             lang=(expert_row3.lang if expert_row3 and expert_row3.lang else lang),
         )
     write_card(row, card)
-    _log(session, card.expert, legacy.LedgerEvent.CARD_CONFIRMED, card_id=card.id)
+    if not incomplete:
+        _log(session, card.expert, legacy.LedgerEvent.CARD_CONFIRMED, card_id=card.id)
 
     # 이 카드가 후배의 공백을 메웠는가 — 메웠으면 질문자에게 알릴 대상이 된다.
     filled = _match_gap(session, card)
@@ -793,6 +799,9 @@ def confirm_card(
         "warning": t("warn.no_exceptions", lang) if not card.exceptions else "",
         "filled_gap": filled,
         "verification_reset": verification_reset,
+        # judgment 미완 → 초안으로만 저장됐음을 UI 가 정직하게 말한다
+        "saved_as_draft": incomplete,
+        "draft_reason": t("cv.draft_needs_judgment", lang) if incomplete else "",
     }
 
 
@@ -1880,6 +1889,7 @@ def card_view(card: Card) -> dict[str, Any]:
         "tacitness_emoji": card.tacitness.emoji,
         "visibility": card.visibility.value,
         "for_whom": card.for_whom,
+        "open_at": card.open_at.isoformat() if card.open_at else "",
         "risk": card.risk,
         "completeness": round(card.completeness, 2),
         "citable": card.citable(),

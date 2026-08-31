@@ -350,6 +350,14 @@ let STATE = {turn:null, card:null, session:null, home:null};
 
 const me = () => $('me').value.trim();
 function show(id){
+  // 세션을 벗어날 때 미전송 답변이 있으면 확인 — Next question 전에 쓴 글이
+  // 경고 없이 사라지던 문제 (심사 QA #4). 홈/서가로 튕기기 전에 한 번 묻는다.
+  const cur = document.getElementById('session');
+  const ta = document.getElementById('s_answer');
+  if(id !== 'session' && cur && !cur.hidden && ta && ta.value.trim()){
+    if(!window.confirm(L['sess.leave_unsaved'] || 'You have an unsent answer. Leave it?')) return;
+    ta.value = '';
+  }
   for(const s of ['onboard','home','session','afterglow','cardview','library','methods']) $(s).hidden = (s!==id);
   // 초행(온보딩)에는 헤더의 아이디·열기를 숨긴다 — 로그인처럼 읽힌다.
   // "내 카드 열기" 보조 링크(revealWho)로만 연다.
@@ -708,9 +716,23 @@ async function resumeDig(cardId){
     $('s_title').textContent = r.card.title || '—';
     $('s_slots').innerHTML = r.report.slots
       .map(x => `<span class="slot ${x.filled?'on':''}">${esc(x.label)}</span>`).join('');
+    // 저장된 공개범위·암묵지 값을 그대로 복원 — 재개했다고 공개범위가
+    // 넓어지면 안 된다 (심사 QA P0: select 가 public 으로 보였다).
+    restoreControls(r.card);
     show('session');
     autoUi(); if(AUTO) askCycle();
   }catch(e){ err(e.message); }
+}
+// 카드에 저장된 통제 값을 화면 select 로 되돌린다. 값이 없으면 비공개.
+function restoreControls(card){
+  const vis = $('s_vis'); if(vis) vis.value = (card && card.visibility) || 'private';
+  const tac = $('s_tacit'); if(tac && card && card.tacitness) tac.value = card.tacitness;
+  const arg = $('s_vis_arg');
+  if(arg){
+    if(card && card.visibility === 'targeted'){ arg.hidden=false; arg.value = card.for_whom||''; }
+    else if(card && card.visibility === 'sealed'){ arg.hidden=false; arg.value = card.open_at||''; }
+    else { arg.hidden=true; arg.value=''; }
+  }
 }
 
 // ── 문서함 — 발굴 지도. 문서는 "말하지 않는 것"으로 정리된다.
@@ -1293,7 +1315,14 @@ async function sendAnswer(skip){
     // 신호 없는 카드는 서버가 어차피 거부한다 — 버튼도 그 사실을 미리
     // 말한다 (활성인 채 눌러 오류 받는 UX 를 없앤다).
     const btn = $('s_confirm_btn');
-    if(btn){ btn.disabled = !(r.card.cues || []).length; }
+    if(btn){
+      btn.disabled = !(r.card.cues || []).length;
+      // judgment 가 없으면 이 승인은 live 가 아니라 초안 저장이다 — 버튼이
+      // 미리 정직하게 말한다 (심사 QA #3: "은퇴 후에도 답한다" 는 판단 있는
+      // 카드만의 약속이다).
+      const hasJudg = !!(r.card.judgment && r.card.judgment.trim());
+      btn.textContent = hasJudg ? L['sess.confirm'] : (L['sess.savedraft'] || L['sess.confirm']);
+    }
     $('s_blocker').textContent = r.report.blocker ? L['sess.blocker'] : '';
     $('s_wrong').innerHTML = '';
     if(AUTO) askCycle();
@@ -1329,6 +1358,13 @@ async function confirmCard(){
       for_whom: vis === 'targeted' ? arg : '',
       open_at: vis === 'sealed' && arg ? arg : null,
     })});
+    if(r.saved_as_draft){
+      // judgment 미완 → live 가 아니라 초안. 정직하게 알리고 계속 파게 둔다.
+      $('s_warn').textContent = r.draft_reason || '';
+      STATE.card = r.card;
+      if(AUTO) askCycle();
+      return;
+    }
     let msg = L['sess.saved'];
     if(r.filled_gap) msg += L['sess.filled_gap'].replace('{}', r.filled_gap);
     if(r.warning) msg += ' ' + r.warning;
@@ -1338,6 +1374,11 @@ async function confirmCard(){
   finally{ if(cbtn){ cbtn.disabled = false; cbtn.textContent = cbl; } }
 }
 
+window.addEventListener('beforeunload', (e) => {
+  const cur = document.getElementById('session');
+  const ta = document.getElementById('s_answer');
+  if(cur && !cur.hidden && ta && ta.value.trim()){ e.preventDefault(); e.returnValue = ''; }
+});
 $('me').value = localStorage.getItem('ydk_me') || '';
 loadHome();
 </script>

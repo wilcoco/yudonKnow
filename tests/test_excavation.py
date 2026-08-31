@@ -383,7 +383,11 @@ def _dig_titled(session, expert, title_seed, lang="ko"):
         r = service.answer_turn(session, t, a, lang=lang)
         t = r["turn_id"]
     cid = r["card"]["id"]
-    service.confirm_card(session, cid, edits={"domain": "도장"}, lang=lang)
+    # 완성 카드로 남긴다 — judgment 없는 카드는 이제 live 가 아니라 초안이다
+    # (심사 QA #3 게이트). 이 헬퍼는 검증이 익는 '완성 카드 3장'을 의도한다.
+    service.confirm_card(session, cid,
+                         edits={"domain": "도장", "judgment": f"{title_seed}는 속도 문제다"},
+                         lang=lang)
     return cid
 
 
