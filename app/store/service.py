@@ -1881,13 +1881,20 @@ def usage_statement(
     totals = {"cited": 0, "helped": 0, "anchored": 0, "missed": 0}
     # 카드 인용 총계 — 답 단위(원장 cited)와 다른 수다: 한 답이 카드 둘을
     # 인용하면 2. 정산 화면은 두 수를 **다른 이름으로** 함께 낸다.
+    # 자기거래 제외는 읽기 시점에도 건다 — 원장은 append-only 라 과거 기록을
+    # 지우지 않지만, 명세서가 본인 행동을 세면 정산 근거가 아니다 (QA P0).
+    # 인용 수는 카운터 대신 인용 행→질문자 조인으로 센다.
     totals["card_citations"] = int(session.scalar(
-        select(func.coalesce(func.sum(db.CardRow.citations), 0))
-        .where(db.CardRow.expert == expert)
+        select(func.count()).select_from(db.Citation)
+        .join(db.Ask, db.Ask.id == db.Citation.ask_id)
+        .join(db.CardRow, db.CardRow.id == db.Citation.card_id)
+        .where(db.CardRow.expert == expert, db.Ask.asker != expert)
     ) or 0)
     for e in entries:
         if e.event not in billable and e.event != "missed":
             continue
+        if e.actor and e.actor == expert:
+            continue   # 본인 행동은 명세에 오르지 않는다
         totals[e.event] += 1
         card = by_card.setdefault(e.card_id or "-", {
             "card_id": e.card_id, "title": "",
