@@ -952,7 +952,10 @@ Hard rules:
   ONLY if the expert explicitly said it does not fit in words. Never invent
   an unspeakable item; an expert who excludes vague impressions must not be
   handed one. The fact that it does not fit is itself the record.
-- Write every field in the language the expert spoke.
+- OUTPUT LANGUAGE — hard rule: write every field in the language the
+  conversation below is held in. The output schema's field descriptions are
+  in Korean; they are metadata for you, NOT a language cue. An English
+  conversation must produce an all-English card.
 
 [Conversation]
 {transcript}
