@@ -842,7 +842,7 @@ def draft_rules(
             f"phrases. Invent nothing.\n\n{body}"
         )
     try:
-        raw = llm.extract(prompt, _RULES_SCHEMA)
+        raw = llm.extract(prompt, _RULES_SCHEMA, think=True)
     except Exception as exc:
         log.warning("규칙 초안 제안 실패(무해): %s", exc)
         return {"rule_all": [], "rule_none": [], "rule_priority": 0}

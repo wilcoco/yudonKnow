@@ -223,8 +223,8 @@
         <div class="card" style="margin-top:12px">
           <textarea id="s_answer" placeholder="{{ L['sess.answer.ph'] }}"></textarea>
           <div class="acts">
-            <button class="primary" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
-            <button class="ghost" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>
+            <button class="primary" id="s_send_btn" onclick="sendAnswer(false)">{{ L['sess.next'] }}</button>
+            <button class="ghost" id="s_skip_btn" onclick="sendAnswer(true)">{{ L['sess.skip'] }}</button>
             {% if llm_enabled %}
             <button class="ghost" id="mic_s" onclick="toggleMic('s_answer', this)">🎙 {{ L['sess.mic'] }}</button>
             {% endif %}
@@ -1218,6 +1218,13 @@ async function sendAnswer(skip){
   err('');
   const answer = $('s_answer').value.trim();
   if(!skip && !answer){ err(L['sess.need_answer']); return; }
+  // 이중 제출 방지 — 20초 대기 중 다시 누르면 같은 턴이 두 번 날아가
+  // "끊김" 으로 보인다 (심사 QA 실측: 같은 turn_id POST 2건).
+  const sendBtn = $('s_send_btn'), skipBtn = $('s_skip_btn');
+  if(sendBtn && sendBtn.disabled) return;
+  const sendLabel = sendBtn ? sendBtn.textContent : '';
+  if(sendBtn){ sendBtn.disabled = true; sendBtn.textContent = L['sess.waiting'] || '…'; }
+  if(skipBtn) skipBtn.disabled = true;
   try{
     const r = await api('/api/turns/'+STATE.turn, {method:'POST',
       body: JSON.stringify({answer, skip})});
@@ -1266,6 +1273,10 @@ async function sendAnswer(skip){
     $('s_wrong').innerHTML = '';
     if(AUTO) askCycle();
   }catch(e){ err(e.message); }
+  finally{
+    if(sendBtn){ sendBtn.disabled = false; sendBtn.textContent = sendLabel; }
+    if(skipBtn) skipBtn.disabled = false;
+  }
 }
 
 function visChanged(){

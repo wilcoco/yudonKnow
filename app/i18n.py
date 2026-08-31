@@ -1018,6 +1018,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "ko": "말하듯이 적어주세요. 정리하지 않으셔도 됩니다.",
     },
     "sess.next": {"en": "Next question", "ko": "다음 질문"},
+    "sess.waiting": {"en": "Listening…", "ko": "듣는 중…"},
     "sess.skip": {"en": "I'll skip this one", "ko": "이건 넘길게요"},
     "sess.building": {"en": "The judgment taking shape", "ko": "지금 만들어지는 판단"},
     "sess.tacit.q": {"en": "🌡 Does this go into words?", "ko": "🌡 이건 읽어서 되나요?"},

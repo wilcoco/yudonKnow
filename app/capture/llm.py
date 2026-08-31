@@ -33,7 +33,8 @@ class BaseLLM(Protocol):
 
     def answer(self, system: str, prompt: str, *, max_tokens: int | None = None) -> str: ...
 
-    def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]: ...
+    def extract(self, prompt: str, schema: dict[str, Any], *,
+                think: bool = False) -> dict[str, Any]: ...
 
     def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str: ...
 
@@ -53,7 +54,8 @@ class StubLLM:
             "들어옵니다. 아래는 검색된 근거 카드 원문입니다.\n\n" + prompt
         )
 
-    def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
+    def extract(self, prompt: str, schema: dict[str, Any], *,
+                think: bool = False) -> dict[str, Any]:
         return {}
 
     def transcribe(self, audio: bytes, mime: str, *, lang: str = "en") -> str:
@@ -187,17 +189,26 @@ class GeminiLLM:
         )
         return (response.text or "").strip()
 
-    def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
-        """스키마 강제 구조화 추출 (카드 포획·오답 생성이 쓴다)."""
-        response = self._gen(
-            model=self._model,
-            contents=prompt,
-            config=self._types.GenerateContentConfig(
-                max_output_tokens=self._max_tokens,
-                response_mime_type="application/json",
-                response_schema=_gemini_schema(schema),
-            ),
+    def extract(self, prompt: str, schema: dict[str, Any], *,
+                think: bool = False) -> dict[str, Any]:
+        """스키마 강제 구조화 추출 (카드 포획·오답 생성이 쓴다).
+
+        기본은 사고 예산 0 — 스키마 채우기에 사고를 켜 두면 턴당 16~19초가
+        든다 (심사 QA 실측, 평상시 1초). 규칙 초안(draft_rules)만 think=True:
+        그 출력은 결정 엔진에 들어가므로 몇 초를 내고 품질을 산다.
+        """
+        cfg = dict(
+            max_output_tokens=self._max_tokens,
+            response_mime_type="application/json",
+            response_schema=_gemini_schema(schema),
         )
+        if not think:
+            try:
+                cfg["thinking_config"] = self._types.ThinkingConfig(thinking_budget=0)
+            except Exception:
+                pass
+        response = self._gen(model=self._model, contents=prompt,
+                             config=self._types.GenerateContentConfig(**cfg))
         text = (response.text or "").strip()
         return json.loads(text) if text else {}
 
@@ -233,13 +244,17 @@ class AnthropicLLM:
         )
         return "".join(b.text for b in response.content if b.type == "text").strip()
 
-    def extract(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
+    def extract(self, prompt: str, schema: dict[str, Any], *,
+                think: bool = False) -> dict[str, Any]:
+        kw: dict[str, Any] = {}
+        if think:
+            kw["thinking"] = {"type": "adaptive"}
         response = self._client.messages.create(
             model=self._model,
             max_tokens=self._max_tokens,
-            thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}],
             output_config={"format": {"type": "json_schema", "schema": schema}},
+            **kw,
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         return json.loads(text) if text else {}
