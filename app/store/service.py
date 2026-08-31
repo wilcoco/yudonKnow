@@ -803,6 +803,7 @@ def dormant_card(
     row = session.get(db.CardRow, card_id)
     if row is None:
         raise ServiceError(t("err.no_card", lang))
+    _guard_demo(row.expert, lang)   # 전시 카드는 심사 기간 보호 (스윕 실측: 뚫려 있었다)
     row.status = CardStatus.DORMANT.value
     session.commit()
     return {"card_id": card_id, "status": row.status}

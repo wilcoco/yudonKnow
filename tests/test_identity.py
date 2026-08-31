@@ -51,3 +51,19 @@ def test_ambiguous_variants_are_not_merged(session):
     # 정확 일치는 언제나 그 사람 자신이다.
     assert service.resolve_expert_id(session, "john-doe") == "john-doe"
     assert service.resolve_expert_id(session, "John Doe") == "John Doe"
+
+
+def test_showcase_cards_cannot_be_put_to_rest(session, monkeypatch):
+    """전시 전문가의 카드는 심사 기간에 잠복시킬 수 없다 (스윕 실측 구멍)."""
+    import dataclasses
+    import pytest as _pytest
+    service.ensure_expert(session, "showman", display_name="showman")
+    started = service.start_session(session, "showman", lang="en")
+    service.answer_turn(session, started["turn_id"],
+                        "One cue: the gauge flutters.", lang="en")
+    from app.store import db as _db
+    card_id = session.get(_db.Session, started["session_id"]).card_id
+    protected = dataclasses.replace(service.settings, featured=("showman",))
+    monkeypatch.setattr(service, "settings", protected)
+    with _pytest.raises(service.ServiceError):
+        service.dormant_card(session, card_id, lang="en")
